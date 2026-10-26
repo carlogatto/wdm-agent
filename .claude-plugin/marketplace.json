@@ -10,7 +10,7 @@
       "name": "wdm-agent",
       "source": "./",
       "description": "Sistema agentico wdm-theme: skill fse-* (theme-setup, kit, build, block-edit, menu-build), fondamenta, hook e script dei token per block theme FSE",
-      "version": "1.0.0"
+      "version": "1.1.0"
     }
   ]
 }

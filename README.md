@@ -30,11 +30,10 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 
 - Claude Code aggiornato (CLI, app desktop o estensione VS Code).
 - `node` 18 o successivo.
-- `jq` (gli hook lo usano): `brew install jq`.
-- git con credenziali per GitHub, perché il repo è privato: chiave SSH caricata in `ssh-agent`
-  oppure `gh auth login` seguito da `gh auth setup-git`. Claude Code non chiede password durante
-  l'installazione: se git non ha già la credenziale, il comando fallisce.
-- Accesso al repo `carlogatto/wdm-agent`, concesso da Carlo.
+- `jq` (gli hook lo usano). Su macOS 15 o successivo è già nel sistema: `jq --version` risponde
+  `jq-1.7…-apple`. Se manca, si installa con [Homebrew](https://brew.sh): `brew install jq`.
+- git (quello di Xcode Command Line Tools basta). Il repo è pubblico: non servono account GitHub,
+  inviti o credenziali.
 - MAMP e WP-CLI non servono per installare il plugin: li prepara `fse-theme-setup` nel progetto.
 
 ## Installazione
@@ -45,7 +44,12 @@ claude plugin install wdm-agent@wdm-agent
 claude plugin list
 ```
 
-L'ultima riga deve elencare `wdm-agent`. Riavvia le sessioni di Claude Code già aperte.
+L'ultima riga deve elencare `wdm-agent`. Le sessioni di Claude Code già aperte non vedono il plugin: chiudile e riaprile, oppure scrivi `/reload-plugins` nella sessione.
+
+Lo stesso si può fare **dentro Claude Code**, senza terminale: nella chat scrivi
+`/plugin marketplace add carlogatto/wdm-agent`, poi `/plugin install wdm-agent@wdm-agent`
+(oppure `/plugin`, scheda **Marketplaces** per aggiungere il catalogo e scheda **Discover** per il
+bottone Install), e infine `/reload-plugins`.
 
 ## Aggiornamento
 
@@ -57,7 +61,8 @@ claude plugin update wdm-agent@wdm-agent
 ## Verifica dell'installazione
 
 Apri una sessione di Claude Code nella cartella di un progetto wdm-theme (quella con `DESIGN.md`
-e `CLAUDE.md`). Le skill compaiono nell'elenco come `wdm-agent:fse-theme-setup`,
+e `CLAUDE.md`; se non ne hai ancora uno, il tema base `wdm-theme` che ricevi con il corso va
+bene, e un progetto nuovo lo crea `fse-theme-setup`). Le skill compaiono nell'elenco come `wdm-agent:fse-theme-setup`,
 `wdm-agent:fse-kit`, `wdm-agent:fse-build`, `wdm-agent:fse-block-edit`,
 `wdm-agent:fse-menu-build`. Scrivi `/wdm-agent:fse-kit`: la skill legge `DESIGN.md` e applica
 la guardia `theme_family` (fse-foundations §0) prima di ogni altra cosa.
@@ -95,11 +100,11 @@ bash tests/run.sh
 Su un altro Mac di Carlo il plugin **non** c'è finché non lo si installa anche lì: la copia che
 Claude Code usa sta in `~/.claude/plugins/`, cartella esclusa dal repo `claude-global`. Si installa
 dal remoto con i due comandi della sezione Installazione; se `settings.json` arrivato da git
-contiene ancora il marketplace locale `wdm-agent`, il comando chiede di sostituirlo: rispondere sì.
+contiene ancora il marketplace locale `wdm-agent`, il comando lo sostituisce con quello GitHub.
 
 A ogni release alza `version` in **entrambi** `.claude-plugin/plugin.json` e
 `.claude-plugin/marketplace.json`, e crea il tag git corrispondente. Gli studenti installano
-sempre dal remoto GitHub, mai dal checkout.
+sempre dal remoto GitHub (repo pubblico), mai dal checkout.
 
 ## Come sono scritti i percorsi
 

@@ -36,7 +36,7 @@ famiglia `fse-*`; la famiglia starter resta sul Mac di Carlo e non viene impacch
   quelle elencate al §5 (hook condiviso).
 - Riscrivere o migliorare il contenuto delle skill. Si sposta e si adattano i percorsi; le
   convenzioni cambiano solo nel progetto tema + sito (spec gemella), e in quella sede.
-- Pubblicare il plugin su un marketplace pubblico. Il repo è privato e l'accesso lo dà Carlo.
+- Pubblicare il plugin su un marketplace pubblico. Il repo è su GitHub (pubblico dal 2026-10-26, vedi §9).
 
 **Anti-obiettivi** (il progetto fallisce anche se "funziona")
 - Una skill che funziona solo sul Mac di Carlo perché un percorso `~/.claude/...` è rimasto.
@@ -219,3 +219,9 @@ il plugin viene versionato di conseguenza.
   `~/.claude`), modifica che Carlo conferma insieme a quella dell'hook (§5).
 
 Approvato da Carlo il 2026-10-26. Prossimo passo: `writing-plans`.
+
+**Aggiornamento 2026-10-26 sera.** Il repo è **pubblico**: con il repo privato l'installazione da GitHub
+fallisce su un Mac senza credenziali git non interattive (Claude Code scarica in silenzio e non può
+chiederle; Sourcetree tiene le sue), cioè sul Mac di quasi ogni studente. Pubblico = leggibile da
+tutti, scrivibile solo da Carlo; il valore del pacchetto resta nel tema e nel corso. Criterio 5
+verificato: installazione da `carlogatto/wdm-agent` riuscita, contenuto identico al checkout.

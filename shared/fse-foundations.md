@@ -68,8 +68,9 @@ page build. State is verified on disk at every session start (§11).
       build/ index.js  index.asset.php  style-index.css  [index.css]  [view.js  view.asset.php]   (generated, committed)
   src/
     scss/   main.scss, _reset, _type, _telaio, _wp-blocks, _buttons, _forms, fonts.scss, swiper.scss,
-            _breakpoints.scss (the only SCSS import shared by blocks), editor/_*.scss (shared editor components)
-    js/     main.js, _dialog.js (theme JS, concat), page-options.js (editor panel, §7), editor/ (shared edit.js components), view/ (shared view.js modules, when the first one is born)
+            _breakpoints.scss and _section.scss (the two SCSS imports shared by blocks), _focus.scss, _motion.scss
+            (focus and reduced-motion rules, global), editor/_*.scss (shared editor components)
+    js/     main.js + _*.js (theme JS, concat), swiper.js (ESM entry of the shared `{prefix}-swiper` module), page-options.js (editor panel, §7), editor/ (shared edit.js components: link-button, post-picker, image-control)
     kit/    {prefix}-home.kit, {prefix}-{page}.kit, {prefix}-blocks.kit (catalogue), main/header|footer, svg-vault
   html/      compiled kit (committed) — view via browser-sync, never file:// (§10)
   assets/    css/main.css fonts.css swiper.css wp-global-styles.css · js/main.js page-options.js · fonts/ · img/placeholder-*.jpg
@@ -96,6 +97,7 @@ blocks; `{prefix}/*` blocks are page content.
   "category": "{prefix}",
   "icon": "cover-image",
   "description": "Una riga in italiano.",
+  "keywords": [ "sezione", "parola-chiave" ],
   "textdomain": "{text-domain}",
   "attributes": { "align": { "type": "string", "default": "full" }, "title": { "type": "string", "default": "" } },
   "supports": {
@@ -103,6 +105,7 @@ blocks; `{prefix}/*` blocks are page content.
     "color": { "background": true, "text": true, "link": false },
     "spacing": { "padding": true, "__experimentalDefaultControls": { "padding": true } }
   },
+  "example": { "attributes": { "title": "Titolo di esempio" } },
   "render": "file:./render.php",
   "editorScript": "file:./build/index.js",
   "style": "file:./build/style-index.css",
@@ -110,15 +113,25 @@ blocks; `{prefix}/*` blocks are page content.
   "viewScriptModule": "file:./build/view.js"
 }
 ```
+- **Key order is fixed** in every block.json: `$schema, apiVersion, name, version, title, category,
+  icon, description, keywords, textdomain, parent?, usesContext?, providesContext?, attributes,
+  supports, example, render, editorScript, style, editorStyle, viewScriptModule?`. `keywords` (Italian
+  search terms for the inserter) and `example` (the inserter preview) are mandatory.
+  `tools/check-blocks.js` in the theme verifies the order.
 - `version` is mandatory: outside `SCRIPT_DEBUG` the block CSS is cache-busted only by this
   key — **bump it at every release** of the block.
 - `editorStyle` only when `src/editor.scss` exists; `viewScriptModule` only when `src/view.js`
   exists. The hook `check-block-contract.sh` verifies every `file:` has its source and that
   `README.md` and `render` exist.
 - Carousels: `"style": ["{prefix}-swiper", "file:./build/style-index.css"]` — the shared Swiper
-  CSS is a registered handle (`wdm-swiper` in the starter: `library/custom.php`,
-  `assets/css/swiper.css`), **never** `@use 'swiper/swiper'` inside a block's SCSS (it would
-  duplicate the Swiper core per block).
+  CSS is a registered handle (`{prefix}-swiper`: `library/custom.php`, `assets/css/swiper.css`),
+  **never** `@use 'swiper/swiper'` inside a block's SCSS (it would duplicate the Swiper core per
+  block). The Swiper JS is the shared script module `{prefix}-swiper` (§5 JS). A block whose JS
+  serves only some variants (hero: carousel yes, image no) does **not** declare
+  `viewScriptModule`/`{prefix}-swiper` in block.json: `blocks/blocks.php` registers its view
+  module and `render.php` enqueues module and style only in the variant that needs them (WP
+  enqueues block view modules **after** the render callback, so they cannot be dequeued from
+  render.php).
 - Child blocks: `"parent": ["{prefix}/{parent}"]`, `"usesContext": ["{prefix}/xyz"]`,
   `"supports": { "html": false, "reusable": false }`; the parent declares
   `"providesContext": { "{prefix}/xyz": "attribute" }`.
@@ -136,23 +149,42 @@ blocks; `{prefix}/*` blocks are page content.
  * @var array $attributes  @var string $content  @var WP_Block $block
  */
 if ( ! defined( 'ABSPATH' ) ) exit;
-$wrapper = get_block_wrapper_attributes( array( 'class' => '{prefix}-block-{slug}' . ( $attributes['reverse'] ? ' {prefix}-block-{slug}--reverse' : '' ) ) );
+
+// 1. Every attribute into a local variable, enumerations validated with one idiom.
+$variant       = in_array( $attributes['variant'], array( 'centered', 'split' ), true ) ? $attributes['variant'] : 'centered';
+$title         = $attributes['title'];
+$heading_level = in_array( (int) $attributes['headingLevel'], array( 2, 3 ), true ) ? (int) $attributes['headingLevel'] : 2;
+$button        = {prefix}_render_button( $attributes['buttonText'], $attributes['buttonUrl'] ); // '' when text or URL empty
+
+// 2. Classes, then the wrapper.
+$classes = '{prefix}-block-{slug} {prefix}-block-{slug}--' . $variant;
+$wrapper = get_block_wrapper_attributes( array( 'class' => $classes ) );
 ?>
 <section <?php echo $wrapper; ?>>
   <div class="{prefix}-block-{slug}__inner">
-    <?php if ( $attributes['title'] ) : ?><h2 class="{prefix}-block-{slug}__title"><?php echo wp_kses_post( $attributes['title'] ); ?></h2><?php endif; ?>
+    <?php if ( $title ) : ?><h<?php echo $heading_level; ?> class="{prefix}-block-{slug}__title"><?php echo wp_kses_post( $title ); ?></h<?php echo $heading_level; ?>><?php endif; ?>
     <?php echo $content; // InnerBlocks, if any ?>
+    <?php echo $button; ?>
   </div>
 </section>
 ```
+Shape of every render.php, in this order: docblock with the three `@var`, `ABSPATH` guard,
+**all** attributes read into local variables (never `$attributes['x']` inside the markup),
+enumerations validated with `in_array( …, true ) ? … : default`, `$classes`, `$wrapper`, markup.
+Wrapper tag: `<section>` for section blocks, `<div>` for children, `<article>` for cards
+(self-contained content). Comments explain **why**, in Italian; every non-obvious number has
+one.
 Rules: never `save()` with markup (content invalidation at every markup change — the one
 non-negotiable rule); `$content` or `$block->parsed_block['innerBlocks']` for children;
 escaping `esc_html` / `esc_attr` / `esc_url` / `wp_kses_post` (RichText values); images via
-`wp_get_attachment_image( $id, 'thumb-700x450', false, [ 'class' => …, 'alt' => $alt ] )` with
-fallback to `imageUrl`; **`is_post_type_viewable()`** before any query or lookup on a post
-type coming from an attribute, `post_status => publish` explicit; shared markup used by two
-blocks goes in a PHP file of the owning block (e.g. `card.php` → `{prefix}_card_markup()`),
-loaded with `require_once` by both render.php.
+`{prefix}_render_image( $image_id, 'thumb-700x450', [ 'class' => …, 'fallback_url' => $image_url ] )`
+(alt read from the media library, never forced; `loading`/`decoding`/`sizes`/`fetchpriority`
+handled there); buttons via `{prefix}_render_button( $text, $url, [ 'new_tab' => …, 'inverted' => … ] )`
+(the only markup of a button, with the screen-reader note for new tabs); both in
+`library/blocks-helpers.php`; **`is_post_type_viewable()`** before any query or lookup on a post
+type coming from an attribute, `post_status => publish` explicit; a block that renders
+another block (cards-carousel → card in `source: query`) calls `render_block()` on a parsed block
+array, never `require_once` of a file of another block: one wrapper, one markup.
 
 ### index.js / edit.js
 ```js
@@ -165,7 +197,11 @@ registerBlockType(metadata.name, { edit: Edit })                                
 registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content /> }) // block with InnerBlocks
 ```
 - `Edit` lives in `edit.js`; its markup **replicates render.php** (same tags, classes, order)
-  via `useBlockProps({ className })`.
+  via `useBlockProps({ className })`, with the comment `// Il markup replica render.php` at the top.
+  Same shape everywhere: imports in the order block-editor, components, compose/data, i18n, icons,
+  server-side-render, local; classes built with a template literal (`` `${base} ${base}--${variant}` ``);
+  one `PanelBody` titled with the block name; `SelectControl` options as `{ label, value }`; every
+  control with both `__nextHasNoMarginBottom` and `__next40pxDefaultSize`.
 - Blocks with children: `save: () => <InnerBlocks.Content />` is **mandatory** (with `save:
   null` the children are not serialized); `useInnerBlocksProps` with `allowedBlocks`,
   `template`, `templateLock` (`'all'` for a fixed single child, `false` with
@@ -177,7 +213,9 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
 - UI strings in Italian inside `__( '…', '{text-domain}' )`: JS translations are not loaded
   (accepted: monolingual sites).
 - Shared components in `src/js/editor/`: `LinkButton` (`value: {text,url,newTab}`,
-  `onChange(next)`; RichText + LinkControl in a popover), `PostPicker` (`postType, postId,
+  `onChange(next)`; RichText + LinkControl in a popover), `ImageControl` (`imageId, imageUrl,
+  imageAlt, onChange` — MediaPlaceholder when empty, MediaReplaceFlow + remove when set; the only
+  image UI of every block), `PostPicker` (`postType, postId,
   onChange` — ComboboxControl + `useEntityRecords`, debounced search), `PostTypeSelect`
   (viewable post types). Their editor styles live in `src/scss/editor/_*.scss`, loaded by the
   block's `editor.scss` with `@use 'editor/link-button'`.
@@ -196,8 +234,9 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
 | In the kit | Attribute(s) | Control in edit.js | render.php |
 |---|---|---|---|
 | short/long text, heading | `title`/`text` string | `RichText` (`tagName`, `allowedFormats: ['core/bold','core/italic'(,'core/link')]`) | `wp_kses_post()`, omitted when empty |
-| image | `imageId` int, `imageUrl` str, `imageAlt` str | `MediaPlaceholder` / `MediaReplaceFlow` | `wp_get_attachment_image` → fallback `imageUrl` |
-| button / link | `buttonText`, `buttonUrl`, `buttonNewTab` | `LinkButton` (shared) | `<a class="wp-element-button …">`, `target="_blank" rel="noopener"`; omitted if text or URL empty |
+| image | `imageId` int, `imageUrl` str, `imageAlt` str | `ImageControl` (shared) | `{prefix}_render_image()` → fallback `imageUrl` |
+| heading level of the section title | `headingLevel` int (2–3, default 2) | `ToggleGroupControl` H2/H3 | `<h2>`/`<h3>` |
+| button / link | `buttonText`, `buttonUrl`, `buttonNewTab` | `LinkButton` (shared) | `{prefix}_render_button()`; omitted if text or URL empty |
 | choice among variants | `variant` string with `enum` | `SelectControl` in `InspectorControls` | class modifier `--{variant}` |
 | on/off | boolean | `ToggleControl` | class modifier |
 | number in a range | integer | `RangeControl` | `style="--{prefix}-x:N"` or `data-*` |
@@ -208,12 +247,25 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
 | anchor id (`id` on the section in the kit) | `anchor` in the insertion markup (no block.json attribute) | `supports.anchor` | wrapper attributes |
 | raw HTML / embed / SVG | — | `core/html`, `core/embed`; SVG read from a file in render.php | never SVG in attributes (kses for non-admins) |
 
+**Shared attribute vocabulary.** The same idea has the same name in every block, present or
+future, so a student learns one vocabulary: `variant` (layout/style variants, kebab-case values,
+CSS modifier `--{value}`, kit file `-{value}.kit`, README same word), `title`, `text`,
+`headingLevel`, `buttonText`/`buttonUrl`/`buttonNewTab`, `imageId`/`imageUrl`/`imageAlt`,
+`columns`, `source` (data source `manual|query`: a mode, not a layout variant), `postType`/`postId`,
+`count`. Booleans are for on/off options, never for a choice between two layouts. One-time
+exception recorded on 2026-10-26: `image-text` renamed `reverse` → `variant: image-left |
+image-right` while the theme was pre-1.0 and its only contents were local demos; from 1.0 on the
+rule "never rename or remove an attribute of an implemented block" is absolute.
+
 ### README.md — the contract
-Sections, in order: `# {prefix}/{slug} — Titolo` · `## Scopo` · `## Varianti` (table: variante,
-attributi, classe, figli, kit) · `## Attributi` (table: nome, tipo, controllo, default, note) +
-line "Supports: …" · `## Figli` · `## Markup (render.php = kit)` (HTML skeleton with classes) ·
-`## Markup di inserimento` (the `<!-- wp:{prefix}/{slug} {…} -->` the build will write, with
-`imageId`+`imageUrl`+`imageAlt`) · `## Dipendenze JS / CSS` · `## Componenti condivisi`. The
+Sections, **always all eight, in this order and with these titles**: `# {prefix}/{slug} — Titolo` ·
+`## Scopo` · `## Varianti` (table with three columns: variante, cosa cambia, kit; `—` when the
+block has one variant) · `## Attributi` (table: nome, tipo, controllo, default) + line
+"Supports: …" · `## Figli` (`—` when none) · `## Markup (render.php = kit)` (HTML skeleton with
+classes) · `## Markup di inserimento` (the `<!-- wp:{prefix}/{slug} {…} -->` the build will
+write, with `imageId`+`imageUrl`+`imageAlt`) · `## Dipendenze JS / CSS` (`—` when none) ·
+`## Componenti condivisi` (`—` when none). No references to plans, phases or decisions: the
+README describes the block as it is. The
 README is what `fse-build` reads to create and populate the block: an attribute not in the
 table does not exist.
 
@@ -263,22 +315,29 @@ blocked by CORS and the carousels do not start.
 ## 5. CSS and JS conventions
 
 ### CSS (`src/style.scss` of the block, compiled to `build/style-index.css`)
-- `@use 'breakpoints' as *;` as first line when the block needs media queries; mixins
+- `@use 'breakpoints' as *;` as first line **only** when the block has media queries (an unused
+  `@use` is a violation); `@use 'section' as *;` when the block is a section (mixin
+  `section-inner`, see below); mixins
   `bp-up(md)` / `bp-down(md)`; the SCSS map ≡ `theme.json → settings.custom.breakpoints`
   (`sync-theme-json-tokens.js --check` fails when they diverge). Breakpoints are the only token
   duplicated in SCSS: media queries do not accept custom properties. In JS read them from
   `--wp--custom--breakpoints--*` (Swiper breakpoints).
 - Every other value from theme.json variables: `var(--wp--preset--color--main)`,
   `--wp--preset--spacing--xs|sm|md|lg|xl|section-sm|section-lg`,
-  `--wp--preset--font-size--*`, `--wp--custom--radius--md`, `--wp--custom--transition--base`,
+  `--wp--preset--font-size--*`, `--wp--custom--radius--sm|md|lg|pill`,
+  `--wp--custom--shadow--sm|md|lg`, `--wp--custom--transition--base`,
   `--wp--custom--z-index--header`, `--wp--custom--header-height--mobile|desktop`,
-  `--wp--style--global--wide-size|content-size`. No hardcoded colours or sizes, no utility
-  classes beyond core's.
+  `--wp--style--global--wide-size|content-size`. **No hex colour, no literal `box-shadow`, no
+  literal `border-radius`, no literal `font-size`** anywhere in `src/scss/**` or `blocks/*/src/**`
+  (`tools/check-tokens.sh`); the only exceptions are structural px measures of a component
+  (header height, arrow footprint), each marked on its line with `// token-exception: <why>`.
+  No utility classes beyond core's.
 - BEM on the block: `.{prefix}-block-{slug}` (root, given by render.php), `__el`, `--modifier`.
 - Section blocks: the root `<section>` is `alignfull` (default `align: full`); the inner
-  container is **`.{prefix}-block-{slug}__inner`**: `box-sizing: content-box; max-width:
-  var(--wp--style--global--wide-size); margin-inline: auto; padding-inline:
-  var(--wp--preset--spacing--xs)` (content = wide-size, padding outside, like core alignwide).
+  container is **`.{prefix}-block-{slug}__inner { @include section-inner; }`** from
+  `src/scss/_section.scss` (`box-sizing: content-box; max-width: var(--wp--style--global--wide-size);
+  margin-inline: auto; padding-inline: var(--wp--preset--spacing--xs)` — content = wide-size,
+  padding outside, like core alignwide), never copied by hand.
   A column that must align to the left edge of the content: `margin-inline-start: max(0px,
   calc((100% - var(--wp--style--global--wide-size)) / 2 - var(--wp--preset--spacing--xs)))`.
   No `supports.layout` on section blocks (core `wp-container-*` hash classes cannot be
@@ -288,6 +347,12 @@ blocked by CORS and the carousels do not start.
   relative to `__inner`; `.has-text-color :is(h1…h6), .has-text-color a:not(.wp-element-button)
   { color: inherit }` is already global (`_wp-blocks.scss`).
 - `clamp()`, grid/flex, container queries where useful; `:where()` for low-specificity resets.
+- Focus: one rule for everything, `src/scss/_focus.scss` (`:focus-visible` outline in `accent`,
+  `accent-dark` on dark/accent backgrounds); a block never writes `outline: none`, `:focus` or
+  `:focus-visible` rules of its own.
+- Motion: `src/scss/_motion.scss` owns `scroll-behavior` and the global
+  `@media (prefers-reduced-motion: reduce)` (transitions and animations to 0.01ms); blocks and
+  Swiper configs do not add their own reduced-motion media queries.
 - Editor-only styles in `src/editor.scss` → `build/index.css` (placeholders, static carousel
   preview); frontend styles are loaded in the editor too (`style` is enqueued in both).
 - Theme SCSS: `main.scss` (+ partials) → `assets/css/main.css`, enqueued on the frontend and
@@ -295,25 +360,28 @@ blocked by CORS and the carousels do not start.
   into editor placeholders. Never `import './style.scss'` from JS (build error by design).
 
 ### JS
-Default **vanilla** (`<dialog>` via `src/js/_dialog.js` with `data-dialog-open`, `<details>`,
-`IntersectionObserver`); **Interactivity API** (`@wordpress/interactivity`, `viewScriptModule`,
-`supports.interactivity`) when there is state to manage; **Swiper** (`import Swiper from
-'swiper'`, `import { Pagination, Navigation, A11y, Keyboard } from 'swiper/modules'`) for
-carousels — bundled per block (tree-shaken, ~40 KB each, accepted). No jQuery.
+Default **vanilla** (`<dialog>`, `<details>`, `IntersectionObserver`); **Interactivity API**
+(`@wordpress/interactivity`, `viewScriptModule`, `supports.interactivity`) when there is state
+to manage; **Swiper** for carousels, as the theme's shared script module **`{prefix}-swiper`**
+(`src/js/swiper.js` → `assets/js/swiper.js`, registered by `library/custom.php` with
+`wp_register_script_module`): a view.js writes `import Swiper, { A11y, Keyboard, Pagination }
+from '{prefix}-swiper'` and `build.js` keeps that import external (`EXTERNAL_MODULES`), so
+Swiper is downloaded once per page and only when a carousel is present. Never `from 'swiper'`
+in a block. No jQuery.
 
 `src/view.js` (ES module, frontend only): `document.querySelectorAll('.{prefix}-block-{slug}--carousel
-.swiper').forEach(el => new Swiper(el, {...}))`; `a11y` messages **in Italian**
-(`prevSlideMessage: 'Slide precedente'`, `paginationBulletMessage: 'Vai alla slide
-{{index}}'`, …) because the A11y module rewrites the aria-labels; `slidesPerView` from a
+.swiper').forEach(el => new Swiper(el, {...}))`; `a11y` messages come from `render.php`
+(`data-a11y-prev|next|first|last|bullet` on the `.swiper` wrapper, written with `esc_attr__()`),
+never as literal strings in the JS (the A11y module rewrites the aria-labels, so they must be
+the translated ones); `keyboard: { enabled: true, onlyInViewport: true }`; `slidesPerView` from a
 `data-*` attribute written by render.php; breakpoints from
 `getComputedStyle(document.documentElement).getPropertyValue('--wp--custom--breakpoints--md')`.
 In the editor the carousel is a **static preview** (stacked/grid in editor.scss); Swiper runs
 only on the frontend. Allowed `@wordpress/*` imports in a view.js: `interactivity`,
 `interactivity-router`, `a11y` (import map of WP); anything else fails the build.
 
-Shared view modules go in `src/js/view/`; whoever creates the first one adds to `build.js` the
-watch rule `src/js/view/** → buildAllBlockViews()` (today only `src/js/editor/**` triggers a
-rebuild of all blocks) — otherwise view.js stays stale in watch.
+The only shared view module is `{prefix}-swiper` (above). A block whose view.js serves some
+variants only registers the module in `blocks/blocks.php` and enqueues it from render.php (§3).
 
 Theme JS (`src/js/main.js` + `_*.js`) uses the concat logic (`@prepend`/`@append`), not ES
 modules.
@@ -416,6 +484,12 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
   `wp_template`/`wp_template_part` post that shadows the file — after a Site Editor test,
   `wp post delete <id> --force` so the files stay the source. Lock: open by default (a project
   adds `templateLock`/`lock` on request).
+- Accessibility of the telaio: core's skip link stays and is styled with the tokens (`surface`
+  on `accent`, radius `sm`); footer column labels share one heading level, consistent with the
+  page outline; the three footer `navigation` blocks carry speaking `aria-label`s (the ones of the
+  kit `<nav aria-label>`); the drawer accordion script sets `aria-expanded` and `aria-controls`
+  on each toggle (core keeps them static inside the overlay); a hero carousel prints the h1 on its
+  first slide when the page title is off, h2 from the second slide on.
 - h1 debt to remember (Phase 4 M5): a page whose client turned "Mostra il titolo" off and whose
   content has no hero has no h1 — say so when relevant.
 

@@ -15,7 +15,6 @@ for s in \
   'claude plugin marketplace add ~/Documents/Development/wdm-agent' \
   '/reload-plugins' \
   'brew install jq' \
-  'gh auth setup-git' \
   'bash tests/run.sh' \
   'claude plugin list' \
   'claude plugin uninstall wdm-agent@wdm-agent && claude plugin install wdm-agent@wdm-agent'; do
