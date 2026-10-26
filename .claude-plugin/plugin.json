@@ -1,0 +1,12 @@
+{
+  "name": "wdm-agent",
+  "version": "1.0.0",
+  "description": "Sistema agentico wdm-theme: skill fse-* (theme-setup, kit, build, block-edit, menu-build), fondamenta, hook e script dei token per block theme FSE",
+  "author": {
+    "name": "Carlo Gatto",
+    "email": "carlo@carlogatto.com"
+  },
+  "repository": "https://github.com/carlogatto/wdm-agent",
+  "license": "proprietary",
+  "keywords": ["wordpress", "fse", "block-theme", "gutenberg", "wdm-theme"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "wdm-agent",
+  "description": "Marketplace del plugin wdm-agent (sistema agentico per wdm-theme)",
+  "owner": {
+    "name": "Carlo Gatto",
+    "email": "carlo@carlogatto.com"
+  },
+  "plugins": [
+    {
+      "name": "wdm-agent",
+      "source": "./",
+      "description": "Sistema agentico wdm-theme: skill fse-* (theme-setup, kit, build, block-edit, menu-build), fondamenta, hook e script dei token per block theme FSE",
+      "version": "1.0.0"
+    }
+  ]
+}
