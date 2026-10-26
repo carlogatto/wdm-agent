@@ -579,6 +579,11 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
 - Credentials: username from DESIGN.md, password from the prompt, never persisted or echoed.
 - Never take over a post locked by another user; close the tab at the end.
 - `debug.log` empty at the end of every session (`WP_DEBUG_LOG` on); `npm run build` exit 0.
+- Browser-sync: if `https://localhost:8848/html/` already answers **and lists this theme's kits**
+  (`{prefix}-*.html`), the dev's `npm run dev` is running — use it, never start a second watcher (it
+  would take another port and compile everything twice). Start `npm run dev` only when 8848 is
+  silent, and stop it at the end of the session. The watch writes sourcemaps (`*.map`, gitignored);
+  `npm run build` removes them, so `npm run build` → `npm run check` passes with the watch on.
 - Git is the dev's (Sourcetree): **never** a git command, not even read-only.
 - 2 spaces, no tabs, in every file; never overwrite an existing file — read and complete it.
 - Every question the agent feels like asking during a build is a gap of the kit/README: report
