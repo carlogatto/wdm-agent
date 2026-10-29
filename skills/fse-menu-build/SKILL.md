@@ -1,6 +1,6 @@
 ---
 name: fse-menu-build
-description: Use to create or realign the WordPress navigation (`wp_navigation` posts and the `ref` of the `core/navigation` blocks in header and footer) from the kit header/footer menus for a wdm-theme FSE project — "popola il menu", "crea il menu WP", "allinea il menu al kit", "il menu mostra il contenuto di una pagina", or when the frontend shows a page list instead of the designed menu. Runs once the main pages exist in WP and is re-run whenever the kit menu or the pages change. Not for wdm-starter projects (`dev-menu-build`).
+description: Use to create or realign the WordPress navigation (`wp_navigation` posts and the `ref` of the `core/navigation` blocks in header and footer) from the kit header/footer menus for a wdm-theme FSE project — "popola il menu", "crea il menu WP", "allinea il menu al kit", "il menu mostra il contenuto di una pagina", or when the frontend shows a page list instead of the designed menu. Runs inline as the last step of the `fse-build` site build and stays available on its own for maintenance, whenever the kit menu or the pages change. Not for wdm-starter projects (`dev-menu-build`).
 ---
 
 # FSE Menu Build — kit `<nav><ul>` → `wp_navigation` + `ref` in the parts
@@ -105,7 +105,7 @@ a message from the dev that answers that diff. Nothing else counts as confirmati
 | "The request already implied the rebuild" | The request selects the skill; the diff is what the dev has not seen yet |
 | "The diff is one line, asking is overhead" | A one-line diff is the cheapest confirmation there is |
 | "The menu has only kit items, nothing can be lost" | The rule exists for the run where that is false and nobody checked |
-| "fse-build is autonomous, it must not stop" | The telaio session stops at the diff like any other: that is its deliverable for the turn |
+| "fse-build is autonomous, it must not stop" | The site build closes its run with the diff in the final report, like a deletion: the dev answers, `confirm` runs in a later turn |
 
 Red flags — stop and end the turn: you are about to run `apply … confirm` on a menu whose diff
 you computed in this same turn · you are writing "ho applicato senza fermarmi" in a report ·

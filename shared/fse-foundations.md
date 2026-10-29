@@ -28,28 +28,40 @@ family ships in the `wdm-agent` plugin, the starter family lives in the user-lev
 project `CLAUDE.md` routing table is the second layer, the SKILL.md description ("for a
 wdm-theme FSE project") the third.
 
-## 1. Two phases, promoted to sessions
+## 1. Six moments, four gates
 
-| Moment | Who drives | Skill | Sessions |
-|---|---|---|---|
-| Setup | agent | `fse-theme-setup` | 1 |
-| **Kit**: telaio, pages, blocks with every variant — in dialogue with the dev | dev | `fse-kit` | N, until every item is `kit` |
-| **Build**: telaio first, then one page per session, autonomous | agent | `fse-build` | 1 per page (+1 for the telaio) |
-| Maintenance | agent | `fse-block-edit`, `fse-menu-build` | 1 per intervention |
+| Moment | Who decides | Skill | Gate (deliverable the dev judges) | Session |
+|---|---|---|---|---|
+| Setup | dev (technical values), agent runs | `fse-theme-setup` | — | 1 |
+| **Brief**: the designer's folder `docs/brief/` becomes the site contract | agent | `fse-brief` | **1 — brief**: site map, tokens applied to theme.json (kit catalogue on `:8848`), tone, plugins, images, in `DESIGN.md → ## Brief` | 1 (+ revision turns) |
+| **Kit telaio**: header, footer, default form in HTML | agent | `fse-kit` | **2 — telaio**: the kit on `:8848` | 1 (+ revision turns) |
+| **Kit page**, one complete page with its blocks and variants | agent | `fse-kit` | **3 — page kit**: the kit with real texts on `:8848` | 1 per page (+ revision turns) |
+| **Site build**: every approved kit into WordPress, menus included | agent | `fse-build` | **4 — built site**: pages and menus in WP, final report | 1 per run, re-runnable |
+| Maintenance | agent | `fse-block-edit`, `fse-menu-build` | — | 1 per intervention |
 
-Kit phase = design in HTML: the dev designs the whole site as kit files (per block, with all
-variants; per page) before any WP code; the block README is the contract. Build phase = the
-agent reads the kit, creates the missing blocks (all variants of the README), inserts them in
-the page with the kit's contents, stops at the end of the page for the dev's review. Never mix:
-no `render.php` for a block whose kit is not approved; no page built from a kit still `da
-progettare`. The session boundary of the build is the **page**. On the dev's explicit request kit
-and build may run in the same conversation (`fse-kit`, then `fse-build`, in order): the row still
-goes `kit` → `implementata`, WP writes (plugins, forms, pages) happen only in the `fse-build`
-part, and `## Log decisioni` records the deviation.
+A gate is a message in chat that hands over something finished to look at. The dev's remarks
+come back as revisions (same skill, same item); the gate closes with an explicit ok **in a later
+turn**, which the skill records in `DESIGN.md` (state, log row). Between gates the agent asks
+nothing: it decides under the decision charter (§10) and marks `[da confermare]` what it cannot
+decide; every question it feels like asking is either a charter decision or a gap reported at the
+gate. Requests a dev makes at a gate are their decisions: applied and logged, not discussed.
 
-States live in `DESIGN.md` (§11) and follow the **pages**: Telaio/Pagine `da progettare` →
-`kit` → `implementato|implementata`; Blocchi `kit` → `implementato`, born on demand from the
-page build. State is verified on disk at every session start (§11).
+Kit = design in HTML made by the agent inside the system (telaio, blocks, tokens) and inside the
+brief (map, tone, sources); the block README is the contract. Build = the agent reads every
+approved kit, creates the missing blocks (all variants of the README), writes each page as the
+difference between kit and WordPress, aligns the menus, stops with the report. Never mix: no
+`render.php` for a block whose kit is not approved; no page built from a kit still `da
+progettare`. Session boundaries: the kit's is the **item** (telaio, or one page), the build's is
+the **site** (the whole perimeter in one run, re-run after every new approval). On the dev's
+explicit request kit and build may run in the same conversation (`fse-kit`, then `fse-build`, in
+order): the row still goes `kit` → `implementata`, WP writes (plugins, forms, pages) happen only
+in the `fse-build` part, and `## Log decisioni` records the deviation.
+
+States live in `DESIGN.md` (§11) and follow the **pages**: Telaio `da progettare` → `kit` →
+`implementato`; Pagine `da progettare` → `kit` → `implementata`, plus `da eliminare` for a page
+the map dropped (deleted only with the dev's `confirm` in a later turn, §11); Blocchi `kit` →
+`implementato`, born on demand from the page build. State is verified on disk at every session
+start (§11).
 
 ## 2. Theme structure
 
@@ -316,6 +328,11 @@ kit, or that differs (hover vs click), is a bug of the build, not an accepted di
 target of the SCSS, and `fse-build` compares the wrapper and the siblings of `__el`, never its
 content.
 
+**No feasibility constraint** kit → render: `render.php` prints any HTML, so the kit is designed
+for the user, not for the implementation. What remains is anatomy, not feasibility: one root
+`<section>` per block (one block = one section), no inline `<script>`/`<style>` (JS in `view.js`,
+CSS in `style.scss`); Formidable is the only parity exception (above).
+
 Verification of a kit: `npm run dev` → `https://localhost:8848/html/` (browser-sync lists the
 compiled pages); never open `html/*.html` from `file://` — the `type="module"` view.js are
 blocked by CORS and the carousels do not start.
@@ -498,7 +515,7 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
   kit `<nav aria-label>`); the drawer accordion script sets `aria-expanded` and `aria-controls`
   on each toggle (core keeps them static inside the overlay); a hero carousel prints the h1 on its
   first slide when the page title is off, h2 from the second slide on.
-- h1 debt to remember (Phase 4 M5): a page whose client turned "Mostra il titolo" off and whose
+- h1 debt to remember: a page whose client turned "Mostra il titolo" off and whose
   content has no hero has no h1 — say so when relevant.
 
 ## 8. WP-CLI recipes (the write path of `fse-build` and `fse-menu-build`)
@@ -578,12 +595,15 @@ Per block (editor → frontend):
 Per page: created via WP-CLI → opens in the editor with 0 invalid / 0 `core/missing` blocks,
 not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h1.
 
-## 10. Session hygiene
+## 10. Session hygiene and the decision charter
 
 - Start: `DESIGN.md` (guard, Project Config, state tables, `## Domande aperte`), then verify the
   state on disk/WP (§11) and report discrepancies before acting.
-- One ⏳ line in `DESIGN.md → ## Domande aperte` while a multi-step build is in progress
-  (`⏳ pagina {Titolo} in costruzione: {M}/{N} blocchi (dal YYYY-MM-DD)`), removed when done.
+- One ⏳ line in `DESIGN.md → ## Domande aperte` while something waits: a kit at its gate
+  (`⏳ kit {item} in revisione (dal YYYY-MM-DD)`), a site build in progress
+  (`⏳ build sito: pagina {Titolo} {M}/{N} (dal YYYY-MM-DD)`); removed when the gate closes or
+  the run ends.
+  Statuses alone cannot express "waiting".
 - Credentials: username from DESIGN.md, password from the prompt, never persisted or echoed.
 - Never take over a post locked by another user; close the tab at the end.
 - `debug.log` empty at the end of every session (`WP_DEBUG_LOG` on); `npm run build` exit 0.
@@ -594,10 +614,21 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   `npm run build` removes them, so `npm run build` → `npm run check` passes with the watch on.
 - Git is the dev's (Sourcetree): **never** a git command, not even read-only.
 - 2 spaces, no tabs, in every file; never overwrite an existing file — read and complete it.
-- Every question the agent feels like asking during a build is a gap of the kit/README: report
-  it at the end, do not ask — except for the stop conditions of the skill. These gaps (report +
-  `## Domande aperte`) are the expected product of the build; anything else still open at the
-  end becomes one question with a proposal, not a list.
+
+### The decision charter
+
+Three classes, valid in every skill. Between gates (§1) the agent does not ask: it classifies
+and goes on.
+
+| Class | What | How it is traced |
+|---|---|---|
+| **Decide and log** | texts in the brief's tone (rewriting notes, titles, microcopy, alt texts, menu labels); layout inside the system (which block and variant, order of the map's sections, columns, `headingLevel`, backgrounds from the palette); ids and anchors; slugs from titles; images chosen among the provided ones; **verifiable numbers** from the code or the DB (counts, versions, repo dates); links to pages and anchors of the map; README contracts of new blocks and variants; attributes and defaults; configuration of approved plugins | where it lives (kit, README, `DESIGN.md`); **one** `## Log decisioni` row per deliverable with the non-obvious choices and why |
+| **Default + `[da confermare]`** | facts about the client the brief lacks (phone, address, hours, prices, names, VAT id); numbers and claims that cannot be verified; external URLs not in the brief; legal and policy texts; missing images; points where the brief contradicts itself; a font without files | text: `[da confermare]` inline, worded as the question itself ("[da confermare] telefono dello studio"); non-text value: a plausible default plus an adjacent comment `<!-- attr "value" [da confermare]: why -->` (a placeholder inside `href`, `src` or a number is a broken value); all collected in the **review table** of the gate with the chosen default; after the gate only what the dev left open stays in `## Domande aperte` |
+| **Stop** | guard; the deliverable's input is missing (empty brief, missing kit, block without README); deletions (pages, blocks, menu items, `wp_navigation`) → the diff is shown and applied only with an ok in a **later turn**; rename or removal of implemented attributes; post locked by another user; request outside the skill | the turn ends with the diff or **one** question with a proposal |
+
+"Niente da confermare" is a normal outcome, said in one line. A dev's remark at a gate is their
+decision: applied and logged as "richiesta del dev", not discussed. Anything still open at the
+end of a session becomes one question with a proposal, not a list.
 - A dev request that contradicts the spec or these foundations wins (a feature "as in
   wdm-starter" is replicated, not redesigned): implement it, then update foundations/skills and
   the spec in the same session and log it.
@@ -635,6 +666,26 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
 ## Design Tokens
 <!-- AUTO-GENERATED:design-tokens da theme.json … --> (sync-theme-json-tokens.js — never by hand)
 
+## Brief
+Stato: bozza | approvato YYYY-MM-DD · Fonte: `docs/brief/` (N file letti, M non letti: …)
+
+### Mappa
+| Pagina | URL | Menu | Contenuto | Fonti |
+|---|---|---|---|---|
+| Home | / | principale, footer Pagine | claim, 3 servizi, cta contatti | brief/home.md, brief/azienda.pdf |
+
+### Tono
+Lingua, persona (tu/voi/lei), registro, lessico da usare e da evitare, 3 esempi di frase.
+
+### Plugin
+| Esigenza | Plugin | Decisione |
+|---|---|---|
+| form di contatto | Formidable Forms | fisso (famiglia FSE) |
+
+### Immagini
+| File (`assets/img/`) | Uso | Origine | Nota |
+|---|---|---|---|
+
 ## Telaio
 | Item | Stato | Kit | Note |
 |---|---|---|---|
@@ -664,7 +715,8 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
 ```
 
 States: Telaio `da progettare` → `kit` → `implementato`; Pagine `da progettare` → `kit` →
-`implementata`; Blocchi `kit` → `implementato` (variants listed; a block is `kit` as soon as
+`implementata`, and `da eliminare` for a page the map dropped (`fse-kit` on the dev's request, or
+the dev by hand; row and kit stay until `fse-build` deletes the page with `confirm`); Blocchi `kit` → `implementato` (variants listed; a block is `kit` as soon as
 its first kit + README exist, `implementato` when `blocks/{prefix}-block-{slug}/build/index.asset.php`
 exists — not `build/style-index.css` alone, which a kit-phase block already has).
 
@@ -675,8 +727,12 @@ it** (a file's existence says nothing about whether the dev approved it) — wit
   only promotion: the editor script is unambiguous evidence of a built block; a kit-phase
   block has only `build/style-index.css`); an `implementato` block without it → back to `kit`;
   a row without `README.md` + `kit/` → flag.
-- Pagine: row `kit`/`implementata` but `src/kit/{prefix}-{page}.kit` missing → back to
-  `da progettare`; row `implementata` but the page is absent in WP (`{wp-cli} post list
+- Brief: `## Brief` missing (wdm-theme itself, projects started before the brief existed) →
+  **flag only** ("brief assente: tono e mappa da DESIGN.md e dai kit esistenti"), never a stop;
+  `Stato: approvato` is written only by `fse-brief` at the dev's ok.
+- Pagine: row `da eliminare` whose page is absent in WP **and** whose kit file is gone → the row
+  is removed (the only case where the disk closes a row); row `kit`/`implementata` but
+  `src/kit/{prefix}-{page}.kit` missing → back to `da progettare`; row `implementata` but the page is absent in WP (`{wp-cli} post list
   --post_type=page --name=<slug>`) → back to `kit`; a page present in WP while the row says
   `da progettare`/`kit` (e.g. the empty Home created by `fse-theme-setup`) → **flag only**
   ("esiste in WP, contenuto da confrontare col kit"): `implementata` means `fse-build` 2g passed
@@ -688,7 +744,8 @@ it** (a file's existence says nothing about whether the dev approved it) — wit
   `"ref":<id>` (`grep -n '"ref":' parts/*.html`); otherwise → flag ("menu da riallineare:
   fse-menu-build"). The row is written by `fse-menu-build` Step 5, never promoted or demoted.
 Every demotion/flag is reported in the opening line of the run. `## Design Tokens` is owned by
-the sync script; `## Project Config` by `fse-theme-setup` (created once, then only verified).
+the sync script; `## Project Config` by `fse-theme-setup` (created once, then only verified);
+`## Brief` by `fse-brief`.
 
 ## 12. Hooks (plugin `wdm-agent`, `hooks/hooks.json`, PostToolUse on Write|Edit)
 

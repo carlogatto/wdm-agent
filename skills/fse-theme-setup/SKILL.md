@@ -279,7 +279,8 @@ Parti)".
 ### Step 5a — DESIGN.md and CLAUDE.md `[AGENT]`
 - `## Telaio`: header, footer, templates, form di default `implementato` (inherited from the starter; the project
   kit will redesign them with `fse-kit`).
-- `## Pagine`: Home `/` `da progettare` (the WP page exists, empty; its kit is the project's);
+- `## Pagine`: Home `/` `da progettare` (the WP page exists, empty; its kit is the project's;
+  `fse-brief` rewrites these rows from the map);
   Catalogo blocchi `/catalogo-blocchi/` `kit` (`src/kit/{prefix}-blocks.kit`, every variant of the
   shipped blocks: the regression page, built by the first `fse-build`). The starter's demo page
   kits (`{prefix}-servizi.kit`, `{prefix}-contatti.kit`) get no row; wdm-theme's "fuori dal
@@ -299,7 +300,7 @@ Parti)".
 
 Remind the dev: `style.css` header (Theme Name/Description/Author), `screenshot.png`,
 `assets/img/` placeholders, `SETUP.md` can be deleted once the repo is created. Next session:
-`fse-kit` (telaio and pages of the project).
+`fse-brief` (the designer deposits the brief in `{site-root}/docs/brief/`), then `fse-kit`.
 
 ## What is NOT automated
 MAMP host and DB (GUI) · git (Sourcetree) · the dev's browser check · password changes.

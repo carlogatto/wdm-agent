@@ -1,8 +1,8 @@
 # wdm-agent
 
-Plugin di Claude Code con il sistema agentico di **wdm-theme**: le skill che progettano e
-costruiscono un block theme WordPress (FSE) a blocchi nativi dinamici, le loro convenzioni, gli
-hook di controllo e lo script dei design token.
+Plugin di Claude Code con il sistema agentico di **wdm-theme**: le skill che, dal brief del
+designer, progettano e costruiscono un block theme WordPress (FSE) a blocchi nativi dinamici, le
+loro convenzioni, gli hook di controllo e lo script dei design token.
 
 ## Cos'è
 
@@ -17,14 +17,34 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 | Skill | Quando parte |
 |---|---|
 | `fse-theme-setup` | nuovo progetto cliente dal repo wdm-theme ("nuovo progetto da wdm-theme") |
-| `fse-kit` | progettazione in HTML di telaio, pagine e blocchi, in dialogo con il dev ("progettiamo il kit…") |
-| `fse-build` | costruzione autonoma in WordPress del prossimo item pronto: telaio, poi una pagina per sessione ("costruisci la pagina X") |
+| `fse-brief` | il brief del designer in `docs/brief/` diventa il contratto del sito: mappa, token applicati, tono, plugin, immagini, per una review ("leggi il brief") |
+| `fse-kit` | progettazione in HTML del telaio o di una pagina completa con i suoi blocchi, un item per sessione, una review alla fine ("progettiamo il kit…") |
+| `fse-build` | build del sito in WordPress da tutti i kit approvati, rieseguibile (applica solo la differenza kit ↔ WP), menu inclusi, una review finale ("costruisci il sito") |
 | `fse-block-edit` | modifica di un blocco già implementato ("aggiungi una variante a X") |
 | `fse-menu-build` | creazione e riallineamento dei menu `wp_navigation` dal kit ("popola il menu") |
 
 - `shared/fse-foundations.md`: le convenzioni, citate per § da ogni skill e dal `CLAUDE.md` dei progetti.
 - `shared/scripts/sync-theme-json-tokens.js`: genera la sezione Design Tokens di `DESIGN.md` e `assets/css/wp-global-styles.css` da `theme.json`.
+- `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff e cancellano solo dopo una conferma in un turno successivo.
 - `hooks/`: `check-block-contract.sh` (a ogni scrittura di un `block.json`: nome, cartella, `render`, sorgenti, README, versione) e `check-design-tokens.sh` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma al dev prima di rigenerare).
+
+## Il flusso
+
+Il designer giudica quattro deliverable finiti; fra un gate e l'altro l'agente decide da solo
+(testi, layout nel sistema, id, numeri verificabili) e marca `[da confermare]` i fatti sul cliente
+che non può decidere (telefono, prezzi, testi legali, immagini mancanti), con un default plausibile.
+
+| Gate | Cosa guarda il designer | Skill |
+|---|---|---|
+| 1 — brief | mappa del sito, tono, plugin, immagini in `DESIGN.md`; i blocchi esistenti nel brand nuovo su `localhost:8848` | `fse-brief` |
+| 2 — telaio | header, footer e form di default in HTML su `localhost:8848` | `fse-kit` |
+| 3 — kit di pagina (uno per pagina) | la pagina completa con i testi veri su `localhost:8848` | `fse-kit` |
+| 4 — sito costruito | le pagine e i menu in WordPress, con il report | `fse-build` |
+
+A ogni gate le osservazioni tornano all'agente come revisioni; il gate si chiude con un ok
+esplicito in un turno successivo, che la skill registra in `DESIGN.md`. La build è rieseguibile:
+dopo ogni kit approvato si rilancia e applica solo la differenza; una cancellazione (blocco,
+pagina, voce di menu) viene mostrata e si esegue solo dopo l'ok.
 
 ## Prerequisiti
 
@@ -63,7 +83,7 @@ claude plugin update wdm-agent@wdm-agent
 Apri una sessione di Claude Code nella cartella di un progetto wdm-theme (quella con `DESIGN.md`
 e `CLAUDE.md`; se non ne hai ancora uno, il tema base `wdm-theme` che ricevi con il corso va
 bene, e un progetto nuovo lo crea `fse-theme-setup`). Le skill compaiono nell'elenco come `wdm-agent:fse-theme-setup`,
-`wdm-agent:fse-kit`, `wdm-agent:fse-build`, `wdm-agent:fse-block-edit`,
+`wdm-agent:fse-brief`, `wdm-agent:fse-kit`, `wdm-agent:fse-build`, `wdm-agent:fse-block-edit`,
 `wdm-agent:fse-menu-build`. Scrivi `/wdm-agent:fse-kit`: la skill legge `DESIGN.md` e applica
 la guardia `theme_family` (fse-foundations §0) prima di ogni altra cosa.
 

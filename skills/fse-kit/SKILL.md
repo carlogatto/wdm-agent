@@ -1,18 +1,18 @@
 ---
 name: fse-kit
-description: Use when designing in HTML, together with the dev, the telaio (header/footer), a page or a block with all its variants for a wdm-theme FSE project — "progettiamo il kit della pagina X", "disegna il blocco Y", "kit dell'header", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. This is the dialogic design phase (kit + README contract + SCSS); WordPress code is written later by `fse-build`.
+description: Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with its blocks and variants for a wdm-theme FSE project — "progettiamo il kit della pagina X", "disegna il blocco Y", "kit del telaio", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. One item per session, one review at the end (kit + README contract + SCSS); WordPress code is written later by `fse-build`.
 ---
 
-# FSE Kit — design in HTML: telaio, pages, blocks (dialogic phase)
+# FSE Kit — design in HTML: telaio, pages, blocks (one item, one review)
 
 **MANDATORY first steps, in order:**
-1. Read `${CLAUDE_PLUGIN_ROOT}/shared/fse-foundations.md` — §0 (guard), §1 (phases), §2
+1. Read `${CLAUDE_PLUGIN_ROOT}/shared/fse-foundations.md` — §0 (guard), §1 (gates), §2
    (structure), §3 (README contract, content pattern → attribute), §4 (kit = render.php),
-   §5 (CSS/JS), §10, §11 (DESIGN.md).
+   §5 (CSS/JS), §10 (hygiene and the decision charter), §11 (DESIGN.md).
 2. Read `DESIGN.md → ## Project Config` and apply the guard of Step 0 **before any other file**
    (`theme_family` row: `fse` → go on; any other value **or row missing** → stop).
-3. Read the project `CLAUDE.md` and the rest of `DESIGN.md` (`## Telaio`, `## Pagine`,
-   `## Blocchi`, `## Domande aperte`).
+3. Read the project `CLAUDE.md` and the rest of `DESIGN.md` (`## Brief` if present: map, tone,
+   plugins, images; `## Telaio`, `## Pagine`, `## Blocchi`, `## Domande aperte`).
 4. For a block that already exists: its `README.md`, `kit/*.kit`, `src/style.scss`.
 
 All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
@@ -21,63 +21,75 @@ All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 
 `DESIGN.md → Project Config → theme_family` must be `fse` (fse-foundations §0); any other value
 **or row missing** (wdm-starter projects predate it) → STOP with the §0 message (wdm-starter
-project: `design-*`/`dev-*` skills). Nothing else is read after the stop. Then verify the state tables against the disk
-(§11) and report discrepancies in the opening line. Set the item's row (Telaio/Pagine only: a
-Blocchi row is born `kit` at 3g, §11) to `da progettare` → work in progress is visible through
-the row itself; no ⏳ line is needed in this phase.
+project: `design-*`/`dev-*` skills). Nothing else is read after the stop. Then verify the state
+tables against the disk (§11) and report discrepancies in the opening line; `## Brief` missing →
+flag "brief assente: tono e mappa da DESIGN.md e dai kit esistenti" (never a stop). The item's
+row (Telaio/Pagine only: a Blocchi row is born `kit` at 3g, §11) stays `da progettare` until the
+dev's ok (Review, below).
 
 ## Principle
 
-This is the **only phase where asking is the job**: the dev designs, the agent proposes markup,
-CSS and the block contract, and iterates in the browser (`npm run dev` →
-`https://localhost:8848/html/`, never `file://`). Everything decided here is written down in
-the kit files and the README so that `fse-build` runs **without questions**: an attribute, a
-variant or a text that is not in the kit/README does not exist for the build. Kit markup = the
-future `render.php` (§4), classes BEM, tokens from theme.json, no WordPress code.
+**The kit is the real design, made by the agent.** It is designed inside the system (telaio,
+existing blocks, tokens of theme.json) and inside the brief (map, tone, sources, images); the
+block README is the contract `fse-build` will read without questions. One item per session —
+the telaio, or one complete page with every block and variant it needs — and **one review at
+the end** (gate 2 or 3 of fse-foundations §1). Decisions follow the charter (§10): texts, layout
+in the system, ids, verifiable numbers are decided and logged; facts about the client, external
+URLs, legal texts, missing images get a default plus `[da confermare]`; nothing is asked
+mid-way. Kit markup = the future `render.php` (§4), BEM classes, tokens from theme.json, no
+WordPress code. No feasibility constraint on the design: `render.php` prints any HTML; what
+remains is anatomy — one root `<section>` per block, no inline `<script>`/`<style>` (JS in
+`view.js`, CSS in `style.scss`), Formidable the only parity exception.
 
 ## Step 1 — Which item
 
 | The dev says | Item | Output |
 |---|---|---|
-| header, footer, menu, template, "telaio" | **Telaio** | `src/kit/main/header|footer/**`, `src/scss/_telaio.scss`, `src/kit/svg-vault` |
+| header, footer, menu, template, "telaio" | **Telaio** | `src/kit/main/header|footer|form/**`, `src/scss/_telaio.scss`, `src/kit/svg-vault` |
 | "pagina X", "home", "la pagina servizi" | **Page** | `src/kit/{prefix}-{page}.kit` (+ new blocks inline) |
 | "blocco Y", "variante Z di Y", "una sezione che…" | **Block** | `blocks/{prefix}-block-{slug}/README.md`, `kit/`, `src/style.scss` (+ `src/view.js`) |
 
-A page that needs a block that does not exist → the block is designed inside the same session
-(Step 3) before the page kit imports it. A new variant of an implemented block → Step 3 (README
-row + kit + CSS); the editor side is `fse-block-edit`'s, run by `fse-build` when the page needs it.
+No item named → the telaio if its rows are `da progettare`, else the first page `da progettare`
+in the order of `## Brief → Mappa` (or of `## Pagine`). A page that needs a block that does not
+exist → the block is designed inside the same session (Step 3) before the page kit imports it. A
+new variant of an implemented block → Step 3 (README row + kit + CSS); the editor side is
+`fse-block-edit`'s, run by `fse-build` when the page needs it. A page the dev removes from the
+map → its row goes `da eliminare` (kit and row stay until `fse-build` deletes it with `confirm`).
 
 ## Step 2 — Telaio
 
 1. `src/kit/main/header/header-parts/_header-content.kit` and
    `src/kit/main/footer/footer-parts/_footer-content.kit`: logo (text or `<img>`), `<nav
-   aria-label="Menu principale"><ul>` with the real page labels (one `<li><a>` per item, nested
-   `<ul>` for submenus — `fse-menu-build` reads exactly this), social `<ul>` with svg-vault
-   icons, footer columns (`{prefix}-footer__col`: description, contacts, menu + social),
+   aria-label="Menu principale"><ul>` with the real page labels of the map (one `<li><a>` per
+   item, nested `<ul>` for submenus — `fse-menu-build` reads exactly this), social `<ul>` with
+   svg-vault icons, footer columns (`{prefix}-footer__col`: description, contacts, menu + social),
    `{prefix}-footer__bottom`.
 2. Keep the **BEM classes** (`{prefix}-header`, `__inner|__logo|__nav|__social`,
    `{prefix}-footer`, `__inner|__columns|__col|__nav|__social|__bottom`, `{prefix}-main`): they
    are the `className` the parts give to the core blocks — the only bridge between kit and WP.
    New element → new BEM class, to be added to the part by the build.
-3. `src/scss/_telaio.scss`: the shared CSS (sticky header with
+3. `src/scss/_telaio.scss`: the shared CSS (fixed header with
    `--wp--custom--header-height--*`, nav, footer grid `repeat(auto-fill, minmax(min(16rem,
    100%), 1fr))`, gaps), knowing that the inner markup in WP is core's (`.wp-block-navigation`,
    `.wp-block-site-logo`, `.wp-block-social-links`): style the BEM wrappers, override core
    classes only where needed. Overlay threshold = `xl` (fse-foundations §7: isolated override of core's 600px; the kit drawer runs on the kit-only script of `_js-shared.kit` and shares the CSS with WP through the `drawer-panel` mixin).
-4. Site data (address, phone, social URLs, form IDs) are **content** of the parts/patterns: put
-   the real ones in the kit, the build copies them.
+4. Site data (address, phone, social URLs, form IDs) are **content** of the parts/patterns: the
+   real ones from the brief go in the kit, the build copies them; missing ones → `[da
+   confermare]` (text) or default + comment (URL), charter §10.
    Behaviours are kit-first too (fse-foundations §4): dropdown trigger, drawer, accordion,
    scrolled header live in the kit (theme JS in `main.js`, or kit-only scripts in
    `_js-shared.kit` for what core will do in WP) and `fse-build` reproduces them with the same
    trigger and classes; never leave an interaction "to be seen in WP".
-5. `npm run dev` → check at 1440/768/390: no horizontal overflow, header heights from the tokens.
-6. `DESIGN.md → Telaio`: `kit`. Differences expected between kit and WP (core markup) are not a
-   problem: the theme README lists them.
+5. `npm run dev` → check at 1440/768/390 with Playwright (fse-foundations §9): no horizontal
+   overflow, header heights from the tokens, drawer and dropdown working; screenshots
+   `.playwright-mcp/shots/kit-telaio-{w}.png`.
+6. Review (below). Differences expected between kit and WP (core markup) are not a problem: the
+   theme README lists them.
 
 ## Step 3 — Block (new, or new variant)
 
 **3a. Contract first** — write/update `blocks/{prefix}-block-{slug}/README.md` (fse-foundations
-§3 "README") and agree it with the dev before any HTML:
+§3 "README") before any HTML; it is part of the deliverable the dev reviews with the page:
 - `## Scopo` (one paragraph), `## Varianti` (every visual/functional variant: attributes,
   modifier class, children, kit file), `## Attributi` (name camelCase, type, control, default,
   note — chosen with the "content pattern → attribute + control" table: text → RichText, image →
@@ -122,7 +134,8 @@ var(--wp--preset--spacing--section-lg) }</style>`.
 
 **3f. Check** — `npm run dev`, `/html/{prefix}-blocks.html` at 1440/768/390 (Playwright on
 `https://localhost:8848`: context with `ignoreHTTPSErrors: true`, fse-foundations §9): no overflow,
-tokens applied, carousel initialised; iterate with the dev.
+tokens applied, carousel initialised; fix and re-check until clean; screenshots
+`.playwright-mcp/shots/kit-{slug}-{w}.png`.
 
 **3g. State** — `DESIGN.md → Blocchi`: row `{prefix}/{slug}` `kit`, variants, children, origin
 page; a new variant of an implemented block stays `implementato` with the new variant marked
@@ -130,8 +143,8 @@ page; a new variant of an implemented block stays `implementato` with the new va
 
 ## Step 4 — Page
 
-1. `DESIGN.md → Pagine`: row with title, URL (parent included: `/servizi/fisioterapia`),
-   `da progettare` → `kit` at the end.
+1. `DESIGN.md → Pagine`: row with title, URL (parent included: `/servizi/fisioterapia`), from
+   the map; `da progettare` until the review's ok.
 2. `src/kit/{prefix}-{page}.kit`:
    ```html
    <!-- $title = Titolo pagina -->
@@ -149,12 +162,16 @@ page; a new variant of an implemented block stays `implementato` with the new va
    iteration) or the **inlined markup of that variant with the real content** (copy of the kit
    file, texts/links/images replaced — structure and classes untouched). The compiled
    `html/{prefix}-{page}.html` is what `fse-build` reads: an instance's variant comes from its
-   modifier class, its attribute values from the BEM elements. Texts real where known, otherwise
-   `[da confermare]` placeholders (kept verbatim by the build and reported). A provisional value
-   that is not text (a URL) gets a plausible value plus an adjacent comment `<!-- buttonUrl
-   "/contatti/" [da confermare]: … -->` (a placeholder inside `href` is a broken link). Derived
-   content (`cards-carousel` query, `card`): the kit inlines the real titles of the posts the
-   query returns today (text parity); the build reads only the section's attributes, links `#`.
+   modifier class, its attribute values from the BEM elements. **Texts**: from the brief verbatim
+   when the brief gives them (spelling corrected), written by the agent in the brief's tone when
+   it gives notes, `[da confermare]` worded as the question for the facts the brief lacks (charter
+   §10). `[da confermare]` never inside an `href`, a `src` or a number: a plausible value plus an
+   adjacent comment `<!-- buttonUrl "/contatti/" [da confermare]: … -->` (a placeholder inside
+   `href` is a broken link). Images from `assets/img/` (the brief's, listed in `## Brief →
+   Immagini`); missing → placeholder + `[da confermare]`. Without a brief: texts by the agent in
+   the tone the existing kits already use. Derived content (`cards-carousel` query, `card`): the
+   kit inlines the real titles of the posts the query returns today (text parity); the build
+   reads only the section's attributes, links `#`.
 3. A page that opens with a hero variant image has its h1 there (the build sets
    `{prefix}_show_title 0`); a page without a hero keeps the template title (meta default 1).
    The default form part (`main/form/_form-contacts.kit`, fse-foundations §7) is shown on every
@@ -163,22 +180,42 @@ page; a new variant of an implemented block stays `implementato` with the new va
    after `</main>` unless its content has a `{prefix}/form`.
 4. Blocks used by the page that do not exist → Step 3 first; blocks that exist but need a new
    variant → Step 3 (variant).
-5. `npm run dev` → `/html/{prefix}-{page}.html` at 1440/768/390.
-6. `DESIGN.md → Pagine`: `kit` + ordered block list (`hero (image), image-text (right), cta`);
-   `## Blocchi`: new rows `kit` with origin = this page.
+5. `npm run dev` → `/html/{prefix}-{page}.html` at 1440/768/390 with Playwright; fix until clean;
+   screenshots `.playwright-mcp/shots/kit-{page}-{w}.png`.
+6. `DESIGN.md → Pagine`: ordered block list (`hero (image), image-text (right), cta`) in the
+   row, state still `da progettare`; `## Blocchi`: new rows `kit` with origin = this page.
+   Then the Review.
+
+## Review (the gate)
+
+The last message of the session hands over the item (gate 2 for the telaio, gate 3 for a page):
+URL on `https://localhost:8848/html/…`, the screenshots, the blocks and variants created with
+their README contract, the decisions taken (one `## Log decisioni` row with the non-obvious ones
+and why), the **table of `[da confermare]`** with the default chosen for each ("Niente da
+confermare" when empty). `DESIGN.md → ## Domande aperte` gets `⏳ kit {item} in revisione (dal
+YYYY-MM-DD)`; the row stays `da progettare`. Then the turn ends.
+
+Later turns: the dev's remarks are their decisions — apply them (same files), log them as
+"richiesta del dev", hand over again. The dev's explicit ok → row `kit` (Telaio: `kit`;
+Blocchi rows were born `kit` at 3g), ⏳ removed, log row "kit {item} approvato". A revision the
+dev asks after the site build (gate 4) follows the same steps without a new gate: the row stays
+`kit`, `fse-build` re-applies the difference at its next run.
 
 ## Never
 
 Write `block.json`, `render.php`, `edit.js`, `index.js`, `editor.scss` (build phase) · touch WP
-(no WP-CLI writes, no editor) · hardcode colours/sizes instead of tokens · a kit whose markup
-could not be produced by a `render.php` (one root `<section>`, no scripts, no `<style>`) ·
-Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · git commands.
+(no WP-CLI writes, no editor) · hardcode colours/sizes instead of tokens · a kit with more than
+one root `<section>` per block, or with inline `<script>`/`<style>` · Bootstrap/utility classes
+· `@use 'swiper/swiper'` in a block (shared handle) · ask mid-way what the charter decides or
+marks `[da confermare]` · invent a fact about the client · mark a row `kit` before the dev's ok ·
+git commands.
 
 ## Completion checklist (per item)
 
-- [ ] Guard passed, state on disk verified, row updated
-- [ ] Block: README contract agreed (variants, attributes with control and default, children, markup, insertion markup) BEFORE the kit
+- [ ] Guard passed, state on disk verified, brief read (or "brief assente" flagged)
+- [ ] Block: README contract written (variants, attributes with control and default, children, markup, insertion markup) BEFORE the kit
 - [ ] Kit per variant with parity markup; `src/style.scss` with tokens and `__inner`; `view.js` only if needed
 - [ ] `_css-shared.kit` (+ `_js-shared.kit`) and `{prefix}-blocks.kit` updated
-- [ ] Page kit with real content inlined (or `@import` placeholders, declared), checked at 3 widths via browser-sync
-- [ ] `DESIGN.md` rows `kit`, open questions written, nothing left in chat only
+- [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots
+- [ ] Review delivered: URL, screenshots, contracts, decisions, `[da confermare]` table; ⏳ `kit {item} in revisione` written; row still `da progettare`
+- [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row

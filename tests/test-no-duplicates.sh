@@ -7,7 +7,7 @@ fail() { echo "FAIL $name: $1"; exit 1; }
 C="$HOME/.claude"
 
 if [ -d "$C/skills" ]; then
-  for s in fse-theme-setup fse-kit fse-build fse-block-edit fse-menu-build; do
+  for s in fse-theme-setup fse-brief fse-kit fse-build fse-block-edit fse-menu-build; do
     [ ! -e "$C/skills/$s" ] || fail "doppione: $C/skills/$s esiste ancora"
   done
   [ ! -e "$C/skills/_shared/fse-foundations.md" ] || fail "doppione: _shared/fse-foundations.md"

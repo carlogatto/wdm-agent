@@ -65,8 +65,9 @@ wdm-agent/
   README.md                       per lo studente: cos'è, requisiti, install, update, verifica, disinstallazione
   skills/
     fse-theme-setup/  SKILL.md  scripts/setup.sh
+    fse-brief/        SKILL.md                      (1.3.0)
     fse-kit/          SKILL.md
-    fse-build/        SKILL.md
+    fse-build/        SKILL.md  scripts/wp-page.php (1.3.0)
     fse-block-edit/   SKILL.md
     fse-menu-build/   SKILL.md  scripts/wp-navigation.php
   shared/
@@ -225,3 +226,9 @@ fallisce su un Mac senza credenziali git non interattive (Claude Code scarica in
 chiederle; Sourcetree tiene le sue), cioè sul Mac di quasi ogni studente. Pubblico = leggibile da
 tutti, scrivibile solo da Carlo; il valore del pacchetto resta nel tema e nel corso. Criterio 5
 verificato: installazione da `carlogatto/wdm-agent` riuscita, contenuto identico al checkout.
+
+**Aggiornamento 2026-10-30 (1.3.0).** Flusso a quattro gate (brief, telaio, kit di pagina, sito
+costruito): skill `fse-brief` nuova, `fse-kit` un item per sessione con una review, `fse-build`
+build del sito rieseguibile con `skills/fse-build/scripts/wp-page.php`, carta delle decisioni in
+fondamenta §10. Spec in `docs/2026-10-30-wdm-agent-flusso-autonomo.md`, piano in
+`docs/2026-10-30-wdm-agent-flusso-autonomo-plan.md`.

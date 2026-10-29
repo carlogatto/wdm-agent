@@ -17,11 +17,13 @@ for s in \
   'brew install jq' \
   'bash tests/run.sh' \
   'claude plugin list' \
+  'wdm-agent:fse-brief' \
+  'wp-page.php' \
   'claude plugin uninstall wdm-agent@wdm-agent && claude plugin install wdm-agent@wdm-agent'; do
   grep -qF -- "$s" "$R" || fail "manca la stringa: $s"
 done
 
-for h in "Cos'è" "Cosa contiene" "Prerequisiti" "Installazione" "Aggiornamento" "Verifica dell'installazione" "Disinstallazione" "Sviluppo" "Come sono scritti i percorsi" "Storia"; do
+for h in "Cos'è" "Cosa contiene" "Il flusso" "Prerequisiti" "Installazione" "Aggiornamento" "Verifica dell'installazione" "Disinstallazione" "Sviluppo" "Come sono scritti i percorsi" "Storia"; do
   grep -qF -- "## $h" "$R" || fail "manca la sezione: ## $h"
 done
 
