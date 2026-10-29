@@ -180,11 +180,16 @@ escaping `esc_html` / `esc_attr` / `esc_url` / `wp_kses_post` (RichText values);
 `{prefix}_render_image( $image_id, 'thumb-700x450', [ 'class' => …, 'fallback_url' => $image_url ] )`
 (alt read from the media library, never forced; `loading`/`decoding`/`sizes`/`fetchpriority`
 handled there); buttons via `{prefix}_render_button( $text, $url, [ 'new_tab' => …, 'inverted' => … ] )`
-(the only markup of a button, with the screen-reader note for new tabs); both in
-`library/blocks-helpers.php`; **`is_post_type_viewable()`** before any query or lookup on a post
-type coming from an attribute, `post_status => publish` explicit; a block that renders
-another block (cards-carousel → card in `source: query`) calls `render_block()` on a parsed block
-array, never `require_once` of a file of another block: one wrapper, one markup.
+(the only markup of a button, with the screen-reader note for new tabs); `{prefix}_claim_page_h1()`
+(the first hero rendered in the request takes the `h1` when the page title is off, every other
+title is `h2`: a block whose title can open the page calls it once); decorative images (the hero
+background) via `{prefix}_render_image( …, [ 'decorative' => true ] )` → `alt=""` +
+`role="presentation"`, the meaning stays in the title; all three in `library/blocks-helpers.php`;
+**`is_post_type_viewable()`** before any query or lookup on a post type coming from an attribute,
+`post_status => publish` explicit; a parent renders its children itself — `render_block()` on the
+parsed block array (cards-carousel → card), or `new WP_Block( $parsed, $context )` when each child
+needs an index or a context of its own (hero → hero-slide) — never `require_once` of a file of
+another block: one wrapper, one markup.
 
 ### index.js / edit.js
 ```js
@@ -237,11 +242,13 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
 | image | `imageId` int, `imageUrl` str, `imageAlt` str | `ImageControl` (shared) | `{prefix}_render_image()` → fallback `imageUrl` |
 | heading level of the section title | `headingLevel` int (2–3, default 2) | `ToggleGroupControl` H2/H3 | `<h2>`/`<h3>` |
 | button / link | `buttonText`, `buttonUrl`, `buttonNewTab` | `LinkButton` (shared) | `{prefix}_render_button()`; omitted if text or URL empty |
+| text link (card, feature) | `linkText`, `linkUrl` | `LinkButton` (shared, no new tab) | `<a>`; omitted if text or URL empty |
 | choice among variants | `variant` string with `enum` | `SelectControl` in `InspectorControls` | class modifier `--{variant}` |
 | on/off | boolean | `ToggleControl` | class modifier |
 | number in a range | integer | `RangeControl` | `style="--{prefix}-x:N"` or `data-*` |
 | repeated element | child block `{prefix}/{child}` with `parent` | `InnerBlocks` (appender) | `$content` |
 | a content chosen by hand | `postType`, `postId` | `PostPicker` + `PostTypeSelect`, preview `ServerSideRender` | `is_post_type_viewable` + `get_post` |
+| card: from a post or by hand | `postType`, `postId` (> 0: post mode) / `postId` 0: `title`, `text`, image, `linkText`/`linkUrl` (manual mode) | `PostPicker` + button to unlink; manual fields inline | post mode: title, permalink, thumbnail, fixed link text; manual: attributes; no title or unpublished post → no output |
 | latest N of a post type | `postType`, `count` | `InspectorControls`, preview `ServerSideRender` | `WP_Query` `post_status publish`, `is_post_type_viewable` |
 | background / text colour, padding | — | `supports.color`, `supports.spacing` (presets only) | `get_block_wrapper_attributes()` |
 | anchor id (`id` on the section in the kit) | `anchor` in the insertion markup (no block.json attribute) | `supports.anchor` | wrapper attributes |
@@ -250,9 +257,10 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
 **Shared attribute vocabulary.** The same idea has the same name in every block, present or
 future, so a student learns one vocabulary: `variant` (layout/style variants, kebab-case values,
 CSS modifier `--{value}`, kit file `-{value}.kit`, README same word), `title`, `text`,
-`headingLevel`, `buttonText`/`buttonUrl`/`buttonNewTab`, `imageId`/`imageUrl`/`imageAlt`,
-`columns`, `source` (data source `manual|query`: a mode, not a layout variant), `postType`/`postId`,
-`count`. Booleans are for on/off options, never for a choice between two layouts. One-time
+`headingLevel`, `buttonText`/`buttonUrl`/`buttonNewTab`, `linkText`/`linkUrl` (a text link without
+new tab: card, feature), `imageId`/`imageUrl`/`imageAlt`, `columns`, `source` (data source
+`manual|query`: a mode, not a layout variant), `postType`/`postId` (`postId` > 0 content from the
+post, `0` manual mode with the block's own attributes), `count`. Booleans are for on/off options, never for a choice between two layouts. One-time
 exception recorded on 2026-10-26: `image-text` renamed `reverse` → `variant: image-left |
 image-right` while the theme was pre-1.0 and its only contents were local demos; from 1.0 on the
 rule "never rename or remove an attribute of an implemented block" is absolute.
