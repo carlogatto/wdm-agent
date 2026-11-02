@@ -403,13 +403,20 @@ Default **vanilla** (`<dialog>`, `<details>`, `IntersectionObserver`); **Interac
 (`@wordpress/interactivity`, `viewScriptModule`, `supports.interactivity`) when there is state
 to manage; **Swiper** for carousels, as the theme's shared script module **`{prefix}-swiper`**
 (`src/js/swiper.js` → `assets/js/swiper.js`, registered by `library/custom.php` with
-`wp_register_script_module`): a view.js writes `import Swiper, { A11y, Keyboard, Pagination }
-from '{prefix}-swiper'` and `build.js` keeps that import external (`EXTERNAL_MODULES`), so
-Swiper is downloaded once per page and only when a carousel is present. Never `from 'swiper'`
-in a block. No jQuery.
+`wp_register_script_module`): a view.js imports it **dynamically**, `const { default: Swiper, A11y,
+Keyboard, Pagination } = await import('{prefix}-swiper')`, inside an `IntersectionObserver`
+(`rootMargin: '100%'`: the import runs when the first carousel is less than one viewport away);
+`build.js` keeps that import external (`EXTERNAL_MODULES`) and writes the dependency as `'import'
+=> 'dynamic'` in `view.asset.php`, so WP puts the module in the import map **without a
+modulepreload**: Swiper (90 KB) is downloaded once per page, only when a carousel is present, and
+never before the first render (the first slide is already visible from the markup). A view module
+registered by hand in `blocks/blocks.php` (hero) declares the same dependency as
+`array( array( 'id' => '{prefix}-swiper', 'import' => 'dynamic' ) )`. Never `from 'swiper'` or a
+static `from '{prefix}-swiper'` in a block. No jQuery.
 
-`src/view.js` (ES module, frontend only): `document.querySelectorAll('.{prefix}-block-{slug}--carousel
-.swiper').forEach(el => new Swiper(el, {...}))`; `a11y` messages come from `render.php`
+`src/view.js` (ES module, frontend only): `const carousels = [...document.querySelectorAll('.{prefix}-block-{slug}--carousel
+.swiper')]`, an `init()` that awaits the import and does `carousels.forEach(el => new Swiper(el, {...}))`,
+the observer that calls it once; `a11y` messages come from `render.php`
 (`data-a11y-prev|next|first|last|bullet` on the `.swiper` wrapper, written with `esc_attr__()`),
 never as literal strings in the JS (the A11y module rewrites the aria-labels, so they must be
 the translated ones); `keyboard: { enabled: true, onlyInViewport: true }`; `slidesPerView` from a

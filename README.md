@@ -95,6 +95,13 @@ claude plugin marketplace update wdm-agent
 claude plugin update wdm-agent@wdm-agent
 ```
 
+**Lo fa l'agente, sempre.** Dopo ogni modifica al plugin, appena il dev dice di aver fatto il
+commit (git è suo, via Sourcetree), l'agente esegue i due comandi da sé e verifica la versione in
+`~/.claude/plugins/installed_plugins.json`; non li consegna mai al dev come passo da fare. Se la
+versione resta quella vecchia il commit non è ancora arrivato sul remoto: lo dice in una riga e
+riprova quando il dev conferma il push. Le skill nuove si caricano al riavvio di Claude Code (o
+con `/reload-plugins`): l'unica cosa che resta al dev.
+
 ## Verifica dell'installazione
 
 Apri una sessione di Claude Code nella cartella di un progetto wdm-theme (quella con `DESIGN.md`
