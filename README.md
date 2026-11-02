@@ -30,21 +30,32 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 
 ## Il flusso
 
-Il designer giudica quattro deliverable finiti; fra un gate e l'altro l'agente decide da solo
+Il designer giudica tre deliverable finiti; fra un gate e l'altro l'agente decide da solo
 (testi, layout nel sistema, id, numeri verificabili) e marca `[da confermare]` i fatti sul cliente
 che non può decidere (telefono, prezzi, testi legali, immagini mancanti), con un default plausibile.
+L'ok a un gate non chiude: l'agente prosegue nella stessa conversazione con il momento successivo
+(brief → kit del telaio; kit → build → kit della pagina seguente). Il designer decide tre cose
+sole, l'ok a un kit, i `confirm` delle cancellazioni e i fatti `[da confermare]`; la meccanica
+non passa mai dalla sua tastiera. I blocchi nascono dentro la pagina che li usa: una review per
+pagina, mai per blocco.
 
 | Gate | Cosa guarda il designer | Skill |
 |---|---|---|
 | 1 — brief | mappa del sito, tono, plugin, immagini in `DESIGN.md`; i blocchi esistenti nel brand nuovo su `localhost:8848` | `fse-brief` |
 | 2 — telaio | header, footer e form di default in HTML su `localhost:8848` | `fse-kit` |
-| 3 — kit di pagina (uno per pagina) | la pagina completa con i testi veri su `localhost:8848` | `fse-kit` |
-| 4 — sito costruito | le pagine e i menu in WordPress, con il report | `fse-build` |
+| 3 — kit di pagina (uno per pagina) | la pagina completa, con tutti i blocchi che le servono e i testi veri, su `localhost:8848` | `fse-kit` |
 
-A ogni gate le osservazioni tornano all'agente come revisioni; il gate si chiude con un ok
-esplicito in un turno successivo, che la skill registra in `DESIGN.md`. La build è rieseguibile:
-dopo ogni kit approvato si rilancia e applica solo la differenza; una cancellazione (blocco,
-pagina, voce di menu) viene mostrata e si esegue solo dopo l'ok.
+La build (`fse-build`) non è un gate: parte da sola all'ok di un kit, nella stessa conversazione,
+e si chiude con il report del sito in WordPress; le osservazioni sul sito live tornano come
+revisioni del kit. A ogni gate le osservazioni tornano all'agente come revisioni; il gate si
+chiude con un ok esplicito in un turno successivo, che la skill registra in `DESIGN.md`. Ogni
+consegna è un messaggio in quattro punti (esito · cosa è cambiato · cosa aspetta te · prossimo
+passo, con il prompt pronto solo per ciò che richiede una conversazione nuova: un `confirm`, una
+reinstallazione, una password): i controlli passati non si elencano, il dettaglio tecnico sta in
+`DESIGN.md → ## Log decisioni` (fondamenta §10). La build è rieseguibile su tutto il sito: applica
+solo la differenza, corregge da sola il kit quando è il kit a sbagliare (una classe che WP
+aggiunge in render), e una cancellazione (blocco, pagina, voce di menu) viene mostrata e si
+esegue solo dopo l'ok.
 
 ## Prerequisiti
 
@@ -55,6 +66,12 @@ pagina, voce di menu) viene mostrata e si esegue solo dopo l'ok.
 - git (quello di Xcode Command Line Tools basta). Il repo è pubblico: non servono account GitHub,
   inviti o credenziali.
 - MAMP e WP-CLI non servono per installare il plugin: li prepara `fse-theme-setup` nel progetto.
+
+Nel progetto la password dell'utente agente (`{agent-admin-user}` di `DESIGN.md`) sta in
+`{site-root}/.env`, due righe `AGENT_ADMIN_USER=…` e `AGENT_ADMIN_PASSWORD=…`: le scrive `fse-theme-setup` (Step 2c), il
+`.gitignore` della site root la tiene fuori dal repo, le skill la leggono solo attraverso la shell
+per il login Playwright e non la stampano mai (fondamenta §9/§10). In un progetto nato prima di
+questa regola il dev crea il file a mano con quelle due righe.
 
 ## Installazione
 

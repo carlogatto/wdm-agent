@@ -104,6 +104,14 @@ keeps them) · `block.json → version` bumped · `DESIGN.md → Blocchi` (varia
 decisioni` (one row: block, scenario, attributes/variants added, pages affected) · project
 `CLAUDE.md → Existing Blocks` if it lists variants.
 
+Handover message (fse-foundations §10): *Esito*; *Cosa è cambiato* = the block (name, version,
+what the editor now offers) and the pages that use it, saying whether their saved content changed
+(normally it did not); *Cosa aspetta te* = a kit left behind by the change, a `[da confermare]`,
+or "Niente da confermare"; *Prossimo passo* = "nessuno" — when the change must reach a page, the
+`fse-build` re-run (whole perimeter) is done **in the same conversation before the handover**,
+never handed to the dev as a prompt (fse-foundations §1 "The ok continues"); a kit revision the
+change needs is done here too. Scenario, files and checks stay in the log row.
+
 ## Stop conditions
 
 Guard fails · the request needs an attribute rename/removal or a type change (explain the rule,
@@ -123,4 +131,4 @@ blocks' files (shared components in `src/js/editor/` only additively) · git com
 - [ ] Scenario(s) identified and applied in order; kit before render.php for B/C
 - [ ] block.json additive (new attribute with safe default / new enum value), `version` bumped
 - [ ] Build exit 0, hook silent, smoke test of the change, regression on an existing instance, parity in `/html/`
-- [ ] README, DESIGN.md (Blocchi, Log decisioni), CLAUDE.md updated; report with affected pages
+- [ ] README, DESIGN.md (Blocchi, Log decisioni), CLAUDE.md updated; handover message (§10) with the pages affected

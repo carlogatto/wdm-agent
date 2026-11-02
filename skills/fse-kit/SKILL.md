@@ -1,9 +1,9 @@
 ---
 name: fse-kit
-description: Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with its blocks and variants for a wdm-theme FSE project — "progettiamo il kit della pagina X", "disegna il blocco Y", "kit del telaio", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. One item per session, one review at the end (kit + README contract + SCSS); WordPress code is written later by `fse-build`.
+description: Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. One page, one review at the end (kit + README contracts + SCSS); on the dev's ok the skill runs `fse-build` in the same conversation. Blocks are never designed on their own: they are born inside the page that needs them.
 ---
 
-# FSE Kit — design in HTML: telaio, pages, blocks (one item, one review)
+# FSE Kit — design in HTML: telaio or one page with its blocks (one item, one review, then the build)
 
 **MANDATORY first steps, in order:**
 1. Read `${CLAUDE_PLUGIN_ROOT}/shared/fse-foundations.md` — §0 (guard), §1 (gates), §2
@@ -31,9 +31,11 @@ dev's ok (Review, below).
 
 **The kit is the real design, made by the agent.** It is designed inside the system (telaio,
 existing blocks, tokens of theme.json) and inside the brief (map, tone, sources, images); the
-block README is the contract `fse-build` will read without questions. One item per session —
-the telaio, or one complete page with every block and variant it needs — and **one review at
-the end** (gate 2 or 3 of fse-foundations §1). Decisions follow the charter (§10): texts, layout
+block README is the contract `fse-build` will read without questions. One item per gate —
+the telaio, or one complete page with every block and variant it needs, however many — and **one
+review at the end** (gate 2 or 3 of fse-foundations §1): the dev looks at the design of the whole
+page, never at one block at a time. On the ok the skill goes on with `fse-build` in the same
+conversation (§1 "The ok continues"). Decisions follow the charter (§10): texts, layout
 in the system, ids, verifiable numbers are decided and logged; facts about the client, external
 URLs, legal texts, missing images get a default plus `[da confermare]`; nothing is asked
 mid-way. Kit markup = the future `render.php` (§4), BEM classes, tokens from theme.json, no
@@ -47,14 +49,17 @@ remains is anatomy — one root `<section>` per block, no inline `<script>`/`<st
 |---|---|---|
 | header, footer, menu, template, "telaio" | **Telaio** | `src/kit/main/header|footer|form/**`, `src/scss/_telaio.scss`, `src/kit/svg-vault` |
 | "pagina X", "home", "la pagina servizi" | **Page** | `src/kit/{prefix}-{page}.kit` (+ new blocks inline) |
-| "blocco Y", "variante Z di Y", "una sezione che…" | **Block** | `blocks/{prefix}-block-{slug}/README.md`, `kit/`, `src/style.scss` (+ `src/view.js`) |
+| "variante Z di Y" on an implemented block, asked on its own (maintenance) | **Variant** | Step 3 on that block, shown in the catalogue page; the review is the catalogue |
 
-No item named → the telaio if its rows are `da progettare`, else the first page `da progettare`
-in the order of `## Brief → Mappa` (or of `## Pagine`). A page that needs a block that does not
-exist → the block is designed inside the same session (Step 3) before the page kit imports it. A
-new variant of an implemented block → Step 3 (README row + kit + CSS); the editor side is
-`fse-block-edit`'s, run by `fse-build` when the page needs it. A page the dev removes from the
-map → its row goes `da eliminare` (kit and row stay until `fse-build` deletes it with `confirm`).
+A **new block is never an item**: "disegna il blocco Y", "una sezione che…" → ask which page
+needs it and design that page (fse-foundations §1 "Blocks are born inside pages"); the block is
+Step 3 inside the page's session and the dev reviews it in the page. No item named → the telaio
+if its rows are `da progettare`, else the first page `da progettare` in the order of `## Brief →
+Mappa` (or of `## Pagine`). A page that needs a block that does not exist → Step 3 before the
+page kit imports it; a block that exists but needs a new variant → Step 3 (README row + kit +
+CSS); the editor side is `fse-block-edit`'s, run by `fse-build` when the page needs it. A page
+the dev removes from the map → its row goes `da eliminare` (kit and row stay until `fse-build`
+deletes it with `confirm`).
 
 ## Step 2 — Telaio
 
@@ -195,20 +200,33 @@ and why), the **table of `[da confermare]`** with the default chosen for each ("
 confermare" when empty). `DESIGN.md → ## Domande aperte` gets `⏳ kit {item} in revisione (dal
 YYYY-MM-DD)`; the row stays `da progettare`. Then the turn ends.
 
+The message has the shape of fse-foundations §10 "The handover message": *Esito* (`⚠️ chiuso, con
+attese`: a kit always waits for the ok); *Cosa è cambiato* = the item to look at (URL, screenshots,
+blocks and variants born with their README) and only the decisions the dev may want to overturn;
+*Cosa aspetta te* = the `[da confermare]` table and the ok itself; *Prossimo passo* = "scrivi ok
+(o le osservazioni): all'ok parte la build in questa conversazione". No prompt to paste: what
+follows the ok is the agent's. How the kit was built (files, checks, screenshots at three
+widths) stays in the `## Log decisioni` row.
+
 Later turns: the dev's remarks are their decisions — apply them (same files), log them as
 "richiesta del dev", hand over again. The dev's explicit ok → row `kit` (Telaio: `kit`;
-Blocchi rows were born `kit` at 3g), ⏳ removed, log row "kit {item} approvato". A revision the
-dev asks after the site build (gate 4) follows the same steps without a new gate: the row stays
-`kit`, `fse-build` re-applies the difference at its next run.
+Blocchi rows were born `kit` at 3g), ⏳ removed, log row "kit {item} approvato" — **and in the
+same turn** read `${CLAUDE_PLUGIN_ROOT}/skills/fse-build/SKILL.md` and run it from its Step 0
+(whole perimeter: this item is built, the aligned rows answer "0 differenze"); the conversation
+ends with the build's report, which names the next `da progettare` row and goes on with its kit
+unless the dev stops. A revision the dev asks after the build follows the same steps without a
+new gate: the row stays as it is, `fse-build` re-applies the difference in the same turn.
 
 ## Never
 
-Write `block.json`, `render.php`, `edit.js`, `index.js`, `editor.scss` (build phase) · touch WP
-(no WP-CLI writes, no editor) · hardcode colours/sizes instead of tokens · a kit with more than
-one root `<section>` per block, or with inline `<script>`/`<style>` · Bootstrap/utility classes
-· `@use 'swiper/swiper'` in a block (shared handle) · ask mid-way what the charter decides or
-marks `[da confermare]` · invent a fact about the client · mark a row `kit` before the dev's ok ·
-git commands.
+Write `block.json`, `render.php`, `edit.js`, `index.js`, `editor.scss` or touch WP (no WP-CLI
+writes, no editor) **before the ok** — after the ok they are `fse-build`'s, run by this skill in
+the same conversation · design a block as an item of its own, or hand over one block at a time ·
+hand the dev a prompt for the build or the next kit · hardcode colours/sizes instead of tokens ·
+a kit with more than one root `<section>` per block, or with inline `<script>`/`<style>` ·
+Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · ask mid-way what
+the charter decides or marks `[da confermare]` · invent a fact about the client · mark a row
+`kit` before the dev's ok · git commands.
 
 ## Completion checklist (per item)
 
@@ -217,5 +235,5 @@ git commands.
 - [ ] Kit per variant with parity markup; `src/style.scss` with tokens and `__inner`; `view.js` only if needed
 - [ ] `_css-shared.kit` (+ `_js-shared.kit`) and `{prefix}-blocks.kit` updated
 - [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots
-- [ ] Review delivered: URL, screenshots, contracts, decisions, `[da confermare]` table; ⏳ `kit {item} in revisione` written; row still `da progettare`
-- [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row
+- [ ] Review delivered once, for the whole item (never one block at a time), in the §10 handover shape: URL, screenshots, contracts, decisions, `[da confermare]` table, "ok o osservazioni" (no prompt to paste); ⏳ `kit {item} in revisione` written; row still `da progettare`
+- [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row, then `fse-build` run in the same turn

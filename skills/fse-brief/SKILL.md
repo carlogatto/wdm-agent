@@ -112,7 +112,11 @@ logged; what it lacks about the client is `[da confermare]`.
 The last message of the session hands over the brief: the map (as a table), the tone, the tokens
 (catalogue URL and screenshots), the plugins proposed with the reason, the images table, the
 files not read, and the **table of `[da confermare]`** with the default chosen for each ("Niente
-da confermare" when empty). Then the turn ends.
+da confermare" when empty). Then the turn ends. Shape: fse-foundations §10 "The handover
+message" — *Esito* `⚠️ chiuso, con attese` (the brief waits for the ok), *Cosa è cambiato* = the
+deliverables above, *Cosa aspetta te* = the `[da confermare]` table, the plugins to approve and
+the ok, *Prossimo passo* = "ok o osservazioni in questa conversazione: all'ok parte il kit del
+telaio" (no prompt to paste, fse-foundations §1 "The ok continues").
 
 Later turns: the dev's remarks are their decisions — apply them (Step 2–3 again on what changed),
 log them as "richiesta del dev", hand over again. The dev's explicit ok →
@@ -120,7 +124,8 @@ log them as "richiesta del dev", hand over again. The dev's explicit ok →
 - plugins approved: `{wp-cli} plugin install {slug} --activate` (and `{wp-cli} language plugin
   install {slug} it_IT`) for each, listed in the log row;
 - `## Log decisioni`: "brief approvato"; `## Domande aperte`: only the `[da confermare]` the dev
-  left open. Next session: `fse-kit` (telaio).
+  left open. Then, **in the same turn**, read `${CLAUDE_PLUGIN_ROOT}/skills/fse-kit/SKILL.md` and
+  start the telaio kit (its Step 0 verifies the state again).
 
 ## Stop conditions (the only ones)
 
@@ -140,5 +145,5 @@ what the charter decides · git commands.
 - [ ] Map, tone, tokens, plugins, images derived under the charter; `[da confermare]` only for facts
 - [ ] `theme.json` edited, sync run, `npm run build` exit 0, catalogue checked at 3 widths with screenshots
 - [ ] `DESIGN.md`: `## Brief` (`Stato: bozza`), `## Pagine` `da progettare`, `## Telaio` `da progettare`, log row
-- [ ] Review delivered with the `[da confermare]` table; turn ended
-- [ ] On the dev's ok (later turn): `Stato: approvato`, plugins installed, log row
+- [ ] Review delivered in the §10 handover shape with the `[da confermare]` table; turn ended
+- [ ] On the dev's ok (later turn): `Stato: approvato`, plugins installed, log row, then the telaio kit started in the same turn

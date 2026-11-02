@@ -139,9 +139,15 @@ No `npm run build` is needed (parts are not compiled); the `html/` kit is unaffe
 
 ## Final report
 
-Per menu: created / updated / 0 differenze, item counts, orphans; `ref` per part before → after;
-curl check result; every point where the skill stopped to ask. A skipped or failed step is said
-explicitly. Never the password (none is needed: the script runs through WP-CLI).
+Standalone run: the handover message of fse-foundations §10 — *Esito* (`⚠️ chiuso, con attese`
+when a diff waits for `confirm`); *Cosa è cambiato*: per menu one line, created / updated / 0
+differenze, and the parts whose `ref` changed; *Cosa aspetta te*: each diff as one item (what
+`apply … confirm` rewrites, what is lost if the dev added items by hand) and each orphan with its
+consequence and remedy (publish the draft, create the page, or remove the label from the kit);
+*Prossimo passo*: the `confirm` runs in a new conversation → prompt ready to paste. Item counts,
+`ref` before → after, the curl check and a skipped or failed step go to the `## Log decisioni`
+row (a failed step is also one line in *Esito*). Inside `fse-build` the same content enters its
+gate-4 message. Never the password (none is needed: the script runs through WP-CLI).
 
 ## Stop conditions (the only ones)
 
@@ -165,4 +171,4 @@ git commands.
 - [ ] `apply` run; for every existing menu with differences the turn ended with the diff and the dev confirmed in a later turn before `apply … confirm`
 - [ ] `dump` after = plan; `ref` identical in header AND footer (and every listed part)
 - [ ] curl check: labels present, no `page-list`, no PHP errors
-- [ ] DESIGN.md (Navigazione, Domande aperte, Log decisioni) updated; final report delivered
+- [ ] DESIGN.md (Navigazione, Domande aperte, Log decisioni) updated; handover message (§10) delivered

@@ -22,22 +22,24 @@ All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 ## Principle
 
 **The kit is the source of the values, WordPress never loses anything without an ok.** The
-build is the fourth gate of fse-foundations §1: one run builds the whole perimeter (telaio,
-every approved page, menus) and ends with one report. It is **re-runnable**: every page goes
-through the diff of `scripts/wp-page.php` and receives only its difference; a second identical
-run answers "0 differenze" everywhere. Deletions (a block or a page the kit no longer has, a
-menu whose content differs) are shown in the report and executed only with the dev's ok **in a
-later turn** (`confirm`); they never stop the rest of the run. During the run the agent asks
-nothing: it decides under the charter (§10) and reports gaps at the end. Gates 2 (telaio kit)
-and 3 (one per page kit) are `fse-kit`'s: a row is `kit` only after the dev's ok there, and this
-run builds only rows that passed them.
+build runs right after the dev's ok to a kit, **in the same conversation**, started by `fse-kit`
+(fse-foundations §1 "The ok continues"), and on its own when the dev asks to realign WP to the
+kits. One run builds the whole perimeter (telaio, every approved page, menus) and ends with one
+report; it is not a gate: the dev's remarks on the live site come back as kit revisions. It is
+**re-runnable**: every page goes through the diff of `scripts/wp-page.php` and receives only its
+difference; a second identical run answers "0 differenze" everywhere. Deletions (a block or a
+page the kit no longer has, a menu whose content differs) are shown in the report and executed
+only with the dev's ok **in a later turn** (`confirm`); they never stop the rest of the run.
+During the run the agent asks nothing: it decides under the charter (§10) and reports gaps at
+the end. Gates 2 (telaio kit) and 3 (one per page kit) are `fse-kit`'s: a row is `kit` only
+after the dev's ok there, and this run builds only rows that passed them.
 
 ## Inputs
 
 | Input | Source |
 |---|---|
-| Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2j). Parents before children. Rows `da progettare` are skipped and named in the report. The prompt may narrow the perimeter ("solo la Home") |
-| Admin credentials | username = `DESIGN.md → Project Config → {agent-admin-user}`; password from the prompt, else **one** question at the start of the run, before any write. Without it the run goes on without Playwright (2c smoke test, 2g editor check skipped) and no page reaches `implementata` (it stays `kit`, report: "verifica editor mancante"). Never written, never echoed |
+| Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2j). Parents before children. Rows `da progettare` are skipped and named in the report. The perimeter is **always the whole site**: the prompt never narrows it (an aligned page costs one "0 differenze") |
+| Admin credentials | username = `DESIGN.md → Project Config → {agent-admin-user}`; password in `{site-root}/.env` (`AGENT_ADMIN_PASSWORD=…`, fse-foundations §9/§10: never read or echoed by the agent, substituted by the shell into the Playwright copy). `.env` missing or empty → no question: the run goes on without Playwright (2c smoke test, 2g editor check skipped), no page reaches `implementata` (it stays `kit`, report: "verifica editor mancante") and *Cosa aspetta te* asks the dev to create `.env` |
 | `{wp-cli}` | `DESIGN.md → Project Config → Paths`; put it in a scratchpad script for the session |
 
 ## Step 0 — Guard and preconditions (all blocking)
@@ -176,8 +178,14 @@ order free: WP and the kit print the same classes in a different order — minus
 classes WP/Swiper generate (`swiper-*`, `wp-container-*`, `is-layout-*`, `has-global-padding`),
 element count per tag (modulo a repeated series), normalized text, links (except the
 permalinks of post-derived cards). Screenshots editor + frontend ×3 in
-`.playwright-mcp/shots/`. Every difference goes in the report with block and attribute. Without
-the password: frontend checks via `curl` only, editor check reported as missing.
+`.playwright-mcp/shots/`. A difference where **WP is right and the kit is wrong** — a class core
+adds in render (`wp-block-paragraph`), a class `render.php` always prints (`is-style-inverted`),
+a stale kit comment, a value the README fixes — is **fixed in the kit in this run** (the files
+`fse-kit` would touch, structure and texts untouched), `npm run build`, parity re-checked, one
+line in the log row: never handed back to the dev, never a `## Domande aperte` item. Only a
+difference that changes the design (text, order, variant, missing element) goes in the report
+with block and attribute. Without `.env` (no password): frontend checks via `curl` only, editor
+check reported as missing.
 
 ### 2h. Documentation (no confirmation asked)
 - `DESIGN.md → Pagine`: `implementata` only when 2g is green (else stays `kit`, with the reason
@@ -201,17 +209,36 @@ exactly as written there. `apply` exit 3 (an existing menu differs from the kit)
 the final report as a question; `apply … confirm` runs only in a later turn, after the dev's
 answer — the run does not stop for it. `DESIGN.md → ## Navigazione` is written by its Step 5.
 
-## Step 4 — Final report and STOP (gate 4)
+## Step 4 — Close the run, report, go on
 
-Per page: id, permalink, blocks created (with variants), additive edits, the `wp-page.php`
-outcome (`uguale`/`modificato`/`nuovo`/`spostato` counts, deletions waiting for `confirm` with
-their diff), hand-edited attributes overwritten, images imported, `[da confermare]` and `#` links
-remaining, parity differences, page options set, screenshots. Menus: per menu created / updated /
-0 differenze / diff waiting, orphans. Pages skipped (`da progettare`), pages `da eliminare`
-waiting, pages outside the flow. `DESIGN.md`: `## Log decisioni` one row for the run, `⏳ build
-sito` line removed, `## Domande aperte` with the gaps and the pending `confirm`s. Never the
-password. Close the browser tab. The next run starts from zero and finds the aligned pages at 0
-differenze: there is no progress state to resume. **Stop** and wait for the dev.
+1. **Log, not chat.** `DESIGN.md → ## Log decisioni`, one row for the run with everything
+   technical: per page id, blocks created (with variants) and additive edits, the `wp-page.php`
+   counts (`uguale`/`modificato`/`nuovo`/`spostato`), hand-edited attributes overwritten, images
+   imported, page options set, parity differences, `#` and `[da confermare]` kept; per menu
+   created / updated / 0 differenze / diff waiting, orphans; pages skipped (`da progettare`),
+   `da eliminare` waiting, outside the flow; decisions taken under the charter; checks run and
+   the screenshot folder. `⏳ build sito` removed; `## Domande aperte` with one `⏳` line per
+   pending `confirm` (what gets deleted or rewritten, and what follows) and one line per gap with
+   its consequence. Close the browser tab. Never the password.
+2. **Handover message** in the shape of fse-foundations §10 "The handover message":
+   - *Esito*: `⚠️ chiuso, con attese` when a `confirm` or a gap is open, `✅ chiuso` otherwise;
+     `❌ fermato` + reason on a stop condition.
+   - *Cosa è cambiato*: pages now `implementata` with permalink, blocks born (name, variants),
+     blocks edited (name, version), telaio parts touched, menus created or updated. Opening line
+     of Step 0 only if it demoted or flagged a row.
+   - *Cosa aspetta te*: one item per `confirm` (page: id, URL, what is deleted with it — kit,
+     html, row — and the menu items that go orphan; menu: what `apply … confirm` rewrites), one
+     per gap the visitor can hit (404 links, placeholder images), one per `[da confermare]`.
+   - *Prossimo passo*: only a `confirm` needs a **new conversation** → the prompt ready to
+     paste, naming `fse-build 2j` / `fse-menu-build apply … confirm` and every item by id (never
+     a password line: it lives in `.env`). Then the next `da progettare` row of `## Pagine`, in
+     one line: the agent goes on with its kit (point 3), no prompt is written for it.
+   Everything else (counts, scripts, intermediate fixes, green checks) stays in the log row.
+3. **Go on, or stop.** A `## Pagine` row `da progettare` → read
+   `${CLAUDE_PLUGIN_ROOT}/skills/fse-kit/SKILL.md` and start its kit in the same conversation
+   (its Step 0 verifies the state again), unless the dev's message says to stop. No row left → the
+   conversation ends with the report. A later run starts from zero and finds the aligned pages at
+   0 differenze: there is no progress state to resume.
 
 ## Step 5 — Block scaffold (from the README, every variant)
 
@@ -273,7 +300,7 @@ git commands · `@use 'swiper/swiper'` in a block.
 - [ ] Guard passed, state on disk verified, perimeter and opening line reported
 - [ ] Missing blocks scaffolded with every README variant; build exit 0; hook silent; smoke test 0 console errors
 - [ ] Every page of the perimeter through `wp-page.php plan` → `apply`; deletions left to `confirm`; page options derived
-- [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1, parity differences reported
+- [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; parity: kit errors fixed in the kit in this run, design differences reported
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
-- [ ] Final report delivered, tab closed, **stopped** for the dev's review
+- [ ] Log row written; handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, prompt pronto solo per i `confirm`); tab closed; next `da progettare` kit started in the same conversation (or none left)

@@ -28,16 +28,16 @@ family ships in the `wdm-agent` plugin, the starter family lives in the user-lev
 project `CLAUDE.md` routing table is the second layer, the SKILL.md description ("for a
 wdm-theme FSE project") the third.
 
-## 1. Six moments, four gates
+## 1. Six moments, three gates
 
-| Moment | Who decides | Skill | Gate (deliverable the dev judges) | Session |
+| Moment | Who decides | Skill | Gate (deliverable the dev judges) | After the ok |
 |---|---|---|---|---|
-| Setup | dev (technical values), agent runs | `fse-theme-setup` | — | 1 |
-| **Brief**: the designer's folder `docs/brief/` becomes the site contract | agent | `fse-brief` | **1 — brief**: site map, tokens applied to theme.json (kit catalogue on `:8848`), tone, plugins, images, in `DESIGN.md → ## Brief` | 1 (+ revision turns) |
-| **Kit telaio**: header, footer, default form in HTML | agent | `fse-kit` | **2 — telaio**: the kit on `:8848` | 1 (+ revision turns) |
-| **Kit page**, one complete page with its blocks and variants | agent | `fse-kit` | **3 — page kit**: the kit with real texts on `:8848` | 1 per page (+ revision turns) |
-| **Site build**: every approved kit into WordPress, menus included | agent | `fse-build` | **4 — built site**: pages and menus in WP, final report | 1 per run, re-runnable |
-| Maintenance | agent | `fse-block-edit`, `fse-menu-build` | — | 1 per intervention |
+| Setup | dev (technical values), agent runs | `fse-theme-setup` | — | — |
+| **Brief**: the designer's folder `docs/brief/` becomes the site contract | agent | `fse-brief` | **1 — brief**: site map, tokens applied to theme.json (kit catalogue on `:8848`), tone, plugins, images, in `DESIGN.md → ## Brief` | the telaio kit, same conversation |
+| **Kit telaio**: header, footer, default form in HTML | agent | `fse-kit` | **2 — telaio**: the kit on `:8848` | `fse-build` (parts, templates), same conversation; then the first page kit |
+| **Kit page**, one complete page with every block and variant it needs | agent | `fse-kit` | **3 — page kit**: the whole page with real texts on `:8848` | `fse-build` (blocks, page, menus), same conversation; then the next page kit |
+| **Site build**: every approved kit into WordPress, menus included | agent | `fse-build` | — (closes with a report, not a gate: remarks on the live site are kit revisions) | the next `da progettare` row |
+| Maintenance | agent | `fse-block-edit`, `fse-menu-build` | — | — |
 
 A gate is a message in chat that hands over something finished to look at. The dev's remarks
 come back as revisions (same skill, same item); the gate closes with an explicit ok **in a later
@@ -46,16 +46,30 @@ nothing: it decides under the decision charter (§10) and marks `[da confermare]
 decide; every question it feels like asking is either a charter decision or a gap reported at the
 gate. Requests a dev makes at a gate are their decisions: applied and logged, not discussed.
 
+**The ok continues, it does not close.** The dev decides three things only: the ok to a kit, the
+`confirm` of a deletion, the facts marked `[da confermare]`. Everything that follows a decision is
+mechanics and the agent does it **in the same conversation, without being asked**: the ok to a
+telaio or page kit starts `fse-build` at once (whole perimeter: the approved item is built, the
+aligned rows answer "0 differenze"), the build report is followed by the kit of the next `da
+progettare` row, a kit error found during the build is fixed in the kit by the build. A **new
+conversation** is needed only for the Stop class of the charter (§10): a `confirm`, a plugin
+reinstall, a password change. The dev who prefers to stop after a report simply stops: the state
+is in `DESIGN.md` and the next conversation resumes from there. Never a "prompt ready to paste"
+for a step the agent can take itself.
+
+**Blocks are born inside pages.** A block or a new variant is designed only inside the kit of the
+page (or the telaio) that needs it and reviewed with that page, never as an item of its own with
+its own review: one gate per page, whatever the page needs. The block catalogue
+(`{prefix}-blocks.kit`) is updated as an effect of the page, never as a gate.
+
 Kit = design in HTML made by the agent inside the system (telaio, blocks, tokens) and inside the
 brief (map, tone, sources); the block README is the contract. Build = the agent reads every
 approved kit, creates the missing blocks (all variants of the README), writes each page as the
-difference between kit and WordPress, aligns the menus, stops with the report. Never mix: no
-`render.php` for a block whose kit is not approved; no page built from a kit still `da
-progettare`. Session boundaries: the kit's is the **item** (telaio, or one page), the build's is
-the **site** (the whole perimeter in one run, re-run after every new approval). On the dev's
-explicit request kit and build may run in the same conversation (`fse-kit`, then `fse-build`, in
-order): the row still goes `kit` → `implementata`, WP writes (plugins, forms, pages) happen only
-in the `fse-build` part, and `## Log decisioni` records the deviation.
+difference between kit and WordPress, aligns the menus, closes with the report. Never mix inside
+one item: no `render.php` for a block whose page kit is not approved; no page built from a kit
+still `da progettare`. The kit's unit is the **item** (telaio, or one page), the build's is the
+**site** (the whole perimeter in one run, re-run after every ok). WP writes (plugins, forms,
+pages) happen only in the `fse-build` part.
 
 States live in `DESIGN.md` (§11) and follow the **pages**: Telaio `da progettare` → `kit` →
 `implementato`; Pagine `da progettare` → `kit` → `implementata`, plus `da eliminare` for a page
@@ -565,9 +579,18 @@ Scripts live in `{site-root}/.playwright-mcp/` (gitignored): `browser_run_code_u
 `filename` accepts only files there; screenshots in `.playwright-mcp/shots/`. Template per block
 `pw-{slug}.js` (copy an existing one), `pw-catalog.js` (catalogue page at 3 widths),
 `pw-telaio.js`, `pw-site-editor.js`. Login with `{agent-admin-user}` (username from DESIGN.md,
-password from the prompt — asked once, never written): scripts carry the placeholder
-`'{password}'`; to run one, write a temporary copy with the password substituted, run it and
-delete the copy right after — a `pw-*.js` never holds the literal. The kit on browser-sync
+password from `{site-root}/.env`, lines `AGENT_ADMIN_USER=…` / `AGENT_ADMIN_PASSWORD=…` — see §10
+"Credentials"): scripts
+carry the placeholder `'{password}'`; to run one, let the **shell** substitute it into a temporary
+copy, run that copy by `filename`, delete it right after — a `pw-*.js` never holds the literal and
+the value never appears in a tool output:
+```bash
+[ -s {site-root}/.env ] || echo ".env assente o vuoto"   # the only check: never cat/Read/grep the file
+PW="$(sed -n 's/^AGENT_ADMIN_PASSWORD=//p' {site-root}/.env)" perl -pe 's/\{password\}/$ENV{PW}/g' {site-root}/.playwright-mcp/pw-{slug}.js > {site-root}/.playwright-mcp/_run.js && echo ok
+# → browser_run_code_unsafe filename=.playwright-mcp/_run.js (never the code inline) → rm .playwright-mcp/_run.js
+```
+`.env` missing or empty → the skill runs "without password" (checks via `curl` only, editor
+checks reported as missing) and the handover asks the dev to create it. The kit on browser-sync
 (`https://localhost:8848`, self-signed certificate) needs a context with `ignoreHTTPSErrors: true`
 (`page.context().browser().newContext({ ignoreHTTPSErrors: true })`; the sandbox has no `require`). If the browser is "already in use":
 `pkill -f mcp-chrome-`.
@@ -604,7 +627,14 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   (`⏳ build sito: pagina {Titolo} {M}/{N} (dal YYYY-MM-DD)`); removed when the gate closes or
   the run ends.
   Statuses alone cannot express "waiting".
-- Credentials: username from DESIGN.md, password from the prompt, never persisted or echoed.
+- Credentials: username from `DESIGN.md → {agent-admin-user}`; the same username and its password
+  in `{site-root}/.env`, two lines `AGENT_ADMIN_USER=…` and `AGENT_ADMIN_PASSWORD=…` (the user line
+  must equal `{agent-admin-user}`), created by `fse-theme-setup` (Step 2c)
+  and kept out of git by the site-root `.gitignore` whitelist (`/*` + `!…` lines: `.env` is
+  never whitelisted; `.env.example` may be). The agent **never reads the file** (no `cat`, `Read`,
+  `grep` with output, no `echo` of the value): only the code it runs reads it (§9). Never asked in
+  the prompt, never written anywhere else, never echoed. The dev who changes the password updates
+  the file; an existing project without `.env` creates it by hand with that one line.
 - Never take over a post locked by another user; close the tab at the end.
 - `debug.log` empty at the end of every session (`WP_DEBUG_LOG` on); `npm run build` exit 0.
 - Browser-sync: if `https://localhost:8848/html/` already answers **and lists this theme's kits**
@@ -632,6 +662,46 @@ end of a session becomes one question with a proposal, not a list.
 - A dev request that contradicts the spec or these foundations wins (a feature "as in
   wdm-starter" is replicated, not redesigned): implement it, then update foundations/skills and
   the spec in the same session and log it.
+- **Mechanics never pass through the dev.** Whatever follows a decision is the agent's and runs in
+  the same conversation (§1): the build after an ok, the kit fix after a parity finding where WP is
+  right (a class core adds in render, a class `render.php` always prints, a stale comment), the
+  catalogue update, the next page kit. `## Domande aperte` holds decisions waiting for the dev,
+  never work the agent could do.
+
+### The handover message
+
+The last message of every session (a gate, a build run, a maintenance intervention) is written
+for the dev who has to decide, not as proof that the checklist was followed. It is read in ten
+seconds, fits on one screen, and answers four questions **in this order, with these headings**:
+
+1. **Esito** — one line: `✅ chiuso` · `⚠️ chiuso, con attese` · `❌ fermato` + the reason in one
+   sentence. "Chiuso" means every exit condition of the skill passed; nothing more is said about
+   them.
+2. **Cosa è cambiato** — only what the dev can see or open: pages, menus and parts in WP (with
+   permalink), the kit URL on `:8848`, blocks born or changed (name, variants, version), files
+   the dev must look at. A number appears only when it carries a decision ("5 link vanno in 404"),
+   never as a count of work done.
+3. **Cosa aspetta te** — every `confirm`, gap and `[da confermare]` left open, one item each,
+   with the **concrete consequence** and the default chosen ("dopo la cancellazione la voce
+   Servizi dei due menu resta appesa: la toglie `fse-kit` sul telaio, poi `fse-menu-build`").
+   Nothing open → one line, "Niente da confermare".
+4. **Prossimo passo** — at a gate: "ok o osservazioni" and what the agent does right after the
+   ok, in this conversation (§1: the build, then the next kit). Otherwise only what the dev alone
+   can do (a `confirm`, a plugin reinstall, a password change): those need a **new conversation**
+   → the prompt **ready to paste**, in a code block, the skill and the exact items by id (never a
+   password line: the password lives in `.env`). Never a prompt for a step the agent can take
+   itself (a build after an ok, a kit correction, the next page kit). Nothing to do → "Nessun
+   passo successivo: la sessione è chiusa".
+
+**Silence.** Checks that passed are not listed (build, `npm run check`, `debug.log`, hooks,
+console, overflow, h1, Site Editor, parity, browser tab closed, no git command): "Esito" already
+says it. Internal mechanics (scripts, diff counters, intermediate bugs fixed, files touched to get
+there) go to `DESIGN.md → ## Log decisioni`, which is where the dev looks for detail; the message
+cites a detail only when it changes a decision of theirs. A **failed** check or a deviation from
+the protocol is said in one line, with its effect on the dev ("regola saltata, nessun effetto:
+lo stato finale è lo stesso"). Never the password, never a wall of counts, no headings for empty
+sections, bullets over tables when the rows are few. The dev who wants more asks: the log row
+and the files hold it.
 
 ## 11. DESIGN.md — the cross-session state (FSE format)
 
