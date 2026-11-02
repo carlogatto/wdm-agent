@@ -62,8 +62,9 @@ page (or the telaio) that needs it and reviewed with that page, never as an item
 its own review: one gate per page, whatever the page needs. The block catalogue
 (`{prefix}-blocks.kit`) is updated as an effect of the page, never as a gate.
 
-Kit = design in HTML made by the agent inside the system (telaio, blocks, tokens) and inside the
-brief (map, tone, sources); the block README is the contract. Build = the agent reads every
+Kit = design in HTML made by the agent inside the system (telaio, tokens; the existing blocks are
+its palette, never its boundary — §4) and inside the brief (map, tone, sources); the block README
+is the contract. Build = the agent reads every
 approved kit, creates the missing blocks (all variants of the README), writes each page as the
 difference between kit and WordPress, aligns the menus, closes with the report. Never mix inside
 one item: no `render.php` for a block whose page kit is not approved; no page built from a kit
@@ -346,6 +347,17 @@ content.
 for the user, not for the implementation. What remains is anatomy, not feasibility: one root
 `<section>` per block (one block = one section), no inline `<script>`/`<style>` (JS in `view.js`,
 CSS in `style.scss`); Formidable is the only parity exception (above).
+
+**No catalogue constraint** either. The existing blocks are the palette the kit draws from, never
+its boundary. Every section is designed **first** for its content, the brief's tone and the
+reader, with the freedom of a designer working in plain HTML; only **then** it is mapped: an
+existing variant that renders the section exactly as designed → the page kit imports it; any
+other case → a new variant or a new block (fse-kit Step 3), born inside that page with its README.
+Never the reverse order (a block chosen from the catalogue and the content fitted into it).
+"Nessun blocco nuovo" is never a goal and never a merit: a page that bends its sections into the
+existing blocks is a worse page, not a cheaper one. What the system fixes is the telaio, the
+tokens of theme.json and the anatomy (one `<section>` per block, BEM, parity): inside them the
+layout, the rhythm and the composition of a section are free.
 
 Verification of a kit: `npm run dev` → `https://localhost:8848/html/` (browser-sync lists the
 compiled pages); never open `html/*.html` from `file://` — the `type="module"` view.js are
@@ -659,7 +671,7 @@ and goes on.
 
 | Class | What | How it is traced |
 |---|---|---|
-| **Decide and log** | texts in the brief's tone (rewriting notes, titles, microcopy, alt texts, menu labels); layout inside the system (which block and variant, order of the map's sections, columns, `headingLevel`, backgrounds from the palette); ids and anchors; slugs from titles; images chosen among the provided ones; **verifiable numbers** from the code or the DB (counts, versions, repo dates); links to pages and anchors of the map; README contracts of new blocks and variants; attributes and defaults; configuration of approved plugins | where it lives (kit, README, `DESIGN.md`); **one** `## Log decisioni` row per deliverable with the non-obvious choices and why |
+| **Decide and log** | texts in the brief's tone (rewriting notes, titles, microcopy, alt texts, menu labels); layout (the section designed first, then the existing variant that renders it or a new block/variant — §4 "No catalogue constraint"; order of the map's sections, columns, `headingLevel`, backgrounds from the palette); ids and anchors; slugs from titles; images chosen among the provided ones; **verifiable numbers** from the code or the DB (counts, versions, repo dates); links to pages and anchors of the map; README contracts of new blocks and variants; attributes and defaults; configuration of approved plugins | where it lives (kit, README, `DESIGN.md`); **one** `## Log decisioni` row per deliverable with the non-obvious choices and why |
 | **Default + `[da confermare]`** | facts about the client the brief lacks (phone, address, hours, prices, names, VAT id); numbers and claims that cannot be verified; external URLs not in the brief; legal and policy texts; missing images; points where the brief contradicts itself; a font without files | text: `[da confermare]` inline, worded as the question itself ("[da confermare] telefono dello studio"); non-text value: a plausible default plus an adjacent comment `<!-- attr "value" [da confermare]: why -->` (a placeholder inside `href`, `src` or a number is a broken value); all collected in the **review table** of the gate with the chosen default; after the gate only what the dev left open stays in `## Domande aperte` |
 | **Stop** | guard; the deliverable's input is missing (empty brief, missing kit, block without README); deletions (pages, blocks, menu items, `wp_navigation`) → the diff is shown and applied only with an ok in a **later turn**; rename or removal of implemented attributes; post locked by another user; request outside the skill | the turn ends with the diff or **one** question with a proposal |
 

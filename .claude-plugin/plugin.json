@@ -1,6 +1,6 @@
 {
   "name": "wdm-agent",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "description": "Sistema agentico wdm-theme: skill fse-* (theme-setup, brief, kit, build, block-edit, menu-build), fondamenta, hook e script dei token per block theme FSE",
   "author": {
     "name": "Carlo Gatto",

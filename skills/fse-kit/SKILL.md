@@ -30,8 +30,9 @@ dev's ok (Review, below).
 ## Principle
 
 **The kit is the real design, made by the agent.** It is designed inside the system (telaio,
-existing blocks, tokens of theme.json) and inside the brief (map, tone, sources, images); the
-block README is the contract `fse-build` will read without questions. One item per gate —
+tokens of theme.json — the existing blocks are its palette, never its boundary, §4) and inside
+the brief (map, tone, sources, images); the block README is the contract `fse-build` will read
+without questions. One item per gate —
 the telaio, or one complete page with every block and variant it needs, however many — and **one
 review at the end** (gate 2 or 3 of fse-foundations §1): the dev looks at the design of the whole
 page, never at one block at a time. On the ok the skill goes on with `fse-build` in the same
@@ -41,7 +42,11 @@ URLs, legal texts, missing images get a default plus `[da confermare]`; nothing 
 mid-way. Kit markup = the future `render.php` (§4), BEM classes, tokens from theme.json, no
 WordPress code. No feasibility constraint on the design: `render.php` prints any HTML; what
 remains is anatomy — one root `<section>` per block, no inline `<script>`/`<style>` (JS in
-`view.js`, CSS in `style.scss`), Formidable the only parity exception.
+`view.js`, CSS in `style.scss`), Formidable the only parity exception. **No catalogue constraint**
+either (§4): every section is designed first for its content and the brief's tone, as a designer
+would in free HTML, and only then mapped — an existing variant that renders it as designed is
+imported, anything else is born as a new variant or a new block in Step 3. A page with zero new
+blocks is not a goal: the design decides how many blocks the page needs, not the catalogue.
 
 ## Step 1 — Which item
 
@@ -183,8 +188,10 @@ page; a new variant of an implemented block stays `implementato` with the new va
    page (meta default 1, as in wdm-starter); the build turns it off only on a page whose content
    already has a `{prefix}/form` block — so the page kit imports `main/form/_form-contacts.kit`
    after `</main>` unless its content has a `{prefix}/form`.
-4. Blocks used by the page that do not exist → Step 3 first; blocks that exist but need a new
-   variant → Step 3 (variant).
+4. Each section is designed first (content, tone, rhythm, free layout — §4 "No catalogue
+   constraint"), then mapped: an existing variant that renders it as designed → imported; no such
+   variant → Step 3 (new variant, or new block) before the page kit imports it. Never the
+   reverse: a section is not picked among the existing blocks and then filled.
 5. `npm run dev` → `/html/{prefix}-{page}.html` at 1440/768/390 with Playwright; fix until clean;
    screenshots `.playwright-mcp/shots/kit-{page}-{w}.png`.
 6. `DESIGN.md → Pagine`: ordered block list (`hero (image), image-text (right), cta`) in the
@@ -224,7 +231,8 @@ writes, no editor) **before the ok** — after the ok they are `fse-build`'s, ru
 the same conversation · design a block as an item of its own, or hand over one block at a time ·
 hand the dev a prompt for the build or the next kit · hardcode colours/sizes instead of tokens ·
 a kit with more than one root `<section>` per block, or with inline `<script>`/`<style>` ·
-Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · ask mid-way what
+Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · fit a section
+into an existing block because it exists (a new variant or block is Step 3, not a cost) · ask mid-way what
 the charter decides or marks `[da confermare]` · invent a fact about the client · mark a row
 `kit` before the dev's ok · git commands.
 
@@ -234,6 +242,7 @@ the charter decides or marks `[da confermare]` · invent a fact about the client
 - [ ] Block: README contract written (variants, attributes with control and default, children, markup, insertion markup) BEFORE the kit
 - [ ] Kit per variant with parity markup; `src/style.scss` with tokens and `__inner`; `view.js` only if needed
 - [ ] `_css-shared.kit` (+ `_js-shared.kit`) and `{prefix}-blocks.kit` updated
+- [ ] Every section designed first, then mapped: new variants/blocks born wherever no existing variant renders the design (§4 "No catalogue constraint")
 - [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots
 - [ ] Review delivered once, for the whole item (never one block at a time), in the §10 handover shape: URL, screenshots, contracts, decisions, `[da confermare]` table, "ok o osservazioni" (no prompt to paste); ⏳ `kit {item} in revisione` written; row still `da progettare`
 - [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row, then `fse-build` run in the same turn
