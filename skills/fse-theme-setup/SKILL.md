@@ -30,13 +30,19 @@ Start immediately with Step 0 — no extra trigger phrase required.
   it) → **STOP**: this is a wdm-starter project, the skill is `new-project-setup`;
 - exists with `theme_family: fse` and `wp-content/themes/wdm-theme` is gone → the setup already
   ran: offer only the verification of Phase 5, never a second `setup.sh`;
+- exists with `theme_family: fse`, `wp-content/themes/wdm-theme` still present and
+  `{site-root}/SETUP.md` present → an earlier session stopped mid-setup: **resume**. Every value
+  comes from `DESIGN.md → Project Config` (ask nothing), `SETUP.md` and `DESIGN.md` stay as they
+  are, the work restarts from the first unchecked step of `SETUP.md` (a `[MANUAL]` step gets its
+  message again). A checked step is never rerun: `setup.sh` in particular runs once.
 - does not exist, or exists as the copy shipped by the wdm-theme repo (its `{prefix}` is
   `wdm`) → proceed: the skill creates/rewrites `## Project Config`.
 
 **Anti-scaffold.** `{site-root}/wp-content/themes/wdm-theme/` must exist (clone or ZIP of the
 wdm-theme repo). Missing → stop: the skill renames the starter, it does not create a theme.
 
-**Ask the dev for every value before doing anything** (do not proceed until confirmed):
+**Ask the dev for every value before doing anything** (do not proceed until confirmed; on a
+resume they come from `DESIGN.md`, nothing is asked):
 
 1. **Project slug** — kebab-case (e.g. `pincopallino`): MAMP folder, local URL, DB name, theme
    folder, text domain default.
