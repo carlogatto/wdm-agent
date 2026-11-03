@@ -74,5 +74,29 @@ swap_marker "$FOREIGN_MARKER"
 run --check; [ "$rc" -eq 2 ] || fail "(d) marker estraneo: exit $rc, atteso 2. Output: $out"
 echo "$out" | grep -q "altra fonte" || fail "(d) manca 'altra fonte'. Output: $out"
 
+# (g) {wp-cli} che stampa un avviso PHP prima del CSS → il CSS scritto parte dal primo selettore, avviso in output
+swap_marker "$NEW_MARKER"
+MOCK="$SITE/wpcli-mock.sh"
+printf '#!/bin/bash\nprintf "Deprecated: Case statements in match\\n:root{--wp--preset--color--base:#fff}\\nbody{margin:0}\\n"\n' > "$MOCK"; chmod +x "$MOCK"
+python3 - "$DESIGN" "$MOCK" <<'PY'
+import sys
+p,mock=sys.argv[1],sys.argv[2]
+s=open(p).read()
+s=s.replace('\n## Design Tokens\n', '\n| `{wp-cli}` | %s |\n\n## Design Tokens\n' % mock, 1)
+open(p,'w').write(s)
+PY
+CSS="$THEME/assets/css/wp-global-styles.css"
+run; [ "$rc" -eq 0 ] || fail "(g) generazione con mock wp-cli: exit $rc. Output: $out"
+[ -f "$CSS" ] || fail "(g) wp-global-styles.css non scritto"
+! grep -q 'Deprecated' "$CSS" || fail "(g) la riga Deprecated è finita nel CSS"
+[ "$(sed -n '/\*\//,$p' "$CSS" | sed '1d' | head -1)" = ':root{--wp--preset--color--base:#fff}' ] || fail "(g) il CSS non parte da :root. Prime righe: $(head -5 "$CSS")"
+echo "$out" | grep -q 'non CSS scartate' || fail "(g) manca l'avviso sulle righe scartate. Output: $out"
+
+# (h) {wp-cli} che stampa solo avvisi → errore, CSS non toccato
+printf '#!/bin/bash\necho "Deprecated: only noise"\n' > "$MOCK"
+rm -f "$CSS"
+run; echo "$out" | grep -q "non è CSS" || fail "(h) manca l'errore 'non è CSS'. Output: $out"
+[ ! -f "$CSS" ] || fail "(h) il CSS è stato scritto con output non CSS"
+
 rm -rf "$SITE"
 echo "PASS $name"

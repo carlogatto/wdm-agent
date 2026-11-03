@@ -558,9 +558,10 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
 
 ## 8. WP-CLI recipes (the write path of `fse-build` and `fse-menu-build`)
 
-`{wp-cli}` from `DESIGN.md → Project Config → Paths` is the full command (MAMP PHP 8.4 +
-socket + phar + `--path`), e.g.
-`/Applications/MAMP/bin/php/php8.4.17/bin/php -d memory_limit=512M -d mysqli.default_socket=/Applications/MAMP/tmp/mysql/mysql.sock {site-root}/wp-cli.phar --path={site-root}`.
+`{wp-cli}` from `DESIGN.md → Project Config → Paths` is the full command (the MAMP PHP of the
+host + `display_errors=stderr`, so PHP notices never reach a captured stdout + socket + phar +
+`--path`), e.g.
+`/Applications/MAMP/bin/php/php8.4.17/bin/php -d memory_limit=512M -d display_errors=stderr -d mysqli.default_socket=/Applications/MAMP/tmp/mysql/mysql.sock {site-root}/wp-cli.phar --path={site-root}`.
 The phar path is **absolute** (the skills `cd` into `{theme-root}` for npm and the Bash cwd
 persists; `sync-theme-json-tokens.js` runs it from any cwd). In zsh put it in a script file, not
 in a string variable. Below `{wp-cli}
@@ -752,7 +753,7 @@ and the files hold it.
 | `{site-root}` | /Users/…/Sites/{slug} |
 | `{theme-root}` | /Users/…/Sites/{slug}/wp-content/themes/{slug} |
 | `{db-socket}` | /Applications/MAMP/tmp/mysql/mysql.sock |
-| `{wp-cli}` | /Applications/MAMP/bin/php/php8.4.17/bin/php -d memory_limit=512M -d mysqli.default_socket=/Applications/MAMP/tmp/mysql/mysql.sock /Users/…/Sites/{slug}/wp-cli.phar --path=/Users/…/Sites/{slug} |
+| `{wp-cli}` | /Applications/MAMP/bin/php/php8.4.17/bin/php -d memory_limit=512M -d display_errors=stderr -d mysqli.default_socket=/Applications/MAMP/tmp/mysql/mysql.sock /Users/…/Sites/{slug}/wp-cli.phar --path=/Users/…/Sites/{slug} |
 
 ## Local Development
 - **Local URL**, **Build watch** `npm run dev`, **Build single** `npm run build`, kit catalogue `https://localhost:8848/html/`

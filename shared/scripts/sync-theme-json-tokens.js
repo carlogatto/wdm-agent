@@ -254,6 +254,17 @@ function syncGlobalStyles(themeRoot, designMd) {
     console.error(`sync-theme-json-tokens: wp eval fallito (${(e.stderr || e.message || '').toString().trim().split('\n')[0]})`);
     return 'error';
   }
+  // PHP può stampare avvisi sullo stdout prima del CSS (es. WP-CLI su un PHP più nuovo: "Deprecated: …"):
+  // una riga non CSS in testa invalida il primo blocco (:root con tutte le variabili --wp--preset--*).
+  const lines = css.split('\n');
+  let skipped = 0;
+  while (lines.length && (lines[0].trim() === '' || /^(PHP )?(Deprecated|Warning|Notice|Strict Standards|Fatal error)\b/.test(lines[0]))) { lines.shift(); skipped++; }
+  css = lines.join('\n');
+  if (!/^[:.#@*\[a-zA-Z]/.test(css.trim()) || !css.includes('{')) {
+    console.error(`sync-theme-json-tokens: l'output di wp eval non è CSS (prima riga: ${JSON.stringify((css.trim().split('\n')[0] || '').slice(0, 120))}); ${path.relative(themeRoot, target)} non toccato. Controlla {wp-cli} (PHP del server MAMP, -d display_errors=stderr).`);
+    return 'error';
+  }
+  if (skipped) console.error(`sync-theme-json-tokens: ${skipped} riga/e non CSS scartate dallo stdout di wp eval (avvisi PHP): aggiungi -d display_errors=stderr a {wp-cli} o usa il PHP del server MAMP.`);
   let header = GLOBAL_STYLES_HEADER;
   const existing = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : '';
   const hm = /^\/\*[\s\S]*?\*\//.exec(existing);
