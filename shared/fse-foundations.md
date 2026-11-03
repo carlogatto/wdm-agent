@@ -106,6 +106,11 @@ start (§11).
   build.js  package.json  (package.json WITHOUT "type": "module" — §6)
 ```
 
+Site root (`{site-root}`, the git repo): `CLAUDE.md` (session protocol, placeholders, shipped
+unchanged), `DESIGN.md` (state, §11), `README.md` (quick-start note for humans: dependencies, setup
+on a new machine, commands, the flow; shipped by wdm-theme, renamed by `fse-theme-setup`, never a
+state file: no skill writes to it), `docs/brief/` (the designer's material, `fse-brief`).
+
 Block folder = `{prefix}-block-{slug}` = root CSS class; `block.json` `name` = `{prefix}/{slug}`;
 block category `{prefix}` (title = project name, `blocks/blocks.php`); pattern category
 `{prefix}` (same slug, different registry, `library/custom.php`). The telaio is made of core

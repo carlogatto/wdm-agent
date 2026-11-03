@@ -10,5 +10,5 @@ for s in '_section.scss' 'Shared attribute vocabulary' 'headingLevel' 'token-exc
 done
 v1="$(jq -r .version "$PLUGIN_ROOT/.claude-plugin/plugin.json")"
 v2="$(jq -r '.plugins[0].version' "$PLUGIN_ROOT/.claude-plugin/marketplace.json")"
-[ "$v1" = "1.5.0" ] && [ "$v2" = "1.5.0" ] || fail "versione plugin.json=$v1 marketplace.json=$v2, attesa 1.5.0"
+[ "$v1" = "1.6.0" ] && [ "$v2" = "1.6.0" ] || fail "versione plugin.json=$v1 marketplace.json=$v2, attesa 1.6.0"
 echo "PASS $name"

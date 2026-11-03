@@ -148,12 +148,13 @@ echo "  ✓ 8  cartelle blocco e file (kit, pattern) rinominati"
 sedfile "s/proxy: '[^']*'/proxy: '$E_LOCAL_URL'/" build.js
 echo "  ✓ 9  build.js proxy → $LOCAL_URL"
 
-# === Step 10 — site root: .gitignore whitelist, DESIGN.md residuals (CLAUDE.md uses placeholders: untouched) ===
+# === Step 10 — site root: .gitignore whitelist, DESIGN.md and README.md residuals (CLAUDE.md uses placeholders: untouched) ===
+# The plugin name `wdm-agent` and the base repo URL `carlogatto/wdm-theme` survive the rename (placeholders, then restored).
+SITE_ROOT_SED="s#carlogatto/wdm-theme#__WDMREPO__#g; s/wdm-agent/__WDMAGENT__/g; s/wdm-theme/$E_SLUG/g; s/| wdm |/| $PREFIX |/g; s/wdm-/$PREFIX-/g; s/wdm_/${PREFIX}_/g; s#wdm/#$PREFIX/#g; s/WDM Theme/$E_CATEGORY/g; s#__WDMREPO__#carlogatto/wdm-theme#g; s/__WDMAGENT__/wdm-agent/g"
 sedfile "s/wdm-theme/$E_SLUG/g" "$TARGET/.gitignore"
-if [ -f "$TARGET/DESIGN.md" ]; then
-  sed -i '' "s/wdm-theme/$E_SLUG/g; s/| wdm |/| $PREFIX |/g; s/wdm-/$PREFIX-/g; s/wdm_/${PREFIX}_/g; s#wdm/#$PREFIX/#g; s/WDM Theme/$E_CATEGORY/g" "$TARGET/DESIGN.md"
-fi
-echo "  ✓ 10 .gitignore e DESIGN.md della site root"
+sedfile "$SITE_ROOT_SED" "$TARGET/DESIGN.md"
+sedfile "$SITE_ROOT_SED" "$TARGET/README.md"   # quick-start note shipped by wdm-theme (site root), see SKILL.md Step 5a
+echo "  ✓ 10 .gitignore, DESIGN.md e README.md della site root"
 
 # === Step 11 — wp-cli.phar (site root) ===
 if [ ! -f "$TARGET/wp-cli.phar" ]; then

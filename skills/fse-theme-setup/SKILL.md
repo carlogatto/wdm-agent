@@ -92,7 +92,7 @@ Project Config values, keep the tables (setup.sh renames `wdm` → `{prefix}` in
 - [ ] Step 4f — Formidable installed, default form part with `formId` 0
 
 ## Phase 5 — Handover
-- [ ] Step 5a — DESIGN.md tables and CLAUDE.md verified
+- [ ] Step 5a — DESIGN.md tables, CLAUDE.md and site-root README.md verified
 - [ ] Step 5b — Dev check in the browser, git repo with Sourcetree
 ```
 
@@ -283,7 +283,7 @@ Parti)".
 
 ## Phase 5 — Handover
 
-### Step 5a — DESIGN.md and CLAUDE.md `[AGENT]`
+### Step 5a — DESIGN.md, CLAUDE.md and README.md `[AGENT]`
 - `## Telaio`: header, footer, templates, form di default `implementato` (inherited from the starter; the project
   kit will redesign them with `fse-kit`).
 - `## Pagine`: Home `/` `da progettare` (the WP page exists, empty; its kit is the project's;
@@ -298,6 +298,12 @@ Parti)".
 - `## Domande aperte`, `## Log decisioni` (one row: setup date, values).
 - `CLAUDE.md` ships with the repo and resolves `{prefix}`/paths from DESIGN.md: verify its
   "First: read DESIGN.md" protocol and routing table mention only `fse-*` skills.
+- `README.md` (site root) ships with the repo as the project's quick-start note for humans
+  (dependencies, setup on a new machine, `npm` commands, the flow, the project structure); it is
+  never a state file (state lives in `DESIGN.md`). `setup.sh` renamed it (Step 10): verify the
+  title and the theme paths carry the project values and that the only `wdm` left are the plugin
+  name `wdm-agent` and the base repo URL `carlogatto/wdm-theme`. Missing from the clone → copy it
+  from the wdm-theme repo and run the same `sed` of Step 10 on it; never write it from scratch.
 
 ### Step 5b — Dev check and git `[MANUAL]`
 > Il setup è completo. Controlla nel browser `{local-url}` (home con header/footer e menu) e
