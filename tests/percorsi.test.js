@@ -31,7 +31,7 @@ test('il plugin ha file da controllare', () => {
 });
 
 test('nessuna cartella personale, nemmeno nelle prove', () => {
-  assert.deepEqual(righe(TUTTI, /\/Users\/[\w.-]+|[A-Za-z]:\\Users\\[\w.-]+|\/home\/[\w.-]+/), []);
+  assert.deepEqual(righe(TUTTI, /\/Users\/[\w.-]+|[A-Za-z]:\\+Users\\+[\w.-]+|\/home\/[\w.-]+/), []);
 });
 
 test('fuori dalle prove nessun riferimento a ~/.claude', () => {

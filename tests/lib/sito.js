@@ -19,6 +19,8 @@ const path = require('node:path');
 const CHIAVI = ['site', 'url', 'db', 'php', 'socket', 'phar'];
 const WP_VERSION = '7.1.3';
 const ADMIN = 'testadmin';
+// File che le prove lasciano nella cartella del sito di prova: è ciò che autorizza a svuotarla.
+const SEGNO = '.wdm-agent-sito-di-prova';
 
 function fileConfig() {
   return process.env.WDM_AGENT_SITO || path.join(__dirname, '..', 'sito.local.json');
@@ -46,8 +48,12 @@ function controlla(cfg) {
   if (!path.isAbsolute(cfg.site)) {
     throw new Error(`configurazione del sito di prova: "site" deve essere un percorso assoluto (${cfg.site}).`);
   }
-  if (!path.basename(cfg.site).endsWith('-test') || !cfg.db.endsWith('-test')) {
-    throw new Error('configurazione del sito di prova: la cartella "site" e il database "db" devono finire con "-test".');
+  if (!path.basename(cfg.site).endsWith('-test')) {
+    throw new Error('configurazione del sito di prova: la cartella "site" deve finire con "-test".');
+  }
+  // Il nome entra in una query: solo lettere, cifre, trattino e trattino basso.
+  if (!/^[A-Za-z0-9_-]+-test$/.test(cfg.db)) {
+    throw new Error('configurazione del sito di prova: "db" deve finire con "-test" e contenere solo lettere, cifre, "-" e "_".');
   }
   for (const nome of ['DESIGN.md', '.git']) {
     if (fs.existsSync(path.join(cfg.site, nome))) {
@@ -111,8 +117,20 @@ function nonDisponibile() {
   return null;
 }
 
+// Il nome della cartella non basta: un sito vero può chiamarsi cliente-test. Si scrive e si
+// cancella solo in una cartella vuota, o in una che porta il segno lasciato da un lancio precedente.
+function voci(cfg) {
+  const trovate = fs.readdirSync(cfg.site);
+  if (trovate.length > 0 && !trovate.includes(SEGNO)) {
+    throw new Error(`${cfg.site} non è vuota e non porta il segno del sito di prova (${SEGNO}): non la tocco. Se è davvero la cartella del sito di prova, svuotala a mano e rilancia.`);
+  }
+  fs.writeFileSync(path.join(cfg.site, SEGNO), 'Cartella del sito di prova del plugin wdm-agent: le prove la svuotano.\n');
+  return trovate.filter((voce) => voce !== SEGNO);
+}
+
 function installa() {
   const cfg = config();
+  voci(cfg);
   if (fs.existsSync(path.join(cfg.site, 'wp-load.php')) || tabelle(cfg) > 0) {
     throw new Error('il sito di prova non è vuoto. Lancia prima "reset".');
   }
@@ -132,8 +150,8 @@ function installa() {
 
 function reset() {
   const cfg = config();
-  for (const entry of fs.readdirSync(cfg.site)) {
-    fs.rmSync(path.join(cfg.site, entry), { recursive: true, force: true });
+  for (const voce of voci(cfg)) {
+    fs.rmSync(path.join(cfg.site, voce), { recursive: true, force: true });
   }
   db(cfg, '$m->query("DROP DATABASE IF EXISTS `$db`");'
     + ' $m->query("CREATE DATABASE `$db` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");');
@@ -148,10 +166,10 @@ function prepara() {
 
 function stato() {
   const cfg = config();
-  return `cartella: ${fs.readdirSync(cfg.site).length} elementi · database: ${tabelle(cfg)} tabelle`;
+  return `cartella: ${fs.readdirSync(cfg.site).filter((voce) => voce !== SEGNO).length} elementi · database: ${tabelle(cfg)} tabelle`;
 }
 
-module.exports = { leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato };
+module.exports = { SEGNO, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato };
 
 if (require.main === module) {
   const [comando, ...resto] = process.argv.slice(2);
@@ -159,8 +177,13 @@ if (require.main === module) {
     install: () => console.log(`installato: WordPress ${WP_VERSION} su ${installa().url}`),
     reset: () => { reset(); console.log(stato()); },
     status: () => console.log(stato()),
-    // Il codice d'uscita di WP-CLI passa così com'è.
-    wp: () => { const cfg = config(); process.exitCode = spawnSync(cfg.php, [...argomentiWp(cfg), ...resto], { stdio: 'inherit' }).status; },
+    // Il codice d'uscita di WP-CLI passa così com'è; se PHP non parte è un errore.
+    wp: () => {
+      const cfg = config();
+      const r = spawnSync(cfg.php, [...argomentiWp(cfg), ...resto], { stdio: 'inherit' });
+      if (r.error) throw new Error(`PHP non parte (${cfg.php}): ${r.error.message}`);
+      process.exitCode = r.status === null ? 1 : r.status;
+    },
   };
   if (!comandi[comando]) {
     console.error('Uso: node tests/lib/sito.js install | reset | status | wp <comando>');

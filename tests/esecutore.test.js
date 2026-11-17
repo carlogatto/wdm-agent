@@ -60,3 +60,29 @@ test('--senza con un gruppo che non esiste: errore d\'uso, exit 2', () => {
   assert.match(r.out, /inesistente/);
   assert.doesNotMatch(r.out, /VERDE/);
 });
+
+// Un file che non riporta le sue prove non vale un file passato: Node lo dà per riuscito.
+for (const cartella of ['esce', 'esce-dopo', 'senza-prove']) {
+  test(`${cartella}: un file che esce prima della fine o non ha prove dà NON VERDE`, () => {
+    const r = esegui(cartella);
+    assert.equal(r.status, 1, r.out);
+    assert.equal(r.verdetto.length, 1, r.out);
+    assert.match(r.verdetto[0], /^NON VERDE/);
+    assert.match(r.out, /fallita {2}a\.test\.js/);
+  });
+}
+
+test('una prova in una sottocartella che l\'esecutore non legge: errore, exit 2', () => {
+  const r = esegui('profonda');
+  assert.equal(r.status, 2, r.out);
+  assert.match(r.out, /b\.test\.js/);
+  assert.doesNotMatch(r.out, /VERDE/);
+});
+
+test('argomenti che l\'esecutore non conosce: errore d\'uso, exit 2, nessuna prova lanciata', () => {
+  for (const args of [['--senza=extra'], ['-senza', 'extra'], ['--senza', 'extra,', 'altro'], ['--senza', 'extra', '--senza', 'extra'], ['--senza']]) {
+    const r = esegui('verde', ...args);
+    assert.equal(r.status, 2, `${args.join(' ')}: ${r.out}`);
+    assert.doesNotMatch(r.out, /VERDE/);
+  }
+});

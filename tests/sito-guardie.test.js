@@ -16,7 +16,7 @@ function cartella(nome) {
 }
 
 function config(valori) {
-  return { site: cartella('prova-test'), url: 'http://localhost', db: 'prova-test', php: 'php', socket: '/tmp/mysql.sock', phar: 'wp-cli.phar', ...valori };
+  return { site: cartella('prova-test'), url: 'http://localhost', db: 'prova-test', php: 'php', socket: path.join(os.tmpdir(), 'wdm-agent-nessun-socket.sock'), phar: 'wp-cli.phar', ...valori };
 }
 
 test('una cartella e un database che finiscono con -test passano', () => {
@@ -29,6 +29,12 @@ test('cartella senza -test: rifiutata', () => {
 
 test('database senza -test: rifiutato', () => {
   assert.throws(() => sito.controlla(config({ db: 'il-mio-sito' })), /-test/);
+});
+
+test('nome del database con caratteri che uscirebbero dalla query: rifiutato', () => {
+  for (const db of ['lavoro` -- -test', 'a b-test', '-test', 'riga\nnuova-test']) {
+    assert.throws(() => sito.controlla(config({ db })), /db/, JSON.stringify(db));
+  }
 });
 
 test('cartella relativa: rifiutata', () => {
@@ -71,4 +77,47 @@ test('configurazione che punta a un progetto: il reset da riga di comando si rif
   const r = spawnSync(process.execPath, [path.join(__dirname, 'lib', 'sito.js'), 'reset'], { encoding: 'utf8', env: { ...process.env, WDM_AGENT_SITO: file } });
   assert.equal(r.status, 1, r.stdout + r.stderr);
   assert.equal(fs.readFileSync(path.join(site, 'DESIGN.md'), 'utf8'), 'da non cancellare');
+});
+
+// Il nome non basta: un sito vero può chiamarsi cliente-test. Il reset tocca solo una cartella
+// vuota o una che porta il segno lasciato dalle prove.
+function resetDaRigaDiComando(site) {
+  const file = path.join(path.dirname(site), 'sito.json');
+  fs.writeFileSync(file, JSON.stringify(config({ site })));
+  return spawnSync(process.execPath, [path.join(__dirname, 'lib', 'sito.js'), 'reset'], { encoding: 'utf8', env: { ...process.env, WDM_AGENT_SITO: file } });
+}
+
+test('cartella non vuota senza il segno del sito di prova: il reset si rifiuta e non cancella', () => {
+  const site = cartella('cliente-test');
+  fs.writeFileSync(path.join(site, 'wp-config.php'), 'da non cancellare');
+  const r = resetDaRigaDiComando(site);
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.ok(r.stderr.includes(sito.SEGNO), r.stderr);
+  assert.equal(fs.readFileSync(path.join(site, 'wp-config.php'), 'utf8'), 'da non cancellare');
+});
+
+test('collegamento simbolico verso una cartella senza il segno: il reset non la svuota', () => {
+  const vera = cartella('documenti');
+  fs.writeFileSync(path.join(vera, 'importante.txt'), 'da non cancellare');
+  const site = path.join(path.dirname(vera), 'link-test');
+  fs.symlinkSync(vera, site, 'dir');
+  const r = resetDaRigaDiComando(site);
+  assert.equal(r.status, 1, r.stdout + r.stderr);
+  assert.equal(fs.readFileSync(path.join(vera, 'importante.txt'), 'utf8'), 'da non cancellare');
+});
+
+test('cartella con il segno: il reset la svuota e lascia il segno', () => {
+  const site = cartella('prova-test');
+  fs.writeFileSync(path.join(site, sito.SEGNO), '');
+  fs.writeFileSync(path.join(site, 'wp-config.php'), 'residuo di una prova');
+  resetDaRigaDiComando(site); // poi fallisce sul database, che qui non esiste
+  assert.deepEqual(fs.readdirSync(site), [sito.SEGNO]);
+});
+
+test('wp da riga di comando con un PHP che non esiste: non esce con 0', () => {
+  const site = cartella('prova-test');
+  const file = path.join(path.dirname(site), 'sito.json');
+  fs.writeFileSync(file, JSON.stringify(config({ site, php: path.join(site, 'php-che-non-esiste') })));
+  const r = spawnSync(process.execPath, [path.join(__dirname, 'lib', 'sito.js'), 'wp', 'option', 'get', 'home'], { encoding: 'utf8', env: { ...process.env, WDM_AGENT_SITO: file } });
+  assert.notEqual(r.status, 0, r.stdout + r.stderr);
 });

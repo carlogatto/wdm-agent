@@ -16,7 +16,9 @@ const SYNC = path.join(RADICE, 'shared', 'scripts', 'sync-theme-json-tokens.js')
 function hook(radice, script, file, senzaRadice) {
   const env = { ...process.env, CLAUDE_PLUGIN_ROOT: radice };
   if (senzaRadice) delete env.CLAUDE_PLUGIN_ROOT;
-  const r = spawnSync('bash', [path.join(radice, 'hooks', script)], { encoding: 'utf8', env, input: JSON.stringify({ tool_input: { file_path: file } }) });
+  // Lanciato come lo lancia hooks.json: il file stesso, che deve quindi essere eseguibile.
+  const r = spawnSync(path.join(radice, 'hooks', script), [], { encoding: 'utf8', env, input: JSON.stringify({ tool_input: { file_path: file } }) });
+  assert.ifError(r.error);
   return { status: r.status, stdout: r.stdout, stderr: r.stderr };
 }
 

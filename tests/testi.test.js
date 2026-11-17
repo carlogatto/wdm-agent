@@ -31,14 +31,23 @@ test('skill e fondamenta non citano piani, fasi di piano o decisioni numerate', 
   assert.deepEqual(righe(SKILL_E_FONDAMENTA, (riga) => piano.test(riga)), []);
 });
 
+// I testi vanno a capo a mano: le parole di un residuo possono stare su due righe. Si cerca
+// quindi nel testo intero, e `ammesso` (se dato) si cerca nei 200 caratteri attorno.
+function residui(elenco, modello, ammesso) {
+  return elenco.flatMap((f) => {
+    const testo = fs.readFileSync(f, 'utf8');
+    return [...testo.matchAll(modello)]
+      .filter((m) => !ammesso || !ammesso.test(testo.slice(Math.max(0, m.index - 200), m.index + m[0].length + 200)))
+      .map((m) => `${path.relative(RADICE, f)}:${testo.slice(0, m.index).split('\n').length}: ${m[0].replace(/\s+/g, ' ')}`);
+  });
+}
+
 test('nessun residuo del flusso a quattro gate', () => {
-  assert.deepEqual(righe(TESTI, (riga) => /gate[- ]4|quattro gate|four gates/i.test(riga)), []);
+  assert.deepEqual(residui(TESTI, /gate[-\s]+4\b|quattro\s+gate|four\s+gates/gi), []);
 });
 
-// Una conversazione nuova serve in un caso solo: dopo un aggiornamento del plugin. La frase può
-// andare a capo, quindi il caso ammesso si cerca anche nella riga prima e in quella dopo.
+// Una conversazione nuova serve in un caso solo: dopo un aggiornamento del plugin.
 test('«conversazione nuova» solo per l\'aggiornamento del plugin', () => {
-  const nuova = /new conversation|conversazione nuova|nuova conversazione/i;
-  const ammesso = /plugin update|aggiornamento del plugin/i;
-  assert.deepEqual(righe(TESTI, (riga, i, tutte) => nuova.test(riga) && !ammesso.test(tutte.slice(Math.max(0, i - 1), i + 2).join(' '))), []);
+  const nuova = /new\s+conversation|conversazione\s+nuova|nuova\s+conversazione/gi;
+  assert.deepEqual(residui(TESTI, nuova, /plugin\s+update|aggiornamento\s+del\s+plugin/i), []);
 });

@@ -29,7 +29,11 @@ describe('wp-page.php', { skip: sito.nonDisponibile() || false }, () => {
   };
   const scriviKit = (...blocchi) => fs.writeFileSync(kit, blocchi.length ? blocchi.join('\n\n') + '\n' : '');
   const page = (modo, pagina, ...args) => sito.wp(['eval-file', SCRIPT, modo, kit, `page=${pagina}`, ...args]);
-  const campo = (nome) => sito.wp(['post', 'get', id, `--field=${nome}`]).stdout.trim();
+  const campo = (nome) => {
+    const r = sito.wp(['post', 'get', id, `--field=${nome}`]);
+    assert.equal(r.status, 0, r.out);
+    return r.stdout.trim();
+  };
   const contenuto = () => campo('post_content');
   const scriviInWp = (testo) => assert.equal(sito.wp(['post', 'update', id, `--post_content=${testo}`]).status, 0);
   // Esegue lo script e pretende codice d'uscita e, se dati, i testi nell'output.

@@ -159,8 +159,9 @@ Il sito di prova è un WordPress usa e getta, in una cartella e in un database r
 prove: le prove che scrivono in WordPress scrivono solo lì, lo azzerano prima di cominciare e lo
 lasciano vuoto. I valori della macchina (cartella, database, PHP e socket di MAMP, `wp-cli.phar`)
 stanno in `tests/sito.local.json`, che non entra nel repo: si parte da una copia di
-`tests/sito.example.json`. Cartella e database devono avere un nome che finisce con `-test`,
-altrimenti le prove si rifiutano di toccarli. Per usarlo a mano:
+`tests/sito.example.json`. Cartella e database devono avere un nome che finisce con `-test`, e la
+cartella al primo uso deve essere vuota: le prove ci lasciano il file `.wdm-agent-sito-di-prova`
+e da allora svuotano solo una cartella che lo contiene. Per usarlo a mano:
 `node tests/lib/sito.js install | reset | status | wp …`.
 
 A ogni push su `master` GitHub Actions (`.github/workflows/prove.yml`) esegue le prove su macOS
