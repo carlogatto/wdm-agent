@@ -38,7 +38,7 @@ after the dev's ok there, and this run builds only rows that passed them.
 
 | Input | Source |
 |---|---|
-| Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition: `fse-kit` puts the row back to `kit` when it revises the telaio after a build; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2j). Parents before children. Rows `da progettare` are skipped and named in the report. The perimeter is **always the whole site**: the prompt never narrows it (an aligned page costs one "0 differenze") |
+| Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition: `fse-kit` puts the row back to `kit` when it revises the telaio after a build; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2i). Parents before children. Rows `da progettare` are skipped and named in the report. The perimeter is **always the whole site**: the prompt never narrows it (an aligned page costs one "0 differenze") |
 | Admin credentials | username = `DESIGN.md → Project Config → {agent-admin-user}`; password in `{site-root}/.env` (`AGENT_ADMIN_PASSWORD=…`, fse-foundations §9/§10: never read or echoed by the agent, substituted by the shell into the Playwright copy). `.env` missing or empty → no question: the run goes on without Playwright (2c smoke test, 2g editor check skipped), no page reaches `implementata` (it stays `kit`, report: "verifica editor mancante") and *Cosa aspetta te* asks the dev to create `.env` |
 | `{wp-cli}` | `DESIGN.md → Project Config → Paths`; put it in a scratchpad script for the session |
 
@@ -82,7 +82,7 @@ after the dev's ok there, and this run builds only rows that passed them.
 4. `DESIGN.md → Telaio`: `implementato`; theme README "Differenze kit ↔ WP" if new ones appear.
    Go on with the pages.
 
-## Step 2 — Pages (repeat 2a–2j for every page of the perimeter, in order; then Step 3)
+## Step 2 — Pages (repeat 2a–2i for every page of the perimeter, in order; then Step 3)
 
 Progress line in `DESIGN.md → ## Domande aperte`: `⏳ build sito: pagina {Titolo} {M}/{N} (dal
 YYYY-MM-DD)`, updated per page, removed at Step 4.
@@ -194,7 +194,7 @@ check reported as missing.
   table of blocks (if the project keeps one) and project `CLAUDE.md → Existing Blocks`.
 - `version` of edited blocks bumped.
 
-### 2j. Pages `da eliminare` and pages outside the flow
+### 2i. Pages `da eliminare` and pages outside the flow
 A row `da eliminare` (the map dropped the page; row and kit still there) → in the report as a
 deletion: "pagina {Titolo} (id N) da cancellare: `confirm`?". Only with the dev's ok in a later
 turn: `{wp-cli} post delete {ID} --force`, delete `src/kit/{prefix}-{page}.kit` (and its
@@ -231,7 +231,7 @@ answer — the run does not stop for it. `DESIGN.md → ## Navigazione` is writt
      per gap the visitor can hit (404 links, placeholder images), one per `[da confermare]`.
    - *Prossimo passo*: a pending `confirm` is answered in this conversation: say what the dev
      writes for each item, by id, and apply it in the turn that follows the answer (`fse-build
-     2j` / `fse-menu-build apply … confirm`); no prompt to paste. Then the next `da progettare`
+     2i` / `fse-menu-build apply … confirm`); no prompt to paste. Then the next `da progettare`
      row of `## Pagine`, in one line: the agent goes on with its kit (point 3).
    Everything else (counts, scripts, intermediate fixes, green checks) stays in the log row.
 3. **Go on, or stop.** A `## Pagine` row `da progettare` → read

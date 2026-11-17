@@ -147,8 +147,8 @@ consequence and remedy (publish the draft, create the page, or remove the label 
 *Prossimo passo*: what the dev writes to confirm each diff; `apply … confirm` runs in the turn
 that follows the answer, in this conversation, with no prompt to paste. Item counts,
 `ref` before → after, the curl check and a skipped or failed step go to the `## Log decisioni`
-row (a failed step is also one line in *Esito*). Inside `fse-build` the same content enters its
-gate-4 message. Never the password (none is needed: the script runs through WP-CLI).
+row (a failed step is also one line in *Esito*). Inside `fse-build` the same content enters the
+build's closing report. Never the password (none is needed: the script runs through WP-CLI).
 
 ## Stop conditions (the only ones)
 

@@ -80,7 +80,8 @@ section padding → `theme.json → styles.blocks["{prefix}/{slug}"]` then
 **E. JS**: `src/view.js` per §5 (vanilla → Interactivity API → Swiper); `block.json`
 `"viewScriptModule": "file:./build/view.js"` (+ `"style": ["{prefix}-swiper", …]` and
 `supports.interactivity` when relevant); `_js-shared.kit` link for the kit; README `## Dipendenze
-JS / CSS`; a shared module → `src/js/view/` + the build.js watch rule (§5).
+JS / CSS`; a shared module → `src/js/{name}.js`, registered as a script module in `library/custom.php` and
+kept external in `build.js` (`EXTERNAL_MODULES`), like `{prefix}-swiper` (§5).
 
 **F. Child**: own folder with the full anatomy (`parent`, `usesContext`, `supports.html false,
 reusable false`), parent `allowedBlocks`/`template`, `providesContext` if the child needs the

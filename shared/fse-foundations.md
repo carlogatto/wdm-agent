@@ -395,7 +395,7 @@ blocked by CORS and the carousels do not start.
   `--wp--custom--z-index--header`, `--wp--custom--header-height--mobile|desktop`,
   `--wp--style--global--wide-size|content-size`. **No hex colour, no literal `box-shadow`, no
   literal `border-radius`, no literal `font-size`** anywhere in `src/scss/**` or `blocks/*/src/**`
-  (`tools/check-tokens.sh`); the only exceptions are structural px measures of a component
+  (`tools/check-tokens.js`); the only exceptions are structural px measures of a component
   (header height, arrow footprint), each marked on its line with `// token-exception: <why>`.
   No utility classes beyond core's.
 - BEM on the block: `.{prefix}-block-{slug}` (root, given by render.php), `__el`, `--modifier`.
