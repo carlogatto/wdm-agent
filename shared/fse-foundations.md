@@ -667,7 +667,20 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   would take another port and compile everything twice). Start `npm run dev` only when 8848 is
   silent, and stop it at the end of the session. The watch writes sourcemaps (`*.map`, gitignored);
   `npm run build` removes them, so `npm run build` → `npm run check` passes with the watch on.
-- Git is the dev's (Sourcetree): **never** a git command, not even read-only.
+- **Git: the agent commits, the dev pushes.** A commit is local and can be undone; a push starts
+  the dev's pipeline, so that decision stays human.
+  - Commit every unit that is closed and verified: after the ok to a gate, after a verified
+    build or maintenance intervention (`npm run build` and `npm run check` exit 0). A kit under
+    review is not committed.
+  - Only the main branch of the repo (`master` or `main`): never create or switch branch.
+  - Only the files of the work in progress, added by name. Changes someone else left in the
+    repo stay out, and the handover says so in one line.
+  - Messages in the dev's style, in Italian (`feat(home): …`, `fix(menu): …`).
+  - Reading the repo is free (`status`, `diff`, `log`): the history also tells which side, kit
+    or theme, changed last.
+  - **Never** `push`; never touch remotes or git configuration; never rewrite history (`amend`,
+    `rebase`, `reset --hard`, `push --force`); never `git clean`; never discard a change the
+    agent did not make.
 - 2 spaces, no tabs, in every file; never overwrite an existing file — read and complete it.
 
 ### The decision charter
@@ -709,7 +722,8 @@ seconds, fits on one screen, and answers four questions **in this order, with th
 3. **Cosa aspetta te** — every `confirm`, gap and `[da confermare]` left open, one item each,
    with the **concrete consequence** and the default chosen ("dopo la cancellazione la voce
    Servizi dei due menu resta appesa: la toglie `fse-kit` sul telaio, poi `fse-menu-build`").
-   Nothing open → one line, "Niente da confermare".
+   Nothing open → one line, "Niente da confermare". When commits wait for the dev's push, one
+   line says how many and in which repo.
 4. **Prossimo passo** — at a gate: "ok o osservazioni" and what the agent does right after the
    ok, in this conversation (§1: the build, then the next kit). Otherwise only what the dev alone
    can do (a `confirm`, a plugin reinstall, a password change): those need a **new conversation**
@@ -719,7 +733,7 @@ seconds, fits on one screen, and answers four questions **in this order, with th
    passo successivo: la sessione è chiusa".
 
 **Silence.** Checks that passed are not listed (build, `npm run check`, `debug.log`, hooks,
-console, overflow, h1, Site Editor, parity, browser tab closed, no git command): "Esito" already
+console, overflow, h1, Site Editor, parity, browser tab closed): "Esito" already
 says it. Internal mechanics (scripts, diff counters, intermediate bugs fixed, files touched to get
 there) go to `DESIGN.md → ## Log decisioni`, which is where the dev looks for detail; the message
 cites a detail only when it changes a decision of theirs. A **failed** check or a deviation from

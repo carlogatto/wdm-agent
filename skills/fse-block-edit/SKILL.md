@@ -123,7 +123,7 @@ pre-existing code · a page with the block is locked by another user.
 
 Rename/remove attributes · edit `build/` by hand · `save()` with markup · change render.php
 without the kit · hardcoded colours/sizes · `@use 'swiper/swiper'` in the block · touch other
-blocks' files (shared components in `src/js/editor/` only additively) · git commands.
+blocks' files (shared components in `src/js/editor/` only additively) · `git push`, or any git command beyond the fse-foundations §10 rule.
 
 ## Completion checklist
 
@@ -132,3 +132,4 @@ blocks' files (shared components in `src/js/editor/` only additively) · git com
 - [ ] block.json additive (new attribute with safe default / new enum value), `version` bumped
 - [ ] Build exit 0, hook silent, smoke test of the change, regression on an existing instance, parity in `/html/`
 - [ ] README, DESIGN.md (Blocchi, Log decisioni), CLAUDE.md updated; handover message (§10) with the pages affected
+- [ ] Commit of the closed intervention (fse-foundations §10: main branch, files added by name); the push is the dev's

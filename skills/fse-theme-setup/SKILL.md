@@ -106,12 +106,13 @@ Project Config values, keep the tables (setup.sh renames `wdm` → `{prefix}` in
 
 ## Phase 5 — Handover
 - [ ] Step 5a — DESIGN.md tables, CLAUDE.md and site-root README.md verified
-- [ ] Step 5b — Dev check in the browser, git repo with Sourcetree
+- [ ] Step 5b — Git repo and first commit (agent), dev check in the browser
 ```
 
 Rules (same as `new-project-setup`): update `SETUP.md` after every step, before the next;
 `[MANUAL]` steps are the dev's — send the quoted message verbatim, STOP, wait for **fatto**,
-never automate them; **git is dev-owned** (never a git command, a missing `.git` is expected);
+never automate them; git follows fse-foundations §10 (the agent commits, the dev pushes; a
+missing `.git` is expected until Step 5b);
 re-read this SKILL.md from disk at every phase boundary.
 
 ---
@@ -125,7 +126,8 @@ re-read this SKILL.md from disk at every phase boundary.
 >   `.gitignore`, `docs/`, `wp-content/themes/wdm-theme/`). I file core di WordPress li scarico io
 >   se mancano.
 >
-> (Il repository git lo creerai tu con Sourcetree alla fine — Step 5b.)
+> (Il repository git lo creo io alla fine, con il primo commit: a te restano il remoto e il push —
+> Step 5b.)
 > Quando tutto è pronto scrivi: **confermato**
 
 ### Step 1b — Database `[MANUAL]`
@@ -318,11 +320,19 @@ Parti)".
   name `wdm-agent` and the base repo URL `carlogatto/wdm-theme`. Missing from the clone → copy it
   from the wdm-theme repo and run the same `sed` of Step 10 on it; never write it from scratch.
 
-### Step 5b — Dev check and git `[MANUAL]`
-> Il setup è completo. Controlla nel browser `{local-url}` (home con header/footer e menu) e
-> `wp-admin` con il tuo utente. Poi con Sourcetree: repository locale in `{site-root}/`, remoto,
-> commit iniziale e push. Ricorda di cambiare la password che ti ho mostrato; quella dell'utente
-> agente è in `{site-root}/.env` (fuori da git): se la cambi, aggiorna il file.
+### Step 5b — Git `[AGENT]`, then dev check `[MANUAL]`
+Git first (fse-foundations §10). `{site-root}/.git` missing → `git init` in `{site-root}`. Then
+the first commit: the whole project is the work, so `git add .` is allowed here and only here
+(the `.gitignore` shipped with the repo keeps WordPress core, uploads, `.env` and `node_modules`
+out); read `git status --short` before committing and stop if `.env` or a core folder is listed.
+Message: `chore: setup del progetto {slug} da wdm-theme`. `.git` already there → no init, commit
+on the current branch; a remote `origin` still pointing to `carlogatto/wdm-theme` is named in the
+message below (the dev replaces it). Never a remote, never a push: they are the dev's.
+
+> Il setup è completo e il primo commit è fatto. Controlla nel browser `{local-url}` (home con
+> header/footer e menu) e `wp-admin` con il tuo utente. Il remoto e il push sono tuoi, quando
+> vuoi. Ricorda di cambiare la password che ti ho mostrato; quella dell'utente agente è in
+> `{site-root}/.env` (fuori da git): se la cambi, aggiorna il file.
 > Quando hai finito scrivi: **fatto**
 
 Remind the dev: `style.css` header (Theme Name/Description/Author), `screenshot.png`,
@@ -337,9 +347,9 @@ items above;
 in docs/brief/ con wdm-agent:fse-brief"), once the designer has deposited the files.
 
 ## What is NOT automated
-MAMP host and DB (GUI) · git (Sourcetree) · the dev's browser check · password changes.
+MAMP host and DB (GUI) · the git remote and the push · the dev's browser check · password changes.
 
 ## Never
 Run `setup.sh` twice · touch the starter repo · persist the dev's password (chat only, once) ·
 print or read the agent's password (`.env` only, written by the shell) · overwrite an existing
-`.env` · git commands · write `CLAUDE.md` by hand (it ships with the repo).
+`.env` · `git push`, or any git command beyond the fse-foundations §10 rule · write `CLAUDE.md` by hand (it ships with the repo).

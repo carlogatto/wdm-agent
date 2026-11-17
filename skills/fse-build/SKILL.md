@@ -293,7 +293,7 @@ close it with the questions in the report, and `confirm` runs in a later turn.
 page or a `wp_navigation` without `confirm` in a later turn · ask during the run (the charter
 decides, the report collects) · rewrite kit texts · write credentials anywhere · write through
 the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are the write paths) ·
-git commands · `@use 'swiper/swiper'` in a block.
+`git push`, or any git command beyond the fse-foundations §10 rule · `@use 'swiper/swiper'` in a block.
 
 ## Completion checklist
 
@@ -303,4 +303,5 @@ git commands · `@use 'swiper/swiper'` in a block.
 - [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; parity: kit errors fixed in the kit in this run, design differences reported
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
+- [ ] Commit of the verified run, before the handover (pages left `kit` by a gap stay out) (fse-foundations §10: main branch, files added by name); the push is the dev's
 - [ ] Log row written; handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, prompt pronto solo per i `confirm`); tab closed; next `da progettare` kit started in the same conversation (or none left)

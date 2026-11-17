@@ -234,7 +234,7 @@ a kit with more than one root `<section>` per block, or with inline `<script>`/`
 Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · fit a section
 into an existing block because it exists (a new variant or block is Step 3, not a cost) · ask mid-way what
 the charter decides or marks `[da confermare]` · invent a fact about the client · mark a row
-`kit` before the dev's ok · git commands.
+`kit` before the dev's ok · `git push`, or any git command beyond the fse-foundations §10 rule; commit a kit still under review.
 
 ## Completion checklist (per item)
 
@@ -245,4 +245,4 @@ the charter decides or marks `[da confermare]` · invent a fact about the client
 - [ ] Every section designed first, then mapped: new variants/blocks born wherever no existing variant renders the design (§4 "No catalogue constraint")
 - [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots
 - [ ] Review delivered once, for the whole item (never one block at a time), in the §10 handover shape: URL, screenshots, contracts, decisions, `[da confermare]` table, "ok o osservazioni" (no prompt to paste); ⏳ `kit {item} in revisione` written; row still `da progettare`
-- [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row, then `fse-build` run in the same turn
+- [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row, commit of the approved kit (fse-foundations §10; the push is the dev's), then `fse-build` run in the same turn

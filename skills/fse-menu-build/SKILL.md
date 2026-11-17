@@ -162,7 +162,7 @@ Guess a page for a label · add to the plan items the kit does not have · rewri
 run `apply … confirm` in the turn that computed the diff · write through the Site Editor,
 Playwright, `wp post update` by hand or SQL · leave the `ref` different between header and
 footer when the plan lists both · use `page-list` · delete a `wp_navigation` without the dev ·
-git commands.
+`git push`, or any git command beyond the fse-foundations §10 rule.
 
 ## Completion checklist
 
@@ -172,3 +172,4 @@ git commands.
 - [ ] `dump` after = plan; `ref` identical in header AND footer (and every listed part)
 - [ ] curl check: labels present, no `page-list`, no PHP errors
 - [ ] DESIGN.md (Navigazione, Domande aperte, Log decisioni) updated; handover message (§10) delivered
+- [ ] Commit of the aligned menus, on a standalone run (inside `fse-build` the build commits) (fse-foundations §10: main branch, files added by name); the push is the dev's

@@ -137,7 +137,7 @@ Guard fails · `DESIGN.md` missing · `docs/brief/` missing or empty · `## Brie
 Install a plugin before the dev's ok · write pages, kits, parts or blocks (that is `fse-kit`) ·
 invent a fact about the client (phone, address, prices, names: `[da confermare]`) · modify,
 move or delete anything in `docs/brief/` · change the palette roles of theme.json · ask mid-way
-what the charter decides · git commands.
+what the charter decides · `git push`, or any git command beyond the fse-foundations §10 rule.
 
 ## Completion checklist
 
@@ -146,4 +146,4 @@ what the charter decides · git commands.
 - [ ] `theme.json` edited, sync run, `npm run build` exit 0, catalogue checked at 3 widths with screenshots
 - [ ] `DESIGN.md`: `## Brief` (`Stato: bozza`), `## Pagine` `da progettare`, `## Telaio` `da progettare`, log row
 - [ ] Review delivered in the §10 handover shape with the `[da confermare]` table; turn ended
-- [ ] On the dev's ok (later turn): `Stato: approvato`, plugins installed, log row, then the telaio kit started in the same turn
+- [ ] On the dev's ok (later turn): `Stato: approvato`, plugins installed, log row, commit of the approved brief (fse-foundations §10; the push is the dev's), then the telaio kit started in the same turn
