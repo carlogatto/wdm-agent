@@ -9,7 +9,7 @@ const { spawnSync } = require('node:child_process');
 
 const { RADICE } = require('./lib/citati');
 const SCRIPT = path.join(RADICE, 'skills', 'fse-theme-setup', 'scripts', 'setup.js');
-const { valida, sostituisci } = require(SCRIPT);
+const { valida, sostituisci, senzaImpronta } = require(SCRIPT);
 
 const BUONI = { prefix: 'atl', slug: 'atelier', textdomain: 'atelier-td', title: "L'Atelier & Co", 'local-url': 'https://atelier.local:8890/' };
 // Le sequenze di escape si compongono qui: scritte per esteso in un file non arrivano intatte.
@@ -121,6 +121,14 @@ describe('setup.js: sostituzione nei file di testo', () => {
     assert.ok(dopo.includes('"integrity": "sha512-Abcwdm0WDMxyz/wDm+abc=="'), 'impronta toccata');
     assert.doesNotThrow(() => JSON.parse(dopo));
     assert.equal(s(dopo, 'package-lock.json'), dopo);
+  });
+
+  // La rinomina cambia theme.json (i nomi dei blocchi in styles.blocks): l'impronta scritta nel
+  // DESIGN.md del tema base non vale più. Si toglie, e la riscrive il sync dei token (Step 4d).
+  it('DESIGN.md: l\'impronta di theme.json del tema base si toglie, i token restano', () => {
+    const design = ['## Design Tokens', '```yaml', '# impronta theme.json: d879457498d480ea5692e0f0714e0897b7c7e22360cae829e708bb7af8fda12a', '# Variabili CSS', 'colors:', '```', ''].join('\n');
+    assert.equal(senzaImpronta(design), ['## Design Tokens', '```yaml', '# Variabili CSS', 'colors:', '```', ''].join('\n'));
+    assert.equal(senzaImpronta(senzaImpronta(design)), senzaImpronta(design));
   });
 
   it('rifare la sostituzione non cambia più nulla (il rilancio dopo un\'interruzione)', () => {

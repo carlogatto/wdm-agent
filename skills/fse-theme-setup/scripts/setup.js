@@ -210,6 +210,12 @@ function fuoriDaProjectConfig(testo, cambia) {
   return cambia(testo.slice(0, inizio)) + testo.slice(inizio, fine) + cambia(testo.slice(fine));
 }
 
+// L'impronta di theme.json scritta nei Design Tokens del tema base non vale più dopo la rinomina
+// (in theme.json cambiano i nomi dei blocchi): si toglie, e la riscrive il sync dei token.
+function senzaImpronta(testo) {
+  return testo.replace(/^# impronta theme\.json: .*\r?\n/m, '');
+}
+
 // Le righe che citano ancora «wdm», tolti i nomi protetti: «file:riga: testo».
 function residui(elenco, radice) {
   const pulita = (riga) => PROTETTI.reduce((t, nome) => t.split(nome).join(''), riga);
@@ -254,7 +260,7 @@ function rinomina(v) {
     if (fs.existsSync(build)) riscrivi(build, (testo) => testo.replace(/proxy: '[^']*'/, () => `proxy: '${v['local-url']}'`));
     for (const percorso of delSito) {
       const cambia = (testo) => sostituisci(testo, percorso, v, 'sito');
-      riscrivi(percorso, path.basename(percorso) === 'DESIGN.md' ? (testo) => fuoriDaProjectConfig(testo, cambia) : cambia);
+      riscrivi(percorso, path.basename(percorso) === 'DESIGN.md' ? (testo) => senzaImpronta(fuoriDaProjectConfig(testo, cambia)) : cambia);
     }
     console.log('  ✓ build.js (proxy), .gitignore, README.md e DESIGN.md della site root');
     // Per ultima: finché la cartella si chiama wdm-theme, un rilancio riprende da qui sopra.
@@ -314,6 +320,6 @@ function main(argv) {
   }
 }
 
-module.exports = { valida, sostituisci };
+module.exports = { valida, sostituisci, senzaImpronta };
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));
