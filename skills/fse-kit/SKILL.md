@@ -1,6 +1,6 @@
 ---
 name: fse-kit
-description: 'Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. One page, one review at the end (kit + README contracts + SCSS); on the dev''s ok the skill runs `fse-build` in the same conversation. Blocks are never designed on their own: they are born inside the page that needs them.'
+description: 'Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "nuova variante Z del blocco Y" (designed inside the page that needs it), or when a DESIGN.md row is `da progettare`. One page, one review at the end (kit + README contracts + SCSS); on the dev''s ok the skill runs `fse-build` in the same conversation. Blocks and variants are never designed on their own: they are born inside the page that needs them.'
 ---
 
 # FSE Kit — design in HTML: telaio or one page with its blocks (one item, one review, then the build)
@@ -53,17 +53,30 @@ blocks is not a goal: the design decides how many blocks the page needs, not the
 |---|---|---|
 | header, footer, menu, template, "telaio" | **Telaio** | `src/kit/main/header|footer|form/**`, `src/scss/_telaio.scss`, `src/kit/svg-vault` |
 | "pagina X", "home", "la pagina servizi" | **Page** | `src/kit/{prefix}-{page}.kit` (+ new blocks inline) |
-| "variante Z di Y" on an implemented block, asked on its own (maintenance) | **Variant** | Step 3 on that block, shown in the catalogue page; the review is the catalogue |
+| "variante Z di Y", "nuova variante di Y" | **Page** (the one that needs the variant) | the variant is Step 3 inside that page's kit and is reviewed with the page; `fse-block-edit` implements it at the build |
 
-A **new block is never an item**: "disegna il blocco Y", "una sezione che…" → ask which page
-needs it and design that page (fse-foundations §1 "Blocks are born inside pages"); the block is
-Step 3 inside the page's session and the dev reviews it in the page. No item named → the telaio
-if its rows are `da progettare`, else the first page `da progettare` in the order of `## Brief →
-Mappa` (or of `## Pagine`). A page that needs a block that does not exist → Step 3 before the
+A **new block or a new variant is never an item**: "disegna il blocco Y", "una sezione che…",
+"aggiungi una variante a Y" → ask which page needs it and design that page (fse-foundations §1
+"Blocks are born inside pages"); the block or variant is Step 3 inside the page's session and
+the dev reviews it in the page. This is the only road to a new variant: `fse-block-edit` does
+not design one, it implements the one that already has its README row and kit.
+
+No item named → first look for a `⏳ kit {item} in revisione` line in `## Domande aperte` whose
+kit is on disk: that item is waiting for the dev's ok, so **hand it over again** (the Review
+below: same URL, screenshots, `[da confermare]` table), never redesign it and never start
+another row while it waits. No such line → the telaio if its rows are `da progettare`, else the
+first page `da progettare` in the order of `## Brief → Mappa` (or of `## Pagine`). A page that needs a block that does not exist → Step 3 before the
 page kit imports it; a block that exists but needs a new variant → Step 3 (README row + kit +
 CSS); the editor side is `fse-block-edit`'s, run by `fse-build` when the page needs it. A page
 the dev removes from the map → its row goes `da eliminare` (kit and row stay until `fse-build`
 deletes it with `confirm`).
+
+**Demo kits of the base theme.** A page kit this project never handed over —
+`src/kit/{prefix}-{page}.kit` on disk while the page has no row in `## Pagine`, or has a row
+`da progettare` with no `⏳ kit … in revisione` line — is a residue of wdm-theme's demo pages,
+not work to complete. When the map has that page, write its kit anew and replace the file (the
+"read and complete, never overwrite" rule does not apply to a residue). A residue whose page is
+not in the map stays where it is: never imported, never built, never given a row.
 
 ## Step 2 — Telaio
 
@@ -221,13 +234,16 @@ same turn** read `${CLAUDE_PLUGIN_ROOT}/skills/fse-build/SKILL.md` and run it fr
 (whole perimeter: this item is built, the aligned rows answer "0 differenze"); the conversation
 ends with the build's report, which names the next `da progettare` row and goes on with its kit
 unless the dev stops. A revision the dev asks after the build follows the same steps without a
-new gate: the row stays as it is, `fse-build` re-applies the difference in the same turn.
+new gate. A **page** row stays as it is: every page that is not `da progettare` is in the
+build's perimeter. A **Telaio** row goes back to `kit` (fse-foundations §11): `fse-build` works
+the telaio only when its row is `kit`. Then `fse-build` re-applies the difference in the same
+turn.
 
 ## Never
 
 Write `block.json`, `render.php`, `edit.js`, `index.js`, `editor.scss` or touch WP (no WP-CLI
 writes, no editor) **before the ok** — after the ok they are `fse-build`'s, run by this skill in
-the same conversation · design a block as an item of its own, or hand over one block at a time ·
+the same conversation · design a block or a variant as an item of its own, or hand over one block at a time ·
 hand the dev a prompt for the build or the next kit · hardcode colours/sizes instead of tokens ·
 a kit with more than one root `<section>` per block, or with inline `<script>`/`<style>` ·
 Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · fit a section

@@ -1,6 +1,6 @@
 ---
 name: fse-block-edit
-description: 'Use when modifying an implemented native block for a wdm-theme FSE project — "modifica il blocco X", "aggiungi un attributo/opzione al blocco X", "nuova variante di X", "cambia lo stile/layout di X", "aggiungi il JS a X" — on a block that already has block.json, render.php and edit.js. Blocks still at `kit` state are built by `fse-build`; the kit/README of a new variant is designed with `fse-kit`.'
+description: 'Use when modifying an implemented native block for a wdm-theme FSE project — "modifica il blocco X", "aggiungi un attributo/opzione al blocco X", "cambia lo stile/layout di X", "aggiungi il JS a X" — on a block that already has block.json, render.php and edit.js. Blocks still at `kit` state are built by `fse-build`. A new variant is not designed here: `fse-kit` designs it inside the page that needs it, and this skill implements it once its README row and kit exist.'
 ---
 
 # FSE Block Edit — modify an implemented block, additively
@@ -41,7 +41,7 @@ invalidates a page. But the attributes **saved in post_content keep their names 
 | Change | Scenario | Touches |
 |---|---|---|
 | new attribute / control (text, image, toggle, select, number) | **A** | block.json, README, edit.js, render.php, kit (if visible), style |
-| new variant | **B** | README row, kit file, block.json enum, edit.js select, render.php modifier, style, `{prefix}-blocks.kit` |
+| variant designed by `fse-kit` (README row and kit exist, marked "(kit)" in `DESIGN.md → Blocchi`) | **B** | block.json enum, edit.js select, render.php modifier, style (what the kit left to do) |
 | markup/layout change of an existing element | **C** | kit (first), render.php, edit.js (parity), style, README markup |
 | style only | **D** | style.scss / editor.scss (+ theme.json styles.blocks for section padding) |
 | frontend JS (first JS, or a change) | **E** | src/view.js, block.json `viewScriptModule`, README dependencies |
@@ -60,9 +60,11 @@ MediaReplaceFlow / LinkButton / SelectControl / ToggleControl / RangeControl in
 `InspectorControls`); `render.php` output with escaping and omission when empty; kit updated
 only if the element is visible by default.
 
-**B. New variant**: README `## Varianti` row + kit file `kit/_{prefix}-block-{slug}-{variant}.kit`
-(from `fse-kit` if the dev wants to design it first; else write it now with the dev's
-indications) + `src/kit/{prefix}-blocks.kit` import; `block.json` enum; `edit.js` select option
+**B. Variant**: the README `## Varianti` row, the kit file
+`kit/_{prefix}-block-{slug}-{variant}.kit` and its `src/kit/{prefix}-blocks.kit` import come from
+`fse-kit`, which designed the variant inside the page that needs it. A variant that has none of
+them is not designed here: stop and route to `fse-kit` (fse-foundations §1, a variant is never
+an item of its own). Here: `block.json` enum; `edit.js` select option
 (Italian label) and class; `render.php` modifier class; `style.scss` rules under
 `&--{variant}`; a variant that changes the children (e.g. single ↔ many) follows the hero
 pattern (`replaceInnerBlocks` + `help` warning, documented).
