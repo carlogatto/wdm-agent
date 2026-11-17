@@ -470,7 +470,9 @@ modules.
   (`dependencies` from the imports, `version` md5); `src/view.js` → `build/view.js` (ESM) +
   `build/view.asset.php` (`type => module`, module ids); `src/style.scss` →
   `build/style-index.css`; `src/editor.scss` → `build/index.css`.
-- **Fails (exit 1)** on: unresolved import; React or an external `@wordpress/*` bundled;
+- **Fails (exit 1)** on: a declared file that is missing (the target of a `@prepend`/`@append`,
+  a fixed theme entry of `build.js`, the `src/` source of a build file named in a
+  `block.json`); unresolved import; React or an external `@wordpress/*` bundled;
   `import './style.scss'` (or any `.css`/`.scss`) from JS; `@wordpress/*` other than
   interactivity/router/a11y in a view.js.
 - `@wordpress/icons` (and the other packages without a `wp.*` global, `BUNDLED` list) are
@@ -586,18 +588,18 @@ post create` is what `wp post create` would be with a global `wp`.
 ```bash
 # page from a file with block markup (the markup of the README "Markup di inserimento" + kit texts)
 ID=$({wp-cli} post create {scratchpad}/page-{slug}.html --post_type=page --post_title="Titolo" --post_name="slug" --post_status=publish --porcelain)
-{wp-cli} post update $ID {scratchpad}/page-{slug}.html              # replace the content of an existing page
+{wp-cli} post update $ID "{scratchpad}/page-{slug}.html"              # replace the content of an existing page
 {wp-cli} post get $ID --field=post_content                          # derived state: what is in WP now
 {wp-cli} post meta update $ID {prefix}_show_title 0                  # page opening with a hero image (its own h1); {prefix}_show_form 0 only when the content already has a {prefix}/form block (§7)
 {wp-cli} option update show_on_front page && {wp-cli} option update page_on_front $ID
 {wp-cli} plugin install formidable --activate && {wp-cli} eval 'FrmAppController::install();'   # Formidable via WP-CLI: only install() creates its tables
 {wp-cli} eval '$s = FrmAppHelper::get_settings(); $s->load_style = "none"; $s->store();'     # plugin CSS off: the theme styles the form
 {wp-cli} post list --post_type=page --fields=ID,post_title,post_name,post_status
-{wp-cli} media import {theme-root}/assets/img/placeholder-700x450.jpg --title="placeholder-700x450" --porcelain   # → attachment ID; reuse it
+{wp-cli} media import "{theme-root}/assets/img/placeholder-700x450.jpg" --title="placeholder-700x450" --porcelain   # → attachment ID; reuse it
 {wp-cli} post list --post_type=attachment --fields=ID,post_title,guid                                               # existing placeholders (starter: 10 = 2000x1150, 11 = 700x450)
 {wp-cli} eval 'echo wp_get_attachment_url(11);'
 {wp-cli} post list --post_type=wp_navigation --fields=ID,post_title            # menus (fse-menu-build owns them)
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php dump
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" dump
 {wp-cli} eval 'echo wp_get_global_stylesheet();'                                # CSS for the kit (sync script does it)
 {wp-cli} eval '_register_theme_block_patterns(); foreach (WP_Block_Patterns_Registry::get_instance()->get_all_registered() as $p) echo $p["name"], "\n";'
 {wp-cli} eval 'foreach (WP_Block_Type_Registry::get_instance()->get_all_registered() as $n => $b) if (str_starts_with($n, "{prefix}/")) echo $n, "\n";'
@@ -626,7 +628,7 @@ carry the placeholder `'{password}'`; to run one, let the **shell** substitute i
 copy, run that copy by `filename`, delete it right after — a `pw-*.js` never holds the literal and
 the value never appears in a tool output:
 ```bash
-[ -s {site-root}/.env ] || echo ".env assente o vuoto"   # the only check: never cat/Read/grep the file
+[ -s "{site-root}/.env" ] || echo ".env assente o vuoto"   # the only check: never cat/Read/grep the file
 PW="$(sed -n 's/^AGENT_ADMIN_PASSWORD=//p' {site-root}/.env)" perl -pe 's/\{password\}/$ENV{PW}/g' {site-root}/.playwright-mcp/pw-{slug}.js > {site-root}/.playwright-mcp/_run.js && echo ok
 # → browser_run_code_unsafe filename=.playwright-mcp/_run.js (never the code inline) → rm .playwright-mcp/_run.js
 ```
@@ -889,7 +891,7 @@ Both hooks are Node scripts, run without a shell (`"command": "node"` with the s
 - `check-design-tokens.js` — on `theme.json` of the theme: runs
   `sync-theme-json-tokens.js --check` and reports one of three cases. **Tokens not aligned**
   (sync exit 1) → show the diff to the dev and regenerate **only after confirmation** (`node
-  ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}` — also
+  "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}"` — also
   regenerates `assets/css/wp-global-styles.css`). **theme.json changed outside the tokens**
   (exit 3: the fingerprint stored in the Design Tokens block no longer matches, no token
   differs, e.g. `styles.elements`) → regenerate at once, no confirmation: only the kit's global

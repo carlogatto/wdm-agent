@@ -112,6 +112,17 @@ describe('setup.js: sostituzione nei file di testo', () => {
     assert.equal(s('# WDM Theme', 'README.md'), "# L'Atelier & Co");
   });
 
+  it('package-lock.json: cambia solo il nome del pacchetto, mai un\'impronta che contiene «wdm» per caso', () => {
+    const lock = ['{', '  "name": "wdm-theme",', '  "packages": {', '    "": {', '      "name": "wdm-theme",', '      "version": "1.0.0"', '    },',
+      '    "node_modules/sass": {', '      "resolved": "https://registry.npmjs.org/sass/-/sass-1.77.0.tgz",',
+      '      "integrity": "sha512-Abcwdm0WDMxyz/wDm+abc=="', '    }', '  }', '}'].join('\n');
+    const dopo = s(lock, 'package-lock.json');
+    assert.equal(dopo.split('"name": "atelier-td"').length - 1, 2);
+    assert.ok(dopo.includes('"integrity": "sha512-Abcwdm0WDMxyz/wDm+abc=="'), 'impronta toccata');
+    assert.doesNotThrow(() => JSON.parse(dopo));
+    assert.equal(s(dopo, 'package-lock.json'), dopo);
+  });
+
   it('rifare la sostituzione non cambia più nulla (il rilancio dopo un\'interruzione)', () => {
     const testo = "'title' => 'WDM Theme', // wdm-agent, wdm-theme, .wdm-x, WDM\n<p>WDM Theme</p>";
     for (const file of ['a.php', 'a.html', 'a.md']) {

@@ -117,6 +117,7 @@ describe('sync-theme-json-tokens.js', () => {
 // Ogni caso parte da un progetto appena generato: non dipendono l'uno dall'altro.
 describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
   const IMPRONTA = /^# impronta theme\.json: [0-9a-f]{64}$/m;
+  const CSS = [':root{--a:1}'];
   let radice, n = 0;
 
   // Un progetto FSE nuovo. `wpCli`: le righe che il finto WP-CLI stampa (senza: nessuna riga {wp-cli}).
@@ -159,7 +160,7 @@ describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
   after(() => fs.rmSync(radice, { recursive: true, force: true }));
 
   it('il blocco generato porta l\'impronta di theme.json; --check è allineato', () => {
-    const p = generato();
+    const p = generato(CSS);
     assert.match(p.leggi(), IMPRONTA);
     assert.equal(p.sync('--check').status, 0);
   });
@@ -171,7 +172,7 @@ describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
   });
 
   it('theme.json cambiato fuori dai token (styles.elements.button): exit 3, nessun token cambiato (U27)', () => {
-    const p = generato();
+    const p = generato(CSS);
     p.theme((t) => { t.styles = { ...(t.styles || {}), elements: { button: { border: { radius: '99px' } } } }; });
     const r = p.sync('--check');
     assert.equal(r.status, 3, r.out);
@@ -189,7 +190,7 @@ describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
   });
 
   it('blocco senza impronta (progetto di prima) e token uguali: allineato, con l\'invito a rigenerare', () => {
-    const p = generato();
+    const p = generato(CSS);
     fs.writeFileSync(p.design, p.leggi().replace(/^# impronta theme\.json: .*\n/m, ''));
     const r = p.sync('--check');
     assert.equal(r.status, 0, r.out);
@@ -197,6 +198,32 @@ describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
     const dopo = p.sync();
     assert.equal(dopo.status, 0, dopo.out);
     assert.match(p.leggi(), IMPRONTA);
+  });
+
+  it('senza la riga {wp-cli} il CSS non si rigenera: i token si scrivono, l\'impronta no', () => {
+    const p = generato();
+    assert.doesNotMatch(p.leggi(), /impronta theme\.json/);
+    const r = p.sync('--check');
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /impronta di theme\.json assente/);
+    p.theme((t) => { t.settings.layout.contentSize = '3px'; });
+    assert.equal(p.sync().status, 0);
+    assert.match(p.leggi(), /contentSize: 3px/);
+    assert.doesNotMatch(p.leggi(), /impronta theme\.json/);
+  });
+
+  it('DESIGN.md con i fine riga di Windows (CRLF): allineato, e resta in CRLF dopo la rigenerazione', () => {
+    const p = generato(CSS);
+    fs.writeFileSync(p.design, p.leggi().replace(/\n/g, '\r\n'));
+    const r = p.sync('--check');
+    assert.equal(r.status, 0, r.out);
+    p.theme((t) => { t.settings.layout.contentSize = '4px'; });
+    assert.equal(p.sync('--check').status, 1);
+    assert.equal(p.sync().status, 0);
+    assert.match(p.leggi(), /contentSize: 4px/);
+    assert.match(p.leggi(), /\r\n/);
+    assert.doesNotMatch(p.leggi(), /[^\r]\n/);
+    assert.equal(p.sync('--check').status, 0);
   });
 
   it('WP-CLI fallisce: DESIGN.md non viene riscritto, così --check resta non allineato', () => {

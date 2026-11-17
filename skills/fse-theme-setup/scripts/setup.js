@@ -22,7 +22,7 @@
 // (legge prefisso e percorsi da DESIGN.md). Non esegue mai git.
 //
 // Exit: 0 fatto · 1 interrotto o riferimenti rimasti (il messaggio dice cosa fare) ·
-// 2 errore d'uso o valori non validi · 3 tema base non trovato.
+// 2 errore d'uso o valori non validi · 3 tema base non trovato, o due temi tra cui non sa scegliere.
 
 'use strict';
 
@@ -36,6 +36,8 @@ const PROTETTI = ['carlogatto/wdm-theme', 'wdm-agent', 'wdm-starter'];
 // Kit del tema base che restano al progetto: il catalogo dei blocchi e il telaio.
 const KIT_TENUTI = ['wdm-blocks.kit', 'wdm-telaio.kit'];
 const SALTATE = ['node_modules', '.git'];
+const LOCK = 'package-lock.json';
+const NOME_NEL_LOCK = /^\s*"name":/;
 const U = `${String.fromCharCode(92)}u`;
 
 // ─── Valori ──────────────────────────────────────────────────────────────────────────────────
@@ -102,6 +104,15 @@ function conTitolo(testo, nomeFile, titolo) {
 // nei percorsi) o 'sito' (i file della site root: wdm-theme = cartella del progetto).
 // Rifarla sul suo risultato non cambia nulla.
 function sostituisci(testo, nomeFile, v, dove = 'tema') {
+  // package-lock.json è pieno di impronte in base64, dove tre lettere a caso possono essere
+  // «wdm»: lì si tocca solo il nome del pacchetto.
+  if (path.basename(nomeFile) === LOCK) {
+    return testo.split('\n').map((riga) => (NOME_NEL_LOCK.test(riga) ? sostituisciTesto(riga, nomeFile, v, dove) : riga)).join('\n');
+  }
+  return sostituisciTesto(testo, nomeFile, v, dove);
+}
+
+function sostituisciTesto(testo, nomeFile, v, dove) {
   const segno = (i) => `${String.fromCharCode(1)}${i}${String.fromCharCode(1)}`;
   let t = testo;
   PROTETTI.forEach((nome, i) => { t = t.split(nome).join(segno(i)); });
@@ -188,6 +199,17 @@ function rinominaNomi(cartella, prefisso) {
   }
 }
 
+// DESIGN.md → Project Config porta già i valori del progetto, scritti dalla skill e da mamp.js:
+// percorsi compresi, e una cartella può chiamarsi «corso-wdm». Quella sezione non si tocca.
+function fuoriDaProjectConfig(testo, cambia) {
+  const inizio = testo.search(/^## Project Config\b/m);
+  if (inizio === -1) return cambia(testo);
+  const dopo = testo.indexOf('\n', inizio) + 1;
+  const prossima = testo.slice(dopo).search(/^## /m);
+  const fine = prossima === -1 ? testo.length : dopo + prossima;
+  return cambia(testo.slice(0, inizio)) + testo.slice(inizio, fine) + cambia(testo.slice(fine));
+}
+
 // Le righe che citano ancora «wdm», tolti i nomi protetti: «file:riga: testo».
 function residui(elenco, radice) {
   const pulita = (riga) => PROTETTI.reduce((t, nome) => t.split(nome).join(''), riga);
@@ -196,7 +218,8 @@ function residui(elenco, radice) {
     const trovati = /wdm/i.test(pulita(path.basename(percorso))) ? [`${relativo}: il nome del file`] : [];
     const testo = testoDi(percorso);
     if (testo === null) return trovati;
-    return trovati.concat(testo.split('\n').flatMap((riga, i) => (/wdm/i.test(pulita(riga)) ? [`${relativo}:${i + 1}: ${riga.trim().slice(0, 160)}`] : [])));
+    const daGuardare = path.basename(percorso) === LOCK ? (riga) => NOME_NEL_LOCK.test(riga) : () => true;
+    return trovati.concat(testo.split('\n').flatMap((riga, i) => (daGuardare(riga) && /wdm/i.test(pulita(riga)) ? [`${relativo}:${i + 1}: ${riga.trim().slice(0, 160)}`] : [])));
   });
 }
 
@@ -229,7 +252,10 @@ function rinomina(v) {
     console.log('  ✓ cartelle dei blocchi, kit e pattern rinominati');
     const build = path.join(base, 'build.js');
     if (fs.existsSync(build)) riscrivi(build, (testo) => testo.replace(/proxy: '[^']*'/, () => `proxy: '${v['local-url']}'`));
-    for (const percorso of delSito) riscrivi(percorso, (testo) => sostituisci(testo, percorso, v, 'sito'));
+    for (const percorso of delSito) {
+      const cambia = (testo) => sostituisci(testo, percorso, v, 'sito');
+      riscrivi(percorso, path.basename(percorso) === 'DESIGN.md' ? (testo) => fuoriDaProjectConfig(testo, cambia) : cambia);
+    }
     console.log('  ✓ build.js (proxy), .gitignore, README.md e DESIGN.md della site root');
     // Per ultima: finché la cartella si chiama wdm-theme, un rilancio riprende da qui sopra.
     fs.renameSync(base, tema);

@@ -133,7 +133,7 @@ re-read this SKILL.md from disk at every phase boundary.
 
 ### Step 1b — MAMP, WP-CLI and database `[AGENT]`
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/skills/fse-theme-setup/scripts/mamp.js --site "{site-root}" --db "{slug}-db"
+node "${CLAUDE_PLUGIN_ROOT}/skills/fse-theme-setup/scripts/mamp.js" --site "{site-root}" --db "{slug}-db"
 ```
 The script finds MAMP and its PHP versions, downloads `wp-cli.phar` into the site root if it is
 missing, picks the PHP for WP-CLI, checks that MAMP's database answers, creates `{slug}-db`
@@ -152,7 +152,7 @@ missing, picks the PHP for WP-CLI, checks that MAMP's database answers, creates 
 
 ### Step 2a — WordPress core `[AGENT]`
 ```bash
-[ -d {site-root}/wp-includes ] || {wp-cli} core download --locale=it_IT --skip-content   # no default themes/plugins
+[ -d "{site-root}/wp-includes" ] || {wp-cli} core download --locale=it_IT --skip-content   # no default themes/plugins
 ```
 `wp-cli.phar` (downloaded in Step 1b) is gitignored by the repo whitelist (verify the line exists).
 
@@ -177,14 +177,14 @@ DEV_PASS="$(openssl rand -base64 18)"; AGENT_PASS="$(openssl rand -base64 18)"
 {wp-cli} core install --url={local-url} --title="{site-title}" --admin_user={dev-admin} --admin_email={dev-email} --admin_password="$DEV_PASS" --skip-email
 {wp-cli} option update siteurl {local-url-without-trailing-slash} && {wp-cli} option update home {local-url-without-trailing-slash}   # wp-cli may append the path
 {wp-cli} user create {agent-admin-user} {agent-admin-user}@{slug}.local --role=administrator --user_pass="$AGENT_PASS"
-[ -e {site-root}/.env ] && echo ".env esiste già: non sovrascritto" || { printf 'AGENT_ADMIN_USER=%s\nAGENT_ADMIN_PASSWORD=%s\n' "{agent-admin-user}" "$AGENT_PASS" > {site-root}/.env; chmod 600 {site-root}/.env; }
+[ -e "{site-root}/.env" ] && echo ".env esiste già: non sovrascritto" || { printf 'AGENT_ADMIN_USER=%s\nAGENT_ADMIN_PASSWORD=%s\n' "{agent-admin-user}" "$AGENT_PASS" > "{site-root}/.env"; chmod 600 "{site-root}/.env"; }
 echo "password {dev-admin}: $DEV_PASS"   # read it and report it to the dev, once; the agent's password is never printed
 ```
 Run the lines in the **same** Bash call (variables do not survive between calls). Tell the dev
 their password **once** in chat; the agent's password lives only in `{site-root}/.env` (two lines,
 `AGENT_ADMIN_USER=…` and `AGENT_ADMIN_PASSWORD=…`), the file every `fse-*` skill reads through the shell for the Playwright
 login (fse-foundations §9/§10) and never opens itself. Verify it is out of git: the site-root
-`.gitignore` whitelist (`/*`) must not contain `!.env` (`grep -n '^!\.env$' {site-root}/.gitignore`
+`.gitignore` whitelist (`/*`) must not contain `!.env` (`grep -n '^!\.env$' "{site-root}/.gitignore"`
 → nothing). Write the agent username (never a password) in `DESIGN.md → Project Config →
 {agent-admin-user}`. The dev changes the passwords as they like; if they change the agent's one,
 they update `.env`.
@@ -193,7 +193,7 @@ they update `.env`.
 
 ### Step 3a — setup.js
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/skills/fse-theme-setup/scripts/setup.js \
+node "${CLAUDE_PLUGIN_ROOT}/skills/fse-theme-setup/scripts/setup.js" \
   --prefix "{prefix}" --slug "{slug}" --textdomain "{text-domain}" --title "{project-title}" \
   --local-url "{local-url}" --target "{site-root}"
 ```
@@ -213,13 +213,14 @@ base theme's database: Step 4b writes the new ones); last, it renames the theme 
 
 Exit 0 → done. Exit 1 → it stopped half-way or found `wdm` references it could not replace: the
 message says what to do; then relaunch **the same command**, it resumes (a finished rename only
-redoes the final check).
+redoes the final check). Exit 3 → the base theme is not in `wp-content/themes/wdm-theme`, or
+both `wdm-theme` and `{slug}` are there: the message says which, nothing was changed.
 
 ### Step 3b — Dependencies and build
 ```bash
-cd {theme-root} && npm install && npm run build
+cd "{theme-root}" && npm install && npm run build
 ```
-Exit 0; `blocks/*/build/index.asset.php` for every block, `html/{prefix}-home.html`,
+Exit 0; `blocks/*/build/index.asset.php` for every block, `html/{prefix}-blocks.html`,
 `assets/css/main.css`.
 
 ## Phase 4 — Activation and site data `[AGENT]`
@@ -235,9 +236,9 @@ ships four menus, one per `<nav aria-label>` of the kit: "Menu principale" in th
 creates the four `wp_navigation` posts and writes each `ref` in the navigation block with the
 same `ariaLabel`:
 ```bash
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php plan header={theme-root}/src/kit/main/header/header-parts/_header-content.kit footer={theme-root}/src/kit/main/footer/footer-parts/_footer-content.kit > {scratchpad}/nav-plan.json
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php apply {scratchpad}/nav-plan.json
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php dump   # every block of navigation_blocks has a ref that is an id of navigations
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" plan "header={theme-root}/src/kit/main/header/header-parts/_header-content.kit" "footer={theme-root}/src/kit/main/footer/footer-parts/_footer-content.kit" > "{scratchpad}/nav-plan.json"
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" apply "{scratchpad}/nav-plan.json"
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" dump   # every block of navigation_blocks has a ref that is an id of navigations
 ```
 On a new site the pages of the kit menus do not exist yet: `plan` warns on stderr and those
 items become `#` links. It is expected: `fse-menu-build` realigns the menus once the project's
@@ -253,9 +254,9 @@ No `front-page.html` (fse-foundations §7): the static Home uses `page.html`.
 
 ### Step 4d — Tokens
 ```bash
-node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}   # DESIGN.md → Design Tokens + assets/css/wp-global-styles.css via {wp-cli}
-node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root} --check   # exit 0
-cd {theme-root} && npm run build   # html/ with the regenerated global styles
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}"   # DESIGN.md → Design Tokens + assets/css/wp-global-styles.css via {wp-cli}
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}" --check   # exit 0
+cd "{theme-root}" && npm run build   # html/ with the regenerated global styles
 ```
 
 ### Step 4e — Checks

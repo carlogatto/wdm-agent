@@ -45,7 +45,7 @@ in any other part with a navigation block) every time the post changes.
 ## Step 1 — dump
 
 ```bash
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php dump > {scratchpad}/nav-before.json
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" dump > "{scratchpad}/nav-before.json"
 ```
 `parts` (ref per part), `navigations` (every `wp_navigation` with its item tree and raw
 content), `pages` (any status), `front_page`. Keep it: it is the "before" of the report.
@@ -53,9 +53,9 @@ content), `pages` (any status), `front_page`. Keep it: it is the "before" of the
 ## Step 2 — plan from the kit
 
 ```bash
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php plan \
-  header={theme-root}/src/kit/main/header/header-parts/_header-content.kit \
-  footer={theme-root}/src/kit/main/footer/footer-parts/_footer-content.kit > {scratchpad}/nav-plan.json
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" plan \
+  "header={theme-root}/src/kit/main/header/header-parts/_header-content.kit" \
+  "footer={theme-root}/src/kit/main/footer/footer-parts/_footer-content.kit" > "{scratchpad}/nav-plan.json"
 ```
 For every `<nav>` of every kit, in order: the `<ul>` items (`<li><a>` label; nested `<ul>` →
 children) resolved to pages: label `Home` or `href="/"` → `home-link`; a **published** page with
@@ -79,7 +79,7 @@ Plan format (`items[].label`, `home: true` | `page: <id>` | nothing = orphan, `c
 ## Step 3 — apply: diff, then ask
 
 ```bash
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php apply {scratchpad}/nav-plan.json
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" apply "{scratchpad}/nav-plan.json"
 ```
 For every menu of the plan the script finds the post (the `ref` of the first listed part if it
 is a `wp_navigation`, else by title), serializes the items with core's own
@@ -117,7 +117,7 @@ runs, never for the real theme.
 ## Step 4 — Verify
 
 ```bash
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php dump > {scratchpad}/nav-after.json
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php" dump > "{scratchpad}/nav-after.json"
 ```
 - `navigations[].items` of the applied menus = plan (labels, order, children, page ids);
 - `parts.header` and `parts.footer` (and every part listed) = the menu id — **both**, always;

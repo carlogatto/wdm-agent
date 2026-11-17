@@ -206,6 +206,59 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       assert.deepEqual(impronta(temaDi(altra)), albero);
     });
 
+    it('interruzione mentre rinomina file e cartelle: il rilancio dà lo stesso risultato', () => {
+      const altra = copia('interrotto sui nomi');
+      scriviProjectConfig(altra, URL);
+      // Una cartella in sola lettura: i file dentro si riscrivono, ma non si possono rinominare.
+      const ostacolo = path.join(altra, 'wp-content', 'themes', 'wdm-theme', 'patterns');
+      fs.chmodSync(ostacolo, 0o555);
+      const primo = setup(altra, URL);
+      fs.chmodSync(ostacolo, 0o755);
+      assert.equal(primo.status, 1, primo.out);
+      assert.match(primo.stderr, /rilancia lo stesso comando/);
+      const base = path.join(altra, 'wp-content', 'themes', 'wdm-theme');
+      assert.ok(fs.existsSync(path.join(base, 'blocks', 'atl-block-hero')), 'nessuna cartella rinominata prima dell\'interruzione');
+      assert.ok(fs.existsSync(path.join(base, 'patterns', 'wdm-cta.php')), 'il file dentro l\'ostacolo è già stato rinominato');
+      const secondo = setup(altra, URL);
+      assert.equal(secondo.status, 0, secondo.out);
+      assert.deepEqual(impronta(temaDi(altra)), albero);
+    });
+
+    it('cartella del sito con «wdm» nel percorso: Project Config resta com\'è e {wp-cli} funziona ancora', () => {
+      const altra = path.join(tmp, 'corso-wdm', 'pinco');
+      sito.copiaBase(altra, (relativo) => !relativo.startsWith('docs/'));
+      scriviProjectConfig(altra, URL);
+      fs.copyFileSync(cfg.phar, path.join(altra, 'wp-cli.phar'));
+      assert.equal(lancia(process.execPath, [MAMP, '--site', altra]).status, 0);
+      const config = () => /^## Project Config[\s\S]*?(?=^## )/m.exec(fs.readFileSync(path.join(altra, 'DESIGN.md'), 'utf8'))[0];
+      const prima = config();
+      const r = setup(altra, URL);
+      assert.equal(r.status, 0, r.out);
+      assert.equal(config(), prima);
+      const design = fs.readFileSync(path.join(altra, 'DESIGN.md'), 'utf8');
+      assert.equal(valore(design, '{site-root}'), altra);
+      const [php, ...resto] = argomenti(valore(design, '{wp-cli}'));
+      const versione = lancia(php, [...resto, '--version']);
+      assert.equal(versione.status, 0, versione.out);
+      // Il resto di DESIGN.md si rinomina come prima.
+      assert.match(design, /^# Design: atelier$/m);
+    });
+
+    it('un\'impronta di package-lock.json che contiene «wDm» per caso: non è un residuo e non si tocca', () => {
+      const altra = copia('lock');
+      scriviProjectConfig(altra, URL);
+      const lock = path.join(altra, 'wp-content', 'themes', 'wdm-theme', 'package-lock.json');
+      const righe = fs.readFileSync(lock, 'utf8').split('\n');
+      const i = righe.findIndex((riga) => riga.includes('"integrity": "sha512-'));
+      righe[i] = righe[i].replace('"sha512-', '"sha512-wDmwdm');
+      fs.writeFileSync(lock, righe.join('\n'));
+      const r = setup(altra, URL);
+      assert.equal(r.status, 0, r.out);
+      const dopo = fs.readFileSync(path.join(temaDi(altra), 'package-lock.json'), 'utf8');
+      assert.equal(dopo.split('\n')[i], righe[i]);
+      assert.equal(JSON.parse(dopo).name, VALORI.textdomain);
+    });
+
     it('la catena senza WordPress: mamp.js, build e controlli a 0, frontend saltato e dichiarato', () => {
       fs.copyFileSync(cfg.phar, path.join(dir, 'wp-cli.phar'));
       const mamp = lancia(process.execPath, [MAMP, '--site', dir]);
@@ -225,7 +278,7 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
   });
 
   describe('dall\'inizio alla fine sul sito di prova', () => {
-    let url, tema, wp, casa;
+    let url, tema, wp, casa, dbHost;
 
     before(() => {
       sito.reset();
@@ -244,6 +297,7 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       const r = lancia(process.execPath, [MAMP, '--site', cfg.site, '--db', cfg.db]);
       assert.equal(r.status, 0, r.out);
       assert.equal(JSON.parse(r.stdout).database.stato, 'vuoto');
+      dbHost = JSON.parse(r.stdout).dbHost;
       // Da qui in poi WP-CLI è la riga scritta in DESIGN.md, come nelle skill.
       const [php, ...resto] = argomenti(valore(fs.readFileSync(path.join(cfg.site, 'DESIGN.md'), 'utf8'), '{wp-cli}'));
       wp = (...args) => lancia(php, [...resto, ...args.flat()]);
@@ -254,7 +308,7 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       assert.equal(scarico.status, 0, scarico.out);
       const php = "define( 'WP_DEBUG', true );\ndefine( 'WP_DEBUG_DISPLAY', false );\ndefine( 'WP_DEBUG_LOG', true );\ndefine( 'WP_DEVELOPMENT_MODE', 'theme' );\n";
       const [eseguibile, ...resto] = argomenti(valore(fs.readFileSync(path.join(cfg.site, 'DESIGN.md'), 'utf8'), '{wp-cli}'));
-      const config = lancia(eseguibile, [...resto, 'config', 'create', `--dbname=${cfg.db}`, '--dbuser=root', '--dbpass=root', '--dbhost=localhost',
+      const config = lancia(eseguibile, [...resto, 'config', 'create', `--dbname=${cfg.db}`, '--dbuser=root', '--dbpass=root', `--dbhost=${dbHost}`,
         '--dbcharset=utf8mb4', `--dbprefix=${VALORI.prefix}_`, '--extra-php', '--quiet'], { input: php });
       assert.equal(config.status, 0, config.out);
       const installa = wp('core', 'install', `--url=${url}`, `--title=${VALORI.title}`, '--admin_user=testadmin',
@@ -271,8 +325,8 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       controllaRinomina(cfg.site, url, cfg.php);
     });
 
-    it('Step 3b: npm ci e npm run build a 0', () => {
-      const ci = lancia('npm', ['ci', '--no-audit', '--no-fund', '--prefer-offline'], { cwd: tema });
+    it('Step 3b: npm install e npm run build a 0', () => {
+      const ci = lancia('npm', ['install', '--no-audit', '--no-fund', '--prefer-offline'], { cwd: tema });
       assert.equal(ci.status, 0, ci.out.slice(-3000));
       const build = lancia('npm', ['run', 'build'], { cwd: tema });
       assert.equal(build.status, 0, build.out.slice(-3000));

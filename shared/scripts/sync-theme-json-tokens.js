@@ -360,7 +360,11 @@ function main() {
   }
 
   const newBlock = buildBlock(generateYaml(theme));
-  const designMd = fs.readFileSync(designMdPath, 'utf8');
+  // Su Windows git può aver convertito i fine riga in CRLF: si confronta e si lavora in LF, e
+  // alla scrittura il file torna com'era.
+  const raw = fs.readFileSync(designMdPath, 'utf8');
+  const eol = raw.includes('\r\n') ? '\r\n' : '\n';
+  const designMd = raw.replace(/\r\n/g, '\n');
   if (!eFse(designMd)) {
     fail('DESIGN.md → Project Config non ha la riga `theme_family` con valore fse: progetto wdm-starter? I suoi Design Tokens vengono da _variables.scss (sync-design-tokens.js). In un progetto wdm-theme rimetti la riga | `theme_family` | fse | nella tabella Identity e rilancia.');
   }
@@ -395,11 +399,14 @@ function main() {
   // Prima il CSS, poi DESIGN.md: se WP-CLI fallisce DESIGN.md resta com'era e --check lo segnala.
   const gs = syncGlobalStyles(themeRoot, designMd);
   if (gs === 'error') process.exit(1);
+  // Senza la riga {wp-cli} il CSS non è stato rigenerato: l'impronta non si scrive, perché
+  // direbbe che lo è. I token si aggiornano lo stesso.
+  const toWrite = gs === 'skipped' ? withoutFingerprint(newBlock) : newBlock;
   let tokensChanged = false;
-  if (currentBlock !== newBlock) {
+  if (currentBlock !== toWrite) {
     // Scrittura in due tempi: un'interruzione a metà non lascia un DESIGN.md troncato.
     const tmp = `${designMdPath}.tmp`;
-    fs.writeFileSync(tmp, insertBlock(designMd, newBlock));
+    fs.writeFileSync(tmp, insertBlock(designMd, toWrite).replace(/\n/g, eol));
     fs.renameSync(tmp, designMdPath);
     console.log(`Design Tokens rigenerati in ${designMdPath}`);
     tokensChanged = true;

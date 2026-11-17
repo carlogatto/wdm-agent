@@ -195,8 +195,11 @@ async function main(argv) {
   const conn = connessione(piattaforma, radice);
   try {
     sql(php, ini, conn, '', 'echo 1;');
-  } catch {
-    throw new Fermo('Il database di MAMP PRO non risponde. Avvia i server di MAMP PRO (pulsante Start) e rilancia.');
+  } catch (errore) {
+    // Il caso vero è MAMP con i server fermi. Per ogni altro (su Windows: PHP senza l'estensione
+    // del database) resta il dettaglio, da riferire: da qui non si ripara in automatico.
+    const dettaglio = errore.message.split('\n')[0].replace(/^(PHP )?Fatal error:\s+Uncaught\s+/, '').slice(0, 200);
+    throw new Fermo(`Il database di MAMP PRO non risponde. Avvia i server di MAMP PRO (pulsante Start) e rilancia. Se i server sono già avviati e questo messaggio torna, il collegamento al database non si può preparare in automatico: riferisci a chi segue il progetto questo dettaglio: ${dettaglio}`);
   }
   const database = opt.db ? { nome: opt.db, stato: preparaDatabase(php, ini, conn, opt.db, sito) } : null;
 

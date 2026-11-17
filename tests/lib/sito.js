@@ -64,8 +64,12 @@ function controlla(cfg) {
     throw new Error(`configurazione del sito di prova: ${cfg.site} contiene un repo o un DESIGN.md senza il segno del sito di prova, quindi è un progetto e non si tocca.`);
   }
   // Il tema base si copia e basta: non può essere la cartella che le prove svuotano.
-  if (!path.isAbsolute(cfg.base) || path.resolve(cfg.base) === path.resolve(cfg.site)) {
-    throw new Error(`configurazione del sito di prova: "base" deve essere il percorso assoluto della site root di wdm-theme, diverso da "site" (${cfg.base}).`);
+  const dentro = (contenitore, cartella) => {
+    const relativo = path.relative(path.resolve(contenitore), path.resolve(cartella));
+    return relativo === '' || (!relativo.startsWith('..') && !path.isAbsolute(relativo));
+  };
+  if (!path.isAbsolute(cfg.base) || dentro(cfg.site, cfg.base) || dentro(cfg.base, cfg.site)) {
+    throw new Error(`configurazione del sito di prova: "base" deve essere il percorso assoluto della site root di wdm-theme, fuori da "site" e senza contenerla (${cfg.base}).`);
   }
   return cfg;
 }

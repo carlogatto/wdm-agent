@@ -6,7 +6,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 
-const { eFse } = require('../../shared/scripts/lib/design-md.js');
+const { eFse, valore } = require('../../shared/scripts/lib/design-md.js');
 const { nelTema } = require('../../shared/scripts/lib/tema.js');
 
 // { file, sito, tema, resto, design } oppure null.
@@ -25,7 +25,11 @@ function fileDelTema() {
   const designMd = path.join(posto.sito, 'DESIGN.md');
   if (!fs.existsSync(designMd)) return null;
   const design = fs.readFileSync(designMd, 'utf8');
-  return eFse(design) ? { file, ...posto, design } : null;
+  if (!eFse(design)) return null;
+  // Con la riga {theme-folder} si giudica solo il tema del progetto, non gli altri installati.
+  const cartella = valore(design, '{theme-folder}');
+  if (cartella && path.basename(posto.tema) !== cartella) return null;
+  return { file, ...posto, design };
 }
 
 module.exports = { fileDelTema };

@@ -75,8 +75,8 @@ logged; what it lacks about the client is `[da confermare]`.
    without files → Google Fonts woff2 latin subset if it exists, else `[da confermare]` and the
    theme's font stays), spacing/radius only when the brand asks for it. Then:
    ```bash
-   node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}   # DESIGN.md → Design Tokens + assets/css/wp-global-styles.css
-   cd {theme-root} && npm run build
+   node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}"   # DESIGN.md → Design Tokens + assets/css/wp-global-styles.css
+   cd "{theme-root}" && npm run build
    ```
    The hook `check-design-tokens.js` reports the tokens as stale while you edit: inside this
    skill the regeneration is **pre-authorised** (fse-foundations §12: the whole deliverable is

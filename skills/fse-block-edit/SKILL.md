@@ -76,7 +76,7 @@ pattern (`replaceInnerBlocks` + `help` warning, documented).
 
 **D. Style**: `src/style.scss` (frontend + editor) or `src/editor.scss` (editor only); default
 section padding → `theme.json → styles.blocks["{prefix}/{slug}"]` then
-`node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}`; tokens only (§5).
+`node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}"`; tokens only (§5).
 
 **E. JS**: `src/view.js` per §5 (vanilla → Interactivity API → Swiper); `block.json`
 `"viewScriptModule": "file:./build/view.js"` (+ `"style": ["{prefix}-swiper", …]` and

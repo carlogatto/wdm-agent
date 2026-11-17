@@ -136,7 +136,7 @@ each block: `<!-- wp:{prefix}/{slug} {"attr":"value"} /-->`, children inside the
 blocks with their HTML, `imageId` always with `imageUrl` (+ `imageAlt`), defaults omitted. Ids
 (images, posts, forms, pages) are resolved from WP, never invented: the file is deterministic.
 ```bash
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php plan {scratchpad}/page-{slug}.html page={slug}
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" plan "{scratchpad}/page-{slug}.html" page={slug}
 ```
 The script aligns the top-level blocks of the file (G) and of the page (W) by key (block name +
 variant; `page=` accepts the ID, the URL path `servizi/fisioterapia` or the slug) and compares
@@ -151,7 +151,7 @@ same rule as the menus). Keep the output: it is the page's section of the report
 ### 2e. Write the difference (WP-CLI, the only write path)
 ```bash
 ID=$({wp-cli} post create --post_type=page --post_title="{Titolo}" --post_name={slug} --post_parent={parent-id} --post_status=publish --porcelain)   # only when plan said "pagina assente"
-{wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php apply {scratchpad}/page-{slug}.html page=$ID   # the ID after a create; else the slug or the URL path
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" apply "{scratchpad}/page-{slug}.html" page=$ID   # the ID after a create; else the slug or the URL path
 {wp-cli} post meta update $ID {prefix}_show_title 0   # only if K[0] is a hero variant image and the meta differs (the h1 is in the content); else leave the default 1
 {wp-cli} post meta update $ID {prefix}_show_form 0    # only if the page content has a {prefix}/form block and the meta differs (no double form); else leave the default 1
 ```
@@ -270,7 +270,7 @@ exits 2 until every `file:` source and `render.php` exist.
    section blocks (read theme.json, add the entry). The hook `check-design-tokens.js` will
    report the tokens as stale: this entry is **pre-authorised** by the README contract
    (fse-foundations §12) — do not ask, run
-   `node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}`
+   `node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}"`
    (DESIGN.md tokens + `wp-global-styles.css`) and log the entry in `## Log decisioni`. Then remove this block's
    kit-only padding rule from `_css-shared.kit` (fse-kit 3e), now emitted by theme.json.
 6. Children: their own folder with the same steps.

@@ -78,6 +78,11 @@ test('il tema base non può essere la cartella del sito di prova, né un percors
   const site = cartella('prova-test');
   assert.throws(() => sito.controlla(config({ site, base: site })), /base/);
   assert.throws(() => sito.controlla(config({ site, base: 'wdm-theme' })), /base/);
+  // Né uno dentro l'altro: il reset svuota "site", e non deve poter stare nel repo del tema base.
+  assert.throws(() => sito.controlla(config({ site, base: path.dirname(site) })), /base/);
+  const annidata = path.join(site, 'tema-base');
+  fs.mkdirSync(annidata);
+  assert.throws(() => sito.controlla(config({ site, base: annidata })), /base/);
 });
 
 test('una chiave mancante: rifiutata, con il nome della chiave', () => {

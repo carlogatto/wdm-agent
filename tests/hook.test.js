@@ -88,7 +88,11 @@ describe('hook del plugin', () => {
     sitoFse = path.join(tmp, 'fse');
     temaFse = tema('t');
     fs.cpSync(path.join(FIXTURE, 'tema'), temaFse, { recursive: true });
-    fs.writeFileSync(path.join(sitoFse, 'DESIGN.md'), fs.readFileSync(path.join(FIXTURE, 'fse-site', 'DESIGN.md'), 'utf8') + '\n## Design Tokens\n\n');
+    // Un finto WP-CLI: senza la riga {wp-cli} il sync non scrive l'impronta di theme.json.
+    const finto = path.join(tmp, 'finto wp cli.js');
+    fs.writeFileSync(finto, 'process.stdout.write(":root{--a:1}\\n");\n');
+    fs.writeFileSync(path.join(sitoFse, 'DESIGN.md'), fs.readFileSync(path.join(FIXTURE, 'fse-site', 'DESIGN.md'), 'utf8')
+      + `\n### Paths\n| Variable | Value |\n|---|---|\n| \`{wp-cli}\` | "${process.execPath}" "${finto}" |\n\n## Design Tokens\n\n`);
     const sync = spawnSync(process.execPath, [SYNC, temaFse], { encoding: 'utf8' });
     assert.equal(sync.status, 0, sync.stdout + sync.stderr);
     bloccoFse = blocco(temaFse);
@@ -221,6 +225,20 @@ describe('hook del plugin', () => {
     const r = hook(RADICE, 'check-block-contract.js', path.relative(sitoFse, senzaReadme), { cwd: sitoFse });
     assert.equal(r.status, 2, r.stderr);
     assert.match(r.stderr, /README\.md/);
+  });
+
+  it('(e3) con la riga {theme-folder} si giudica solo il tema del progetto', () => {
+    const sito = path.join(tmp, 'un-tema-solo');
+    fs.cpSync(sitoFse, sito, { recursive: true });
+    const design = path.join(sito, 'DESIGN.md');
+    fs.writeFileSync(design, fs.readFileSync(design, 'utf8').replace('| `{prefix}` | wdm |', () => '| `{prefix}` | wdm |\n| `{theme-folder}` | t |'));
+    const altro = blocco(path.join(sito, 'wp-content', 'themes', 'twentytwentyfive'), 'README.md');
+    assert.deepEqual(hook(RADICE, 'check-block-contract.js', altro), ZITTO);
+    const suo = blocco(path.join(sito, 'wp-content', 'themes', 't', 'altro'), 'README.md');
+    fs.renameSync(path.join(sito, 'wp-content', 'themes', 't', 'altro', 'blocks', 'wdm-block-cta'), path.join(sito, 'wp-content', 'themes', 't', 'blocks', 'wdm-block-nuovo'));
+    void suo;
+    const r = hook(RADICE, 'check-block-contract.js', path.join(sito, 'wp-content', 'themes', 't', 'blocks', 'wdm-block-nuovo', 'block.json'));
+    assert.equal(r.status, 2, r.stderr);
   });
 
   it('(f) plugin in una cartella con spazi: i due hook funzionano', () => {

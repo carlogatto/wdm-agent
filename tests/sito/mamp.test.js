@@ -89,7 +89,10 @@ describe('mamp.js sul MAMP PRO di questa macchina', { skip: sito.nonDisponibile(
     const r = mamp('--site', progetto, '--mamp', finto);
     assert.equal(r.status, 1, r.stdout + r.stderr);
     assert.match(r.stderr, /Avvia i server di MAMP PRO/);
-    assert.doesNotMatch(r.stderr, /\bat .*\.js:\d+|mysqli/);
+    // Per il caso in cui avviare i server non basta: il dettaglio da riferire, in una riga sola.
+    assert.match(r.stderr, /riferisci a chi segue il progetto questo dettaglio: \S/);
+    assert.equal(r.stderr.trim().split('\n').length, 1, r.stderr);
+    assert.doesNotMatch(r.stderr, /\bat .*\.js:\d+|Stack trace|#0 /);
     assert.equal(r.stdout, '');
   });
 

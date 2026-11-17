@@ -43,6 +43,25 @@ test('ogni skill cita gli script che usa', () => {
   assert.ok(!skill('fse-theme-setup').includes('Template of `new-project-setup`'));
 });
 
+// Una cartella può avere spazi nel nome («Mario Rossi»): nei comandi di skill e fondamenta ogni
+// percorso sta tra virgolette, altrimenti bash lo spezza.
+test('nei comandi i percorsi stanno tra virgolette', () => {
+  const testi = [...['fse-theme-setup', 'fse-brief', 'fse-kit', 'fse-build', 'fse-block-edit', 'fse-menu-build'].map((nome) => path.join(RADICE, 'skills', nome, 'SKILL.md')),
+    path.join(RADICE, 'shared', 'fse-foundations.md')];
+  const SEGNAPOSTO = '\\{(?:theme-root|site-root|scratchpad)\\}';
+  const nudi = [
+    /\b(node|eval-file) \$\{CLAUDE_PLUGIN_ROOT\}/,
+    new RegExp(`\\bcd ${SEGNAPOSTO}`),
+    new RegExp(`^\\s*\\[ -[a-z] ${SEGNAPOSTO}`),
+    // In una riga di comando: un argomento (anche part=percorso, o dopo >) che comincia con un segnaposto di percorso.
+    new RegExp(`^\\s*(\\{wp-cli\\}|node |cd |\\[ ).*[\\s>]([a-z]+=)?${SEGNAPOSTO}`),
+    new RegExp(`^\\s+([a-z]+=)?${SEGNAPOSTO}\\S* \\\\$`),
+  ];
+  const trovate = testi.flatMap((f) => fs.readFileSync(f, 'utf8').split('\n')
+    .flatMap((riga, i) => (nudi.some((modello) => modello.test(riga)) ? [`${path.relative(RADICE, f)}:${i + 1}: ${riga.trim().slice(0, 120)}`] : [])));
+  assert.deepEqual(trovate, []);
+});
+
 test('i testi citano file del plugin', () => {
   assert.ok(citati().length >= 8, `citati: ${citati().join(', ')}`);
   assert.ok(citati('.js').length >= 5 && citati('.php').length >= 2);
