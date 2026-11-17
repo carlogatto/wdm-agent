@@ -26,6 +26,7 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 - `shared/fse-foundations.md`: le convenzioni, citate per § da ogni skill e dal `CLAUDE.md` dei progetti.
 - `shared/scripts/sync-theme-json-tokens.js`: genera la sezione Design Tokens di `DESIGN.md` e `assets/css/wp-global-styles.css` da `theme.json`.
 - `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff e cancellano solo dopo una conferma in un turno successivo.
+- `skills/fse-theme-setup/scripts/`: `mamp.js` (trova MAMP PRO, scarica WP-CLI, sceglie il PHP, crea il database del progetto e scrive `{wp-cli}` in `DESIGN.md`) e `setup.js` (rinomina il tema base nel tema del progetto; si può rilanciare dopo un'interruzione).
 - `hooks/`: due script Node. `check-block-contract.js` (a ogni scrittura di un `block.json` del tema: nome, prefisso, cartella, `render`, sorgenti, README, versione) e `check-design-tokens.js` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma al dev prima di rigenerare).
 
 ## Il flusso
@@ -64,7 +65,7 @@ esegue solo dopo l'ok.
 - `node` 22 o successivo (hook e script del plugin sono in Node, come la build del tema).
 - git (quello di Xcode Command Line Tools basta). Il repo è pubblico: non servono account GitHub,
   inviti o credenziali.
-- MAMP e WP-CLI non servono per installare il plugin: li prepara `fse-theme-setup` nel progetto.
+- MAMP PRO non serve per installare il plugin: serve nei progetti, e va installato a parte. WP-CLI non va installato: lo scarica `fse-theme-setup` nel progetto.
 
 Nel progetto la password dell'utente agente (`{agent-admin-user}` di `DESIGN.md`) sta in
 `{site-root}/.env`, due righe `AGENT_ADMIN_USER=…` e `AGENT_ADMIN_PASSWORD=…`: le scrive `fse-theme-setup` (Step 2c), il
@@ -149,14 +150,14 @@ gruppi esclusi.
 
 | Gruppo | Richiede |
 |---|---|
-| `tests/bash/` | `bash`: è la prova di `setup.sh` |
 | `tests/claude/` | la CLI `claude` con il plugin installato |
-| `tests/sito/` | il sito di prova |
+| `tests/sito/` | il sito di prova e una copia del tema base (wdm-theme) |
 
 Il sito di prova è un WordPress usa e getta, in una cartella e in un database riservati alle
 prove: le prove che scrivono in WordPress scrivono solo lì, lo azzerano prima di cominciare e lo
-lasciano vuoto. I valori della macchina (cartella, database, PHP e socket di MAMP, `wp-cli.phar`)
-stanno in `tests/sito.local.json`, che non entra nel repo: si parte da una copia di
+lasciano vuoto. Il setup, i controlli e la build del tema si provano su una copia del tema base,
+che le prove leggono soltanto. I valori della macchina (cartella, database, PHP e socket di MAMP,
+`wp-cli.phar`, site root del tema base) stanno in `tests/sito.local.json`, che non entra nel repo: si parte da una copia di
 `tests/sito.example.json`. Cartella e database devono avere un nome che finisce con `-test`, e la
 cartella al primo uso deve essere vuota: le prove ci lasciano il file `.wdm-agent-sito-di-prova`
 e da allora svuotano solo una cartella che lo contiene. Per usarlo a mano:
@@ -174,7 +175,7 @@ sempre dal remoto GitHub (repo pubblico), mai dal checkout.
 ## Come sono scritti i percorsi
 
 Dentro una skill, un file della stessa skill si cita con percorso relativo alla sua cartella
-(`scripts/setup.sh`). Qualunque altro file del plugin si cita con `${CLAUDE_PLUGIN_ROOT}/…`,
+(`scripts/setup.js`). Qualunque altro file del plugin si cita con `${CLAUDE_PLUGIN_ROOT}/…`,
 che Claude Code espande nel testo delle skill e nei comandi degli hook, ovunque il plugin sia
 installato. Dettagli in `shared/fse-foundations.md §12`.
 

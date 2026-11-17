@@ -1,7 +1,7 @@
 // Le skill citano i file del plugin con ${CLAUDE_PLUGIN_ROOT}: ogni file citato esiste, e ogni
 // script citato si avvia (E2: una prova che cerca solo il testo resta verde con uno script
-// rotto). Qui gli script .js; gli .sh stanno in bash/, i .php in sito/. Gli hook hanno la loro
-// prova (hook.test.js): qui se ne controlla solo la sintassi.
+// rotto). Qui gli script .js; i .php stanno in sito/. Gli hook hanno la loro prova
+// (hook.test.js): qui se ne controlla solo la sintassi. Di script di shell non ce ne sono più.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -20,7 +20,8 @@ const NAV = cita('eval-file ', 'skills/fse-menu-build/scripts/wp-navigation.php'
 const SYNC = cita('node ', 'shared/scripts/sync-theme-json-tokens.js');
 const PAGE = cita('eval-file ', 'skills/fse-build/scripts/wp-page.php');
 const MENU = cita('', 'skills/fse-menu-build/SKILL.md');
-const SETUP = cita('bash ', 'skills/fse-theme-setup/scripts/setup.sh');
+const SETUP = cita('node ', 'skills/fse-theme-setup/scripts/setup.js');
+const MAMP = cita('node ', 'skills/fse-theme-setup/scripts/mamp.js');
 
 test('ogni skill legge le fondamenta dal plugin', () => {
   for (const nome of ['fse-theme-setup', 'fse-brief', 'fse-kit', 'fse-build', 'fse-block-edit', 'fse-menu-build']) {
@@ -30,20 +31,30 @@ test('ogni skill legge le fondamenta dal plugin', () => {
 
 test('ogni skill cita gli script che usa', () => {
   const almeno = [
-    ['fse-menu-build', NAV, 4], ['fse-theme-setup', NAV, 2],
+    ['fse-menu-build', NAV, 4], ['fse-theme-setup', NAV, 3],
     ['fse-build', SYNC, 1], ['fse-block-edit', SYNC, 1], ['fse-theme-setup', SYNC, 2], ['fse-brief', SYNC, 1],
     ['fse-build', PAGE, 2], ['fse-build', MENU, 1], ['fse-theme-setup', MENU, 1],
   ];
   for (const [nome, modello, n] of almeno) {
     assert.ok(volte(nome, modello) >= n, `${nome}: attese almeno ${n} citazioni di ${modello.source}, trovate ${volte(nome, modello)}`);
   }
-  assert.equal(volte('fse-theme-setup', SETUP), 1, 'fse-theme-setup lancia setup.sh una volta sola');
+  assert.equal(volte('fse-theme-setup', SETUP), 1, 'fse-theme-setup lancia setup.js in un punto solo');
+  assert.equal(volte('fse-theme-setup', MAMP), 1, 'fse-theme-setup lancia mamp.js in un punto solo');
   assert.ok(!skill('fse-theme-setup').includes('Template of `new-project-setup`'));
 });
 
 test('i testi citano file del plugin', () => {
   assert.ok(citati().length >= 8, `citati: ${citati().join(', ')}`);
-  assert.ok(citati('.js').length >= 3 && citati('.sh').length >= 1 && citati('.php').length >= 2);
+  assert.ok(citati('.js').length >= 5 && citati('.php').length >= 2);
+  assert.deepEqual(citati('.sh'), [], 'nessuno script di shell: il plugin gira anche senza bash');
+});
+
+test('nel plugin non restano script di shell, e nessuno script chiama comandi del sistema', () => {
+  const tutti = fs.readdirSync(RADICE, { recursive: true }).filter((f) => !/^(\.git|docs|node_modules)([\\/]|$)/.test(f));
+  assert.deepEqual(tutti.filter((f) => f.endsWith('.sh')), []);
+  for (const f of tutti.filter((f) => /^(hooks|shared|skills)[\\/].*\.js$/.test(f))) {
+    assert.doesNotMatch(fs.readFileSync(path.join(RADICE, f), 'utf8'), /execSync|shell:\s*true|\bcurl\b|\bjq\b|\bsed -/, f);
+  }
 });
 
 for (const relativo of citati()) {

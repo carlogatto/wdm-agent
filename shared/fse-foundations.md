@@ -568,10 +568,16 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
 
 ## 8. WP-CLI recipes (the write path of `fse-build` and `fse-menu-build`)
 
-`{wp-cli}` from `DESIGN.md → Project Config → Paths` is the full command (the MAMP PHP of the
-host + `display_errors=stderr`, so PHP notices never reach a captured stdout + socket + phar +
+`{wp-cli}` from `DESIGN.md → Project Config → Paths` is the full command (a MAMP PHP +
+`display_errors=stderr`, so PHP notices never reach a captured stdout + socket + phar +
 `--path`), e.g.
 `/Applications/MAMP/bin/php/php8.4.17/bin/php -d memory_limit=512M -d display_errors=stderr -d mysqli.default_socket=/Applications/MAMP/tmp/mysql/mysql.sock {site-root}/wp-cli.phar --path={site-root}`.
+The row is written by `fse-theme-setup` (its `mamp.js` finds MAMP, composes the command and
+proves it): never compose it by hand, and never ask the dev for a PHP version. The PHP is the
+newest one installed in MAMP that starts the phar without warnings, so it **can differ from the
+PHP of the host: it is intended** (on a PHP newer than the phar supports, WP-CLI prints
+`Deprecated` lines). Arguments with spaces are double-quoted in the row; a script that runs it
+splits it into arguments and spawns it without a shell (`sync-theme-json-tokens.js` does).
 The phar path is **absolute** (the skills `cd` into `{theme-root}` for npm and the Bash cwd
 persists; `sync-theme-json-tokens.js` runs it from any cwd). In zsh put it in a script file, not
 in a string variable. Below `{wp-cli}
@@ -897,7 +903,7 @@ Both hooks are Node scripts, run without a shell (`"command": "node"` with the s
   change (palette, fonts, spacing, layout, custom) waits for the dev.
 
 **File references inside the plugin.** A SKILL.md cites a file of its own skill with a path
-relative to the skill folder (`scripts/setup.sh`); any other file of the plugin (`shared/…`,
+relative to the skill folder (`scripts/setup.js`); any other file of the plugin (`shared/…`,
 another skill) with `${CLAUDE_PLUGIN_ROOT}/…`. `${CLAUDE_PLUGIN_ROOT}` is expanded by Claude
 Code in SKILL.md bodies and in the `command` and `args` of `hooks.json`; it is
 **not** set in the session shell, so never type it in a Bash command you compose yourself:
