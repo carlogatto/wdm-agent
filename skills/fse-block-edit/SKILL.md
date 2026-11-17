@@ -47,8 +47,9 @@ invalidates a page. But the attributes **saved in post_content keep their names 
 | frontend JS (first JS, or a change) | **E** | src/view.js, block.json `viewScriptModule`, README dependencies |
 | new child block / child attribute | **F** | child folder (A–D on it), parent `allowedBlocks`/template, context |
 
-Several scenarios → handle in order A → B → C → D → E → F. The kit is edited **before**
-render.php in B and C (kit = render.php, §4): a markup change not reflected in the kit breaks
+Several scenarios → handle in order A → B → C → D → E → F. The kit comes **before**
+render.php (kit = render.php, §4): in C it is edited first, in B it already exists, from
+`fse-kit`; a markup change not reflected in the kit breaks
 the parity rule and the next `fse-build` of a page would read a stale design.
 
 ## Step 2 — Apply
@@ -131,7 +132,7 @@ blocks' files (shared components in `src/js/editor/` only additively) · `git pu
 ## Completion checklist
 
 - [ ] Guard, block implemented, usage list collected
-- [ ] Scenario(s) identified and applied in order; kit before render.php for B/C
+- [ ] Scenario(s) identified and applied in order; kit before render.php (C: edited first; B: from `fse-kit`)
 - [ ] block.json additive (new attribute with safe default / new enum value), `version` bumped
 - [ ] Build exit 0, hook silent, smoke test of the change, regression on an existing instance, parity in `/html/`
 - [ ] README, DESIGN.md (Blocchi, Log decisioni), CLAUDE.md updated; handover message (§10) with the pages affected

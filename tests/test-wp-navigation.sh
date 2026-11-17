@@ -18,7 +18,12 @@ wp option get home >/dev/null 2>&1 || { echo "SKIP $name: WordPress non raggiung
 TMP="$PLUGIN_ROOT/tests/tmp/nav-$$"; mkdir -p "$TMP/parts"
 TITLE="wdm-agent test nav $$"
 ID=""
-cleanup() { [ -n "$ID" ] && wp post delete "$ID" --force >/dev/null 2>&1 || true; rm -rf "$TMP"; }
+# Il post si cerca per titolo: se apply lo crea e poi fallisce, $ID resta vuoto.
+cleanup() {
+  ids="$(wp post list --post_type=wp_navigation --title="$TITLE" --format=ids 2>/dev/null || true)"
+  [ -n "$ids" ] && wp post delete $ids --force >/dev/null 2>&1 || true
+  rm -rf "$TMP"
+}
 trap cleanup EXIT
 
 cat > "$TMP/header.kit" <<KIT
@@ -56,6 +61,7 @@ sed -i.bak 's/Privacy &amp; Cookie/Privacy, Cookie \&amp; Termini/' "$TMP/header
 wp eval-file "$SCRIPT" plan header="$TMP/header.kit" > "$TMP/plan.json" 2>/dev/null || fail "plan (d): exit $?"
 run apply "$TMP/plan.json" parts="$TMP/parts" confirm
 [ "$rc" -eq 0 ] || fail "(d) apply confirm: exit $rc. $out"
+echo "$out" | grep -qF "aggiornato" || fail "(d) apply confirm: menu non aggiornato. $out"
 run apply "$TMP/plan.json" parts="$TMP/parts"
 [ "$rc" -eq 0 ] || fail "(d) apply dopo l'aggiornamento: exit $rc, atteso 0. $out"
 echo "$out" | grep -qF "0 differenze" || fail "(d) atteso «0 differenze» dopo l'aggiornamento. $out"

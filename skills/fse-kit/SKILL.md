@@ -61,11 +61,15 @@ A **new block or a new variant is never an item**: "disegna il blocco Y", "una s
 the dev reviews it in the page. This is the only road to a new variant: `fse-block-edit` does
 not design one, it implements the one that already has its README row and kit.
 
-No item named → first look for a `⏳ kit {item} in revisione` line in `## Domande aperte` whose
-kit is on disk: that item is waiting for the dev's ok, so **hand it over again** (the Review
-below: same URL, screenshots, `[da confermare]` table), never redesign it and never start
-another row while it waits. No such line → the telaio if its rows are `da progettare`, else the
-first page `da progettare` in the order of `## Brief → Mappa` (or of `## Pagine`). A page that needs a block that does not exist → Step 3 before the
+**A kit already under review comes first.** A `⏳ kit {item} in revisione` line in `## Domande
+aperte` whose kit is on disk means that item is waiting for the dev's ok (one gate open at a
+time, §10). Whatever the request, **hand it over again** (the Review below: same URL,
+screenshots, `[da confermare]` table) and never redesign it: remarks in the dev's message are
+revisions of that item; if the dev names another item, say in one line that {item} is waiting
+for the ok and do not start the other.
+
+No such line and no item named → the telaio if its rows are `da progettare`, else the first
+page `da progettare` in the order of `## Brief → Mappa` (or of `## Pagine`). A page that needs a block that does not exist → Step 3 before the
 page kit imports it; a block that exists but needs a new variant → Step 3 (README row + kit +
 CSS); the editor side is `fse-block-edit`'s, run by `fse-build` when the page needs it. A page
 the dev removes from the map → its row goes `da eliminare` (kit and row stay until `fse-build`
@@ -74,7 +78,8 @@ deletes it with `confirm`).
 **Demo kits of the base theme.** A page kit this project never handed over —
 `src/kit/{prefix}-{page}.kit` on disk while the page has no row in `## Pagine`, or has a row
 `da progettare` with no `⏳ kit … in revisione` line — is a residue of wdm-theme's demo pages,
-not work to complete. When the map has that page, write its kit anew and replace the file (the
+not work to complete (`{prefix}-telaio.kit` and `{prefix}-blocks.kit` are the telaio and the
+catalogue, never residues). When the map has that page, write its kit anew and replace the file (the
 "read and complete, never overwrite" rule does not apply to a residue). A residue whose page is
 not in the map stays where it is: never imported, never built, never given a row.
 
@@ -249,7 +254,8 @@ a kit with more than one root `<section>` per block, or with inline `<script>`/`
 Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · fit a section
 into an existing block because it exists (a new variant or block is Step 3, not a cost) · ask mid-way what
 the charter decides or marks `[da confermare]` · invent a fact about the client · mark a row
-`kit` before the dev's ok · `git push`, or any git command beyond the fse-foundations §10 rule; commit a kit still under review.
+`kit` before the dev's ok (only a Telaio row revised after its build goes back to `kit`, see
+Review) · `git push`, or any git command beyond the fse-foundations §10 rule; commit a kit still under review.
 
 ## Completion checklist (per item)
 

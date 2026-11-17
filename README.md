@@ -20,7 +20,7 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 | `fse-brief` | il brief del designer in `docs/brief/` diventa il contratto del sito: mappa, token applicati, tono, plugin, immagini, per una review ("leggi il brief") |
 | `fse-kit` | progettazione in HTML del telaio o di una pagina completa con i suoi blocchi, un item per sessione, una review alla fine ("progettiamo il kit…") |
 | `fse-build` | build del sito in WordPress da tutti i kit approvati, rieseguibile (applica solo la differenza kit ↔ WP), menu inclusi, una review finale ("costruisci il sito") |
-| `fse-block-edit` | modifica di un blocco già implementato ("aggiungi una variante a X") |
+| `fse-block-edit` | modifica di un blocco già implementato ("aggiungi un attributo a X"); una variante nuova nasce in `fse-kit`, dentro la pagina che la richiede |
 | `fse-menu-build` | creazione e riallineamento dei menu `wp_navigation` dal kit ("popola il menu") |
 
 - `shared/fse-foundations.md`: le convenzioni, citate per § da ogni skill e dal `CLAUDE.md` dei progetti.

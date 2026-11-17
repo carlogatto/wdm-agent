@@ -32,9 +32,9 @@ tone and tokens are **proposed** (decide and log); facts about the client are ne
 
 ## Step 0 — Guard and preconditions
 
-1. `theme_family` = `fse` (fse-foundations §0); any other value **or row missing** → STOP with
-   the §0 message. Nothing else is read after the stop.
-2. `DESIGN.md` missing → stop: "progetto non inizializzato: prima `fse-theme-setup`".
+1. `theme_family` = `fse` (fse-foundations §0); any other value or row missing → STOP with
+   the §0 message for that case. Nothing else is read after the stop.
+2. `DESIGN.md` missing → STOP with the §0 message for that case (`/wdm-agent:fse-theme-setup`).
 3. `## Brief` already `Stato: approvato` → stop: the brief is closed; it reopens only on an
    explicit request ("rivediamo il brief"), which runs Step 1–4 again on the same section.
 4. `docs/brief/` missing or empty → stop with this paragraph, verbatim:

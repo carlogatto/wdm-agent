@@ -684,7 +684,8 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
     review is not committed.
   - Only the main branch of the repo (`master` or `main`): never create or switch branch.
   - Only the files of the work in progress, added by name. Changes someone else left in the
-    repo stay out, and the handover says so in one line.
+    repo stay out, and the handover says so in one line. `git init` and `git add .` belong to
+    `fse-theme-setup` Step 5b only: the first commit of a new project.
   - Messages in the dev's style, in Italian (`feat(home): …`, `fix(menu): …`).
   - Reading the repo is free (`status`, `diff`, `log`): the history also tells which side, kit
     or theme, changed last.

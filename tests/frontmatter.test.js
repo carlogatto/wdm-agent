@@ -8,7 +8,13 @@ const path = require('node:path');
 
 const SKILLS = path.join(__dirname, '..', 'skills');
 
-for (const skill of fs.readdirSync(SKILLS).filter((d) => fs.existsSync(path.join(SKILLS, d, 'SKILL.md')))) {
+const skills = fs.readdirSync(SKILLS).filter((d) => fs.existsSync(path.join(SKILLS, d, 'SKILL.md')));
+
+test('le skill sono sei', () => {
+  assert.equal(skills.length, 6);
+});
+
+for (const skill of skills) {
   test(`frontmatter di ${skill}`, () => {
     const lines = fs.readFileSync(path.join(SKILLS, skill, 'SKILL.md'), 'utf8').split('\n');
     assert.equal(lines[0], '---');

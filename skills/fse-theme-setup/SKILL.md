@@ -322,13 +322,23 @@ Parti)".
   from the wdm-theme repo and run the same `sed` of Step 10 on it; never write it from scratch.
 
 ### Step 5b — Git `[AGENT]`, then dev check `[MANUAL]`
-Git first (fse-foundations §10). `{site-root}/.git` missing → `git init` in `{site-root}`. Then
-the first commit: the whole project is the work, so `git add .` is allowed here and only here
-(the `.gitignore` shipped with the repo keeps WordPress core, uploads, `.env` and `node_modules`
-out); read `git status --short` before committing and stop if `.env` or a core folder is listed.
-Message: `chore: setup del progetto {slug} da wdm-theme`. `.git` already there → no init, commit
-on the current branch; a remote `origin` still pointing to `carlogatto/wdm-theme` is named in the
-message below (the dev replaces it). Never a remote, never a push: they are the dev's.
+Git first (fse-foundations §10: `git init` and `git add .` are allowed in this step only).
+`{site-root}/.git` missing → `git init` in `{site-root}`; already there → no init. Then the
+first commit, on the main branch: the whole project is the work, so `git add .` (the
+`.gitignore` shipped with the repo keeps WordPress core, uploads, `.env` and `node_modules`
+out). Before committing,
+`git status --short | grep -E '\.env|wp-admin/|wp-includes/|wp-config\.php|wp-cli\.phar|node_modules/|uploads/'`
+must print nothing: any line → stop, nothing is committed. Message: `chore: setup del progetto
+{slug} da wdm-theme`. Never a remote, never a push: they are the dev's. Two cases add one line
+to the message below:
+- the commit is refused because git has no identity on this machine (`user.name`,
+  `user.email`): do not configure it (§10), leave Step 5b unchecked and replace the first
+  sentence with "Il setup è completo, ma il primo commit non è ancora fatto: git su questo
+  computer non ha ancora il tuo nome e la tua email. Apri il Terminale e lancia `git config
+  --global user.name "Nome Cognome"` e `git config --global user.email "tu@esempio.it"`, poi
+  scrivimi **fatto**: il commit lo faccio io.";
+- `.git` was already there with a remote `origin` that points to `carlogatto/wdm-theme`: add "Il
+  repository punta ancora al tema base wdm-theme: cambia il remoto prima del push."
 
 > Il setup è completo e il primo commit è fatto. Controlla nel browser `{local-url}` (home con
 > header/footer e menu) e `wp-admin` con il tuo utente. Il remoto e il push sono tuoi, quando

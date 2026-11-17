@@ -219,7 +219,8 @@ answer — the run does not stop for it. `DESIGN.md → ## Navigazione` is writt
    `da eliminare` waiting, outside the flow; decisions taken under the charter; checks run and
    the screenshot folder. `⏳ build sito` removed; `## Domande aperte` with one `⏳` line per
    pending `confirm` (what gets deleted or rewritten, and what follows) and one line per gap with
-   its consequence. Close the browser tab. Never the password.
+   its consequence. Close the browser tab. Never the password. Then commit the run
+   (fse-foundations §10): the handover says how many commits wait for the push.
 2. **Handover message** in the shape of fse-foundations §10 "The handover message":
    - *Esito*: `⚠️ chiuso, con attese` when a `confirm` or a gap is open, `✅ chiuso` otherwise;
      `❌ fermato` + reason on a stop condition.
@@ -303,5 +304,4 @@ the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are th
 - [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; parity: kit errors fixed in the kit in this run, design differences reported
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
-- [ ] Commit of the verified run, before the handover (pages left `kit` by a gap stay out) (fse-foundations §10: main branch, files added by name); the push is the dev's
-- [ ] Log row written; handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, nessun prompt da incollare); tab closed; next `da progettare` kit started in the same conversation (or none left)
+- [ ] Log row written; commit of the verified run (fse-foundations §10: main branch, files added by name; the push is the dev's); handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, nessun prompt da incollare); tab closed; next `da progettare` kit started in the same conversation (or none left)
