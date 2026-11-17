@@ -1,6 +1,9 @@
 // wp-navigation.php sul sito di prova: le voci con & o " arrivano intatte nel post wp_navigation
 // (wp_insert_post e wp_update_post vogliono dati slashati) e un secondo apply non trova nulla da
-// scrivere. I casi sono in sequenza.
+// scrivere. `confirm` serve solo quando WordPress perderebbe qualcosa (U07); un menu aperto
+// nell'editor non si scrive (U16); le parts si controllano prima di creare un menu.
+// Exit: 0 ok · 1 errore · 3 perdite in attesa di conferma · 4 menu aperto nell'editor.
+// I casi sono in sequenza.
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -24,6 +27,17 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
     fs.writeFileSync(piano, r.stdout);
   };
   const applica = (...args) => nav('apply', piano, `parts=${parts}`, ...args);
+  const scriviVoci = (...voci) => fs.writeFileSync(kit, `<nav aria-label="${TITOLO}"><ul>\n${voci.map((v) => `  <li><a href="#">${v}</a></li>`).join('\n')}\n</ul></nav>\n`);
+  const contenuto = () => sito.wp(['post', 'get', id, '--field=post_content']).stdout;
+  const scriviInWp = (testo) => assert.equal(sito.wp(['post', 'update', id, `--post_content=${testo}`]).status, 0);
+  // Pianifica dal kit e applica: pretende codice d'uscita e, se dati, i testi nell'output.
+  const atteso = (status, args, ...testi) => {
+    pianifica();
+    const r = applica(...args);
+    assert.equal(r.status, status, r.out);
+    for (const testo of testi) assert.ok(r.out.includes(testo), `manca «${testo}» in: ${r.out}`);
+    return r;
+  };
 
   before(() => {
     sito.prepara();
@@ -72,5 +86,94 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
     r = applica();
     assert.equal(r.status, 0, r.out);
     assert.match(r.out, /0 differenze/);
+  });
+
+  it('(e) voce aggiunta nel kit: si scrive senza confirm', () => {
+    scriviVoci('Uno', 'Due');
+    atteso(0, ['confirm']);
+    scriviVoci('Uno', 'Due', 'Contatti');
+    atteso(0, [], 'aggiornato', '+ ');
+    assert.ok(contenuto().includes('Contatti'));
+  });
+
+  it('(f) riordino: si scrive senza confirm', () => {
+    scriviVoci('Contatti', 'Uno', 'Due');
+    atteso(0, [], 'aggiornato');
+    assert.ok(contenuto().indexOf('Contatti') < contenuto().indexOf('Uno'));
+  });
+
+  it('(g) una voce orfana trova la sua pagina: si scrive senza confirm', () => {
+    assert.equal(sito.wp(['post', 'create', '--post_type=page', '--post_status=publish', '--post_title=Contatti', '--porcelain']).status, 0);
+    atteso(0, [], 'aggiornato');
+    assert.ok(contenuto().includes('"kind":"post-type"'), contenuto());
+  });
+
+  it('(h) voce tolta dal kit: exit 3 con il nome della voce, nulla scritto; confirm la toglie', () => {
+    scriviVoci('Contatti', 'Uno');
+    atteso(3, [], 'WordPress perderebbe: «Due»');
+    assert.ok(contenuto().includes('Due'), 'apply senza confirm ha scritto');
+    atteso(0, ['confirm'], 'aggiornato');
+    assert.ok(!contenuto().includes('Due'));
+  });
+
+  it('(i) voce aggiunta a mano in WordPress: exit 3, non sparisce perché il kit ha solo aggiunte', () => {
+    scriviInWp(`${contenuto()}\n<!-- wp:navigation-link {"label":"Blog","url":"https://example.com/blog","kind":"custom"} /-->`);
+    scriviVoci('Contatti', 'Uno', 'Tre');
+    atteso(3, [], '«Blog» (https://example.com/blog)');
+    assert.ok(contenuto().includes('Blog') && !contenuto().includes('Tre'));
+    atteso(0, ['confirm']);
+    assert.ok(!contenuto().includes('Blog') && contenuto().includes('Tre'));
+  });
+
+  it('(j) indirizzo scritto a mano su una voce del kit, o un blocco che non è una voce: exit 3', () => {
+    scriviInWp(contenuto().replace('"label":"Tre","url":"#"', '"label":"Tre","url":"https://example.com/tre"'));
+    assert.ok(contenuto().includes('https://example.com/tre'));
+    atteso(3, [], '«Tre» (https://example.com/tre)');
+    atteso(0, ['confirm']);
+    scriviInWp(`${contenuto()}\n<!-- wp:search {"label":"Cerca"} /-->`);
+    atteso(3, [], 'blocco core/search');
+    atteso(0, ['confirm']);
+  });
+
+  it('(k) menu aperto nell\'editor da un utente: exit 4, nulla scritto; un blocco vecchio non ferma', () => {
+    const blocco = (secondi) => assert.equal(sito.wp(['post', 'meta', 'update', id, '_edit_lock', `${Math.floor(Date.now() / 1000) - secondi}:1`]).status, 0);
+    scriviVoci('Contatti', 'Uno', 'Tre', 'Quattro');
+    blocco(5);
+    atteso(4, [], 'aperto da');
+    assert.ok(!contenuto().includes('Quattro'), 'apply ha scritto su un menu aperto nell\'editor');
+    blocco(3600);
+    atteso(0, [], 'aggiornato');
+    assert.ok(contenuto().includes('Quattro'));
+  });
+
+  it('(l) part senza attributi nel blocco navigation: il ref si scrive lo stesso', () => {
+    fs.writeFileSync(path.join(parts, 'header.html'), '<!-- wp:navigation /-->\n');
+    atteso(0, [], 'ref → ');
+    assert.equal(fs.readFileSync(path.join(parts, 'header.html'), 'utf8'), `<!-- wp:navigation {"ref":${id}} /-->\n`);
+  });
+
+  it('(m) part assente, o senza il blocco con quell\'aria-label: exit 1 e nessun menu creato', () => {
+    const menu = () => sito.wp(['post', 'list', '--post_type=wp_navigation', '--post_status=any', '--format=count']).stdout.trim();
+    const prima = menu();
+    fs.writeFileSync(kit, '<nav aria-label="Menu nuovo"><ul><li><a href="#">Uno</a></li></ul></nav>\n');
+    let r = nav('plan', `footer=${kit}`);
+    fs.writeFileSync(piano, r.stdout);
+    r = applica();
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, /la part footer\.html non esiste/);
+    fs.writeFileSync(path.join(parts, 'footer.html'), '<!-- wp:navigation {"ariaLabel":"A"} /-->\n<!-- wp:navigation {"ariaLabel":"B"} /-->\n');
+    r = applica();
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, /nessuno con ariaLabel/);
+    assert.equal(menu(), prima, 'un menu è stato creato prima dell\'errore');
+  });
+
+  it('(n) lista dentro un contenitore (<nav><div><ul>): il piano ha le voci; <nav> senza lista: avviso', () => {
+    fs.writeFileSync(kit, '<nav aria-label="Con contenitore"><div><ul><li><a href="#">Uno</a></li></ul></div></nav>\n<nav aria-label="Vuoto"><p>niente</p></nav>\n');
+    const r = nav('plan', `header=${kit}`);
+    assert.equal(r.status, 0, r.out);
+    const menus = JSON.parse(r.stdout).menus;
+    assert.deepEqual(menus.map((m) => [m.title, m.items.length]), [['Con contenitore', 1]]);
+    assert.match(r.stderr, /Vuoto: il <nav> .* non contiene una lista/);
   });
 });

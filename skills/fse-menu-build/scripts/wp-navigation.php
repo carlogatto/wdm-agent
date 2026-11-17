@@ -15,12 +15,17 @@
  *         scegliere il blocco navigation giusto quando una part ne ha più di uno) e stampa il
  *         piano JSON; avvisi su stderr.
  * apply → per ogni menu del piano: trova il post (ref della prima part → titolo), lo crea se
- *         manca, confronta il contenuto; se differisce stampa il diff ed esce 3 senza
- *         scrivere, salvo `confirm`; poi riscrive `"ref":N` nel blocco navigation di OGNI part
- *         elencata (core non controlla il post type del ref: un id sbagliato stampa una pagina
- *         dentro il menu). `parts=<dir>` sostituisce {theme-root}/parts (test, dry run).
+ *         manca, confronta il contenuto e stampa il diff. Aggiunte, riordini e voci che trovano
+ *         la loro pagina si scrivono subito. Se WordPress perderebbe qualcosa (una voce che il
+ *         piano non ha, un indirizzo scritto a mano, un blocco che non è una voce) esce 3 senza
+ *         scrivere, salvo `confirm`. Se il menu è aperto nell'editor da un utente esce 4 senza
+ *         scrivere. Poi riscrive `"ref":N` nel blocco navigation di OGNI part elencata (core non
+ *         controlla il post type del ref: un id sbagliato stampa una pagina dentro il menu).
+ *         Le parts si controllano prima di scrivere: una part assente o senza il blocco giusto
+ *         ferma tutto con exit 1. `parts=<dir>` sostituisce {theme-root}/parts (test, dry run).
  *
- * Exit: 0 ok · 1 errore · 3 differenze in attesa di conferma.
+ * Exit: 0 ok · 1 errore · 3 voci che WordPress perderebbe, in attesa di conferma · 4 menu aperto
+ * nell'editor da un utente, nulla scritto.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -55,14 +60,18 @@ function fmb_parts_dir( $override = '' ) {
 
 // Per ogni part: i blocchi navigation con ariaLabel e ref (una part può averne più di uno,
 // es. footer con menu principale + menu legale: il ref si assegna al blocco con l'ariaLabel giusto).
+// Il commento di apertura di un blocco navigation: gli attributi possono mancare
+// (`<!-- wp:navigation /-->`).
+const FMB_NAV = '/(<!-- wp:navigation)(?: (\{.*?\}))?( \/?-->)/s';
+
 function fmb_part_navs( $dir ) {
   $out = array();
   foreach ( (array) glob( $dir . '/*.html' ) as $file ) {
     $part   = basename( $file, '.html' );
     $html   = file_get_contents( $file );
     $blocks = array();
-    if ( preg_match_all( '/<!-- wp:navigation (\{.*?\}) \/?-->/s', $html, $m ) ) {
-      foreach ( $m[1] as $json ) {
+    if ( preg_match_all( FMB_NAV, $html, $m ) ) {
+      foreach ( $m[2] as $json ) {
         $attrs    = json_decode( $json, true );
         $blocks[] = array(
           'ariaLabel' => is_array( $attrs ) && isset( $attrs['ariaLabel'] ) ? $attrs['ariaLabel'] : null,
@@ -188,11 +197,11 @@ function fmb_plan_from_kits( $kits ) {
     $navs = $doc->getElementsByTagName( 'nav' );
     if ( ! $navs->length ) { $warnings[] = "$part: nessun <nav> nel kit $file"; continue; }
     foreach ( $navs as $i => $nav ) {
-      $ul = null;
-      foreach ( $nav->childNodes as $c ) { if ( $c instanceof DOMElement && $c->tagName === 'ul' ) { $ul = $c; break; } }
-      if ( ! $ul ) continue;
       $title = trim( $nav->getAttribute( 'aria-label' ) );
       if ( $title === '' ) $title = 'Menu ' . $part;
+      // La lista può stare dentro un contenitore (<nav><div><ul>): vale la prima che si incontra.
+      $ul = $nav->getElementsByTagName( 'ul' )->item( 0 );
+      if ( ! $ul ) { $warnings[] = "$title: il <nav> del kit $file non contiene una lista <ul>"; continue; }
       $items = fmb_items_from_ul( $ul, $pages, $warnings, $title );
       $sig   = json_encode( $items );
       $merged = false;
@@ -260,35 +269,92 @@ function fmb_print_diff( $old, $new ) {
   }
 }
 
-function fmb_set_ref( $file, $id, $aria ) {
-  if ( ! file_exists( $file ) ) return "assente ($file)";
-  $html  = file_get_contents( $file );
-  if ( ! preg_match_all( '/<!-- wp:navigation (\{.*?\}) \/?-->/s', $html, $all ) ) return 'nessun blocco navigation';
+// Ciò che WordPress perderebbe se il menu venisse riscritto dal piano: le voci del post che il
+// piano non ha (riconosciute dall'etichetta), le voci con un indirizzo scritto a mano che il
+// piano non conserva, i blocchi che non sono voci. Un riordino o un'aggiunta non perdono nulla.
+function fmb_existing_ids( $blocks ) {
+  $out = array();
+  foreach ( $blocks as $b ) {
+    if ( empty( $b['blockName'] ) ) continue;
+    $a = isset( $b['attrs'] ) && is_array( $b['attrs'] ) ? $b['attrs'] : array();
+    if ( in_array( $b['blockName'], array( 'core/navigation-link', 'core/navigation-submenu', 'core/home-link' ), true ) ) {
+      $label = isset( $a['label'] ) ? (string) $a['label'] : '';
+      $url   = isset( $a['url'] ) ? (string) $a['url'] : '';
+      $hand  = $b['blockName'] !== 'core/home-link' && ( ! isset( $a['kind'] ) || $a['kind'] === 'custom' ) && $url !== '' && $url !== '#';
+      $out[] = array( 'id' => fmb_norm( $label ) . ( $hand ? '|' . $url : '' ), 'show' => '«' . $label . '»' . ( $hand ? " ($url)" : '' ) );
+    } else {
+      $out[] = array( 'id' => '[' . $b['blockName'] . ']', 'show' => 'blocco ' . $b['blockName'] );
+    }
+    if ( ! empty( $b['innerBlocks'] ) ) $out = array_merge( $out, fmb_existing_ids( $b['innerBlocks'] ) );
+  }
+  return $out;
+}
+
+function fmb_plan_ids( $items ) {
+  $out = array();
+  foreach ( $items as $it ) {
+    $hand  = empty( $it['home'] ) && empty( $it['page'] ) && isset( $it['url'] ) && $it['url'] !== '' && $it['url'] !== '#';
+    $out[] = fmb_norm( isset( $it['label'] ) ? $it['label'] : '' ) . ( $hand ? '|' . $it['url'] : '' );
+    if ( ! empty( $it['children'] ) ) $out = array_merge( $out, fmb_plan_ids( $it['children'] ) );
+  }
+  return $out;
+}
+
+function fmb_lost( $existing_content, $items ) {
+  $left = array_count_values( fmb_plan_ids( $items ) );
+  $lost = array();
+  foreach ( fmb_existing_ids( parse_blocks( (string) $existing_content ) ) as $e ) {
+    if ( ! empty( $left[ $e['id'] ] ) ) { $left[ $e['id'] ]--; continue; }
+    $lost[] = $e['show'];
+  }
+  return $lost;
+}
+
+// Il nome dell'utente che ha il post aperto nell'editor, o '' se nessuno.
+function fmb_locked_by( $post_id ) {
+  if ( ! function_exists( 'wp_check_post_lock' ) ) require_once ABSPATH . 'wp-admin/includes/post.php';
+  $user = wp_check_post_lock( $post_id );
+  if ( ! $user ) return '';
+  $data = get_userdata( $user );
+  return $data ? $data->display_name : "utente $user";
+}
+
+// Il blocco navigation di una part a cui scrivere il ref: l'indice, oppure un errore in parole.
+function fmb_ref_target( $file, $aria ) {
+  if ( ! file_exists( $file ) ) return array( null, 'la part ' . basename( $file ) . ' non esiste' );
+  if ( ! preg_match_all( FMB_NAV, file_get_contents( $file ), $all ) ) return array( null, 'la part ' . basename( $file ) . ' non ha un blocco navigation' );
   $blocks = array();
-  foreach ( $all[1] as $json ) {
+  foreach ( $all[2] as $json ) {
     $attrs    = json_decode( $json, true );
     $blocks[] = array( 'ariaLabel' => is_array( $attrs ) && isset( $attrs['ariaLabel'] ) ? $attrs['ariaLabel'] : null );
   }
   $target = fmb_pick_nav_block( $blocks, $aria );
   if ( $target === null ) {
-    fmb_err( basename( $file ) . ': ' . count( $blocks ) . " blocchi navigation e nessuno con ariaLabel \"$aria\" (il <nav> del kit e il blocco della part devono avere lo stesso aria-label)" );
+    return array( null, basename( $file ) . ': ' . count( $blocks ) . " blocchi navigation e nessuno con ariaLabel \"$aria\" (il <nav> del kit e il blocco della part devono avere lo stesso aria-label)" );
   }
+  return array( $target, count( $blocks ) > 1 && $aria !== null ? " (blocco \"$aria\")" : '' );
+}
+
+function fmb_set_ref( $file, $id, $aria ) {
+  list( $target, $note ) = fmb_ref_target( $file, $aria );
+  if ( $target === null ) fmb_err( $note );
+  $html  = file_get_contents( $file );
   $index = 0;
-  $next  = preg_replace_callback( '/(<!-- wp:navigation )(\{.*?\})( \/?-->)/s', function ( $m ) use ( $id, $target, &$index ) {
+  $next  = preg_replace_callback( FMB_NAV, function ( $m ) use ( $id, $target, &$index ) {
     if ( $index++ !== $target ) return $m[0];
-    $json = $m[2];
+    $json = isset( $m[2] ) ? $m[2] : '';
     if ( preg_match( '/"ref":\s*\d+/', $json ) ) {
       $json = preg_replace( '/"ref":\s*\d+/', '"ref":' . $id, $json, 1 );
-    } elseif ( $json === '{}' ) {
+    } elseif ( $json === '' || $json === '{}' ) {
       $json = '{"ref":' . $id . '}';
     } else {
       $json = '{"ref":' . $id . ',' . substr( $json, 1 );
     }
-    return $m[1] . $json . $m[3];
+    return $m[1] . ' ' . $json . $m[3];
   }, $html );
-  if ( $next === $html ) return "ref $id già presente" . ( $aria !== null && count( $blocks ) > 1 ? " (blocco \"$aria\")" : '' );
+  if ( $next === $html ) return "ref $id già presente$note";
   file_put_contents( $file, $next );
-  return "ref → $id scritto" . ( $aria !== null && count( $blocks ) > 1 ? " (blocco \"$aria\")" : '' );
+  return "ref → $id scritto$note";
 }
 
 // ---------- main ----------
@@ -337,17 +403,32 @@ if ( $fmb_mode === 'apply' ) {
   $pending   = array();
   $ops       = array();
 
-  // 1. confronto: niente viene scritto finché ogni differenza non è confermata
+  // 1. confronto: niente viene scritto finché parts, blocchi di modifica e perdite non sono a posto
+  $locked = array();
   foreach ( $plan['menus'] as $menu ) {
     if ( empty( $menu['title'] ) || empty( $menu['parts'] ) || ! isset( $menu['items'] ) ) fmb_err( 'ogni menu del piano richiede title, parts, items' );
+    foreach ( $menu['parts'] as $part ) {
+      list( $target, $note ) = fmb_ref_target( "$dir/$part.html", isset( $menu['aria'][ $part ] ) ? $menu['aria'][ $part ] : null );
+      if ( $target === null ) fmb_err( "{$menu['title']}: $note. Nulla è stato scritto." );
+    }
     $content  = fmb_serialize_items( $menu['items'] );
     $existing = fmb_find_navigation( $menu, $part_navs );
     if ( $existing && trim( $existing->post_content ) !== trim( $content ) ) {
       echo "{$menu['title']} (id {$existing->ID}): differenze kit → WP\n";
       fmb_print_diff( $existing->post_content, $content );
-      $pending[] = $menu['title'];
+      $lost = fmb_lost( $existing->post_content, $menu['items'] );
+      if ( $lost ) {
+        echo '  WordPress perderebbe: ' . implode( ', ', $lost ) . "\n";
+        $pending[] = $menu['title'];
+      }
+      $who = fmb_locked_by( $existing->ID );
+      if ( $who !== '' ) $locked[] = "{$menu['title']} (aperto da $who)";
     }
     $ops[] = array( 'menu' => $menu, 'content' => $content, 'existing' => $existing );
+  }
+  if ( $locked ) {
+    echo "\nNessuna scrittura: menu aperto nell'editor — " . implode( ', ', $locked ) . ". Chiudi la scheda dell'editor e rilancia.\n";
+    fmb_halt( 4 );
   }
   if ( $pending && ! $confirm ) {
     echo "\nNessuna scrittura: mostra il diff al dev e, solo dopo la sua conferma in un turno successivo, rilancia con `confirm`.\n";
