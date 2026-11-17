@@ -164,9 +164,6 @@ cartella al primo uso deve essere vuota: le prove ci lasciano il file `.wdm-agen
 e da allora svuotano solo una cartella che lo contiene. Per usarlo a mano:
 `node tests/lib/sito.js install | reset | status | wp …`.
 
-A ogni push su `master` GitHub Actions (`.github/workflows/prove.yml`) esegue le prove su macOS
-e su Windows, senza i gruppi che lì non possono girare.
-
 Su un altro Mac di Carlo il plugin **non** c'è finché non lo si installa anche lì: la copia che
 Claude Code usa sta in `~/.claude/plugins/`, cartella esclusa dal repo `claude-global`. Si installa
 dal remoto con i due comandi della sezione Installazione; se `settings.json` arrivato da git
