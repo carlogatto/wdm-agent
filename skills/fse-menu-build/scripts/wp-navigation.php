@@ -362,12 +362,15 @@ if ( $fmb_mode === 'apply' ) {
       if ( trim( $op['existing']->post_content ) === trim( $op['content'] ) ) {
         echo "{$menu['title']} (id $id): 0 differenze\n";
       } else {
-        $r = wp_update_post( array( 'ID' => $id, 'post_content' => $op['content'] ), true );
+        // wp_update_post e wp_insert_post vogliono dati slashati (fanno wp_unslash): senza wp_slash
+        // le sequenze di escape JSON degli attributi (barra + u0026 per &, barra + u0022 per ")
+        // perdono la barra e la voce si corrompe.
+        $r = wp_update_post( array( 'ID' => $id, 'post_content' => wp_slash( $op['content'] ) ), true );
         if ( is_wp_error( $r ) ) fmb_err( 'update fallito: ' . $r->get_error_message() );
         echo "{$menu['title']} (id $id): aggiornato\n";
       }
     } else {
-      $id = wp_insert_post( array( 'post_type' => 'wp_navigation', 'post_status' => 'publish', 'post_title' => $menu['title'], 'post_content' => $op['content'] ), true );
+      $id = wp_insert_post( wp_slash( array( 'post_type' => 'wp_navigation', 'post_status' => 'publish', 'post_title' => $menu['title'], 'post_content' => $op['content'] ) ), true );
       if ( is_wp_error( $id ) ) fmb_err( 'creazione fallita: ' . $id->get_error_message() );
       echo "{$menu['title']} (id $id): creato\n";
     }
