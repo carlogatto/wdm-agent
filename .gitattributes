@@ -1,0 +1,3 @@
+# Fine riga LF su ogni sistema: su Windows il checkout li convertirebbe in CRLF, e il
+# frontmatter delle skill e gli script non lo reggono.
+* text=auto eol=lf

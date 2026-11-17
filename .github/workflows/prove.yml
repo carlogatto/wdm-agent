@@ -1,0 +1,32 @@
+# Esegue le prove del plugin su macOS e su Windows a ogni push. Non usa segreti né parametri:
+# chi clona o installa il plugin non deve fare nulla.
+# Restano fuori, per nome, i gruppi che qui non possono girare: claude (la CLI con il plugin
+# installato), sito (il sito di prova dell'autore) e, su Windows, bash (gli hook ancora in bash).
+name: prove
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            senza: claude,sito
+          - os: windows-latest
+            senza: bash,claude,sito
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: node tests/run.js --senza ${{ matrix.senza }}

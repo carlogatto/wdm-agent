@@ -140,8 +140,31 @@ poi nuova sessione, o `/reload-plugins` nella sessione aperta. Le versioni più 
 leggono i marketplace locali sul posto: in quel caso basta `/reload-plugins`. Prima di ogni commit:
 
 ```bash
-bash tests/run.sh
+node tests/run.js
 ```
+
+Le prove usano `node --test`, senza pacchetti da installare. Il verdetto è `TUTTO VERDE` solo se
+ogni prova è stata eseguita ed è passata: una prova saltata dà `NON VERDE`, con il motivo. Le
+prove in `tests/` chiedono solo Node. Quelle nelle sottocartelle chiedono altro, e si escludono
+solo dichiarandolo: `node tests/run.js --senza claude,sito` risponde `VERDE IN PARTE` e nomina i
+gruppi esclusi.
+
+| Gruppo | Richiede |
+|---|---|
+| `tests/bash/` | `bash` e `jq`: sono le prove degli hook |
+| `tests/claude/` | la CLI `claude` con il plugin installato |
+| `tests/sito/` | il sito di prova |
+
+Il sito di prova è un WordPress usa e getta, in una cartella e in un database riservati alle
+prove: le prove che scrivono in WordPress scrivono solo lì, lo azzerano prima di cominciare e lo
+lasciano vuoto. I valori della macchina (cartella, database, PHP e socket di MAMP, `wp-cli.phar`)
+stanno in `tests/sito.local.json`, che non entra nel repo: si parte da una copia di
+`tests/sito.example.json`. Cartella e database devono avere un nome che finisce con `-test`,
+altrimenti le prove si rifiutano di toccarli. Per usarlo a mano:
+`node tests/lib/sito.js install | reset | status | wp …`.
+
+A ogni push su `master` GitHub Actions (`.github/workflows/prove.yml`) esegue le prove su macOS
+e su Windows, senza i gruppi che lì non possono girare.
 
 Su un altro Mac di Carlo il plugin **non** c'è finché non lo si installa anche lì: la copia che
 Claude Code usa sta in `~/.claude/plugins/`, cartella esclusa dal repo `claude-global`. Si installa
