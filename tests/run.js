@@ -5,8 +5,8 @@
 //   node tests/run.js --senza claude,sito   senza i gruppi nominati
 //
 // Le prove sono i file *.test.js di tests/ (chiedono solo Node) e delle sue sottocartelle, una
-// per requisito: bash/ (bash e jq), claude/ (la CLI di Claude Code con il plugin installato),
-// sito/ (il sito di prova, tests/sito.example.json).
+// per requisito: claude/ (la CLI di Claude Code con il plugin installato), sito/ (il sito di
+// prova e una copia del tema base, tests/sito.example.json).
 //
 // Verdetto: «TUTTO VERDE» solo se ogni prova è stata eseguita ed è passata. Con un gruppo
 // escluso da --senza è «VERDE IN PARTE», e il gruppo è nominato. Una prova fallita, saltata o
