@@ -1,0 +1,14 @@
+// Breakpoints — unica eccezione alla regola "token da theme.json": le media query non
+// accettano custom property. La mappa DEVE coincidere con theme.json → settings.custom.breakpoints
+// (lo script di sync lo verifica). Importare con `@use 'breakpoints' as *;`.
+@use 'sass:map';
+
+$breakpoints: (xs: 480px, sm: 576px, md: 768px, lg: 992px, xl: 1170px, xxl: 1434px);
+
+@mixin bp-up($name) {
+  @media (min-width: map.get($breakpoints, $name)) { @content; }
+}
+
+@mixin bp-down($name) {
+  @media (max-width: map.get($breakpoints, $name) - 0.02px) { @content; }
+}
