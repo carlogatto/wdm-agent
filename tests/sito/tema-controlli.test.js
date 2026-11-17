@@ -254,6 +254,41 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
     });
   });
 
+  // Un file dichiarato e assente fa fallire la build, non la lascia passare con un avviso (U43).
+  describe('build.js', () => {
+    const build = () => nodo('build.js');
+
+    it('copia intatta: exit 0', async () => {
+      const r = await build();
+      assert.equal(r.status, 0, r.out);
+      assert.ok(fs.existsSync(file('assets/css/main.css')) && fs.existsSync(file('html/wdm-blocks.html')));
+    });
+
+    it('un @append verso un file che non esiste: exit 1, il messaggio lo nomina', async () => {
+      const r = await con('src/js/main.js', (js) => `${js}\n// @append "_non-esiste.js";\n`, build);
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /_non-esiste\.js/);
+    });
+
+    it('un file fisso del tema assente (src/scss/fonts.scss): exit 1', async () => {
+      const r = await con('src/scss/fonts.scss', null, build);
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /fonts\.scss/);
+    });
+
+    it('block.json dichiara build/index.js ma src/index.js non c\'è: exit 1', async () => {
+      const r = await con('blocks/wdm-block-hero/src/index.js', null, build);
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /wdm-block-hero\/src\/index\.js/);
+    });
+
+    it('package.json dichiara la versione di Node e non è pubblicabile', () => {
+      const p = JSON.parse(fs.readFileSync(file('package.json'), 'utf8'));
+      assert.equal(p.engines.node, '>=22');
+      assert.equal(p.private, true);
+    });
+  });
+
   describe('npm run check', () => {
     it('lancia i cinque controlli, tutti in Node', () => {
       const check = JSON.parse(fs.readFileSync(file('package.json'), 'utf8')).scripts.check;
