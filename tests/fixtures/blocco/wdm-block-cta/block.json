@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "wdm/cta",
+  "version": "2.0.0",
+  "title": "Call to action",
+  "category": "wdm",
+  "icon": "megaphone",
+  "description": "Fascia a tutta larghezza con titolo, testo e bottone; centrata oppure con il bottone a destra.",
+  "keywords": [ "invito", "bottone", "contatto" ],
+  "textdomain": "wdm-theme",
+  "attributes": {
+    "align": { "type": "string", "default": "full" },
+    "variant": { "type": "string", "enum": [ "centered", "split" ], "default": "centered" },
+    "headingLevel": { "type": "integer", "default": 2 },
+    "title": { "type": "string", "default": "" },
+    "text": { "type": "string", "default": "" },
+    "buttonText": { "type": "string", "default": "" },
+    "buttonUrl": { "type": "string", "default": "" },
+    "buttonNewTab": { "type": "boolean", "default": false }
+  },
+  "supports": {
+    "align": [ "full" ],
+    "anchor": true,
+    "html": false,
+    "color": { "background": true, "text": true, "link": false },
+    "spacing": { "padding": true, "__experimentalDefaultControls": { "padding": true } }
+  },
+  "example": {
+    "attributes": {
+      "title": "Pronto a iniziare?",
+      "text": "Raccontaci il tuo progetto: ti rispondiamo entro un giorno lavorativo.",
+      "buttonText": "Contattaci",
+      "buttonUrl": "#"
+    }
+  },
+  "render": "file:./render.php",
+  "editorScript": "file:./build/index.js",
+  "style": "file:./build/style-index.css",
+  "editorStyle": "file:./build/index.css"
+}
