@@ -4,5 +4,6 @@
   "db": "wdm-agent-test",
   "php": "/Applications/MAMP/bin/php/php8.4.17/bin/php",
   "socket": "/Applications/MAMP/tmp/mysql/mysql.sock",
-  "phar": "/percorso/assoluto/di/wp-cli.phar"
+  "phar": "/percorso/assoluto/di/wp-cli.phar",
+  "base": "/percorso/assoluto/di/wdm-theme"
 }

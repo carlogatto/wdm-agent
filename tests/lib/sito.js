@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Sito di prova del plugin wdm-agent: un'installazione di WordPress usa e getta, in una cartella
-// e in un database riservati alle prove. Serve solo a chi sviluppa il plugin.
+// e in un database riservati alle prove, più una copia del tema base (wdm-theme) su cui provare
+// setup, controlli e build. Serve solo a chi sviluppa il plugin.
 //
 //   node tests/lib/sito.js install   scarica WordPress, crea wp-config.php, installa
 //   node tests/lib/sito.js reset     svuota la cartella e ricrea vuoto il database
@@ -9,14 +10,16 @@
 //
 // I valori della macchina stanno in tests/sito.local.json (non versionato; modello:
 // tests/sito.example.json). La variabile WDM_AGENT_SITO indica un file diverso.
-// Le prove usano prepara() all'inizio e reset() alla fine: il sito resta vuoto.
+// Le prove usano prepara() all'inizio e reset() alla fine: il sito resta vuoto. Il tema base
+// (chiave "base": la site root del repo wdm-theme) si legge soltanto: copiaBase() ne fa una copia.
 
 const { execFileSync, spawnSync } = require('node:child_process');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const CHIAVI = ['site', 'url', 'db', 'php', 'socket', 'phar'];
+const CHIAVI = ['site', 'url', 'db', 'php', 'socket', 'phar', 'base'];
+const TEMA_BASE = path.join('wp-content', 'themes', 'wdm-theme');
 const WP_VERSION = '7.1.3';
 const ADMIN = 'testadmin';
 // File che le prove lasciano nella cartella del sito di prova: è ciò che autorizza a svuotarla.
@@ -55,10 +58,14 @@ function controlla(cfg) {
   if (!/^[A-Za-z0-9_-]+-test$/.test(cfg.db)) {
     throw new Error('configurazione del sito di prova: "db" deve finire con "-test" e contenere solo lettere, cifre, "-" e "_".');
   }
-  for (const nome of ['DESIGN.md', '.git']) {
-    if (fs.existsSync(path.join(cfg.site, nome))) {
-      throw new Error(`configurazione del sito di prova: ${cfg.site} contiene ${nome}, quindi è un progetto e non si tocca.`);
-    }
+  // Un repo non è mai il sito di prova. Un DESIGN.md sì, ma solo se ce l'ha messo una prova
+  // (la copia del tema base): lo dice il segno lasciato nella cartella.
+  if (fs.existsSync(path.join(cfg.site, '.git')) || (fs.existsSync(path.join(cfg.site, 'DESIGN.md')) && !fs.existsSync(path.join(cfg.site, SEGNO)))) {
+    throw new Error(`configurazione del sito di prova: ${cfg.site} contiene un repo o un DESIGN.md senza il segno del sito di prova, quindi è un progetto e non si tocca.`);
+  }
+  // Il tema base si copia e basta: non può essere la cartella che le prove svuotano.
+  if (!path.isAbsolute(cfg.base) || path.resolve(cfg.base) === path.resolve(cfg.site)) {
+    throw new Error(`configurazione del sito di prova: "base" deve essere il percorso assoluto della site root di wdm-theme, diverso da "site" (${cfg.base}).`);
   }
   return cfg;
 }
@@ -108,6 +115,9 @@ function nonDisponibile() {
   }
   for (const chiave of ['php', 'phar', 'site']) {
     if (!fs.existsSync(cfg[chiave])) return `sito di prova: ${chiave} non trovato (${cfg[chiave]}).`;
+  }
+  if (!fs.existsSync(path.join(cfg.base, TEMA_BASE, 'theme.json'))) {
+    return `sito di prova: in "base" (${cfg.base}) non c'è il tema base ${TEMA_BASE}.`;
   }
   try {
     db(cfg, 'echo 1;');
@@ -164,12 +174,35 @@ function prepara() {
   return installa();
 }
 
+// Copia in `destinazione` ciò che un clone del tema base conterrebbe: i file tracciati e quelli
+// nuovi non ignorati, nello stato in cui sono ora su disco. `tieni(relativo)` filtra.
+function copiaBase(destinazione, tieni = () => true) {
+  const cfg = config();
+  const elenco = execFileSync('git', ['-C', cfg.base, 'ls-files', '--cached', '--others', '--exclude-standard', '-z'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  for (const relativo of elenco.split('\0').filter(Boolean)) {
+    const origine = path.join(cfg.base, ...relativo.split('/'));
+    if (!tieni(relativo) || !fs.existsSync(origine)) continue;
+    const copia = path.join(destinazione, ...relativo.split('/'));
+    fs.mkdirSync(path.dirname(copia), { recursive: true });
+    fs.copyFileSync(origine, copia);
+  }
+  return path.join(destinazione, TEMA_BASE);
+}
+
+// Le dipendenze npm del tema base, collegate in una copia: evita un `npm ci` per ogni prova.
+// Solo nelle prove: il codice consegnato non usa collegamenti simbolici.
+function collegaModuli(tema) {
+  const moduli = path.join(config().base, TEMA_BASE, 'node_modules');
+  if (!fs.existsSync(moduli)) throw new Error(`nel tema base manca node_modules (${moduli}): lancia npm install nel tema.`);
+  fs.symlinkSync(moduli, path.join(tema, 'node_modules'), 'dir');
+}
+
 function stato() {
   const cfg = config();
   return `cartella: ${fs.readdirSync(cfg.site).filter((voce) => voce !== SEGNO).length} elementi · database: ${tabelle(cfg)} tabelle`;
 }
 
-module.exports = { SEGNO, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato };
+module.exports = { SEGNO, TEMA_BASE, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato, copiaBase, collegaModuli };
 
 if (require.main === module) {
   const [comando, ...resto] = process.argv.slice(2);

@@ -25,7 +25,7 @@ test.after(() => {
 });
 
 function config(valori) {
-  return { site: cartella('prova-test'), url: 'http://localhost', db: 'prova-test', php: 'php', socket: path.join(os.tmpdir(), 'wdm-agent-nessun-socket.sock'), phar: 'wp-cli.phar', ...valori };
+  return { site: cartella('prova-test'), url: 'http://localhost', db: 'prova-test', php: 'php', socket: path.join(os.tmpdir(), 'wdm-agent-nessun-socket.sock'), phar: 'wp-cli.phar', base: path.join(os.tmpdir(), 'wdm-agent-nessun-tema-base'), ...valori };
 }
 
 test('una cartella e un database che finiscono con -test passano', () => {
@@ -56,6 +56,22 @@ test('cartella con un DESIGN.md o un .git (un progetto): rifiutata', () => {
     fs.writeFileSync(path.join(site, nome), '');
     assert.throws(() => sito.controlla(config({ site })), /progetto/);
   }
+});
+
+// Le prove del setup copiano nel sito di prova il tema base, DESIGN.md compreso.
+test('un DESIGN.md accanto al segno del sito di prova: ammesso; un .git mai', () => {
+  const site = cartella('prova-test');
+  fs.writeFileSync(path.join(site, 'DESIGN.md'), '');
+  fs.writeFileSync(path.join(site, sito.SEGNO), '');
+  assert.doesNotThrow(() => sito.controlla(config({ site })));
+  fs.mkdirSync(path.join(site, '.git'));
+  assert.throws(() => sito.controlla(config({ site })), /progetto/);
+});
+
+test('il tema base non può essere la cartella del sito di prova, né un percorso relativo', () => {
+  const site = cartella('prova-test');
+  assert.throws(() => sito.controlla(config({ site, base: site })), /base/);
+  assert.throws(() => sito.controlla(config({ site, base: 'wdm-theme' })), /base/);
 });
 
 test('una chiave mancante: rifiutata, con il nome della chiave', () => {
