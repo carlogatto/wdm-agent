@@ -9,11 +9,20 @@ const { spawnSync } = require('node:child_process');
 
 const sito = require('./lib/sito');
 
+// Ogni cartella nasce in una sua cartella temporanea, tolta alla fine del file.
+const temporanee = [];
+
 function cartella(nome) {
-  const dir = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-guardie-')), nome);
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-guardie-'));
+  temporanee.push(base);
+  const dir = path.join(base, nome);
   fs.mkdirSync(dir);
   return dir;
 }
+
+test.after(() => {
+  for (const base of temporanee) fs.rmSync(base, { recursive: true, force: true });
+});
 
 function config(valori) {
   return { site: cartella('prova-test'), url: 'http://localhost', db: 'prova-test', php: 'php', socket: path.join(os.tmpdir(), 'wdm-agent-nessun-socket.sock'), phar: 'wp-cli.phar', ...valori };
