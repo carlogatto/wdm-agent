@@ -144,7 +144,8 @@ when a diff waits for `confirm`); *Cosa è cambiato*: per menu one line, created
 differenze, and the parts whose `ref` changed; *Cosa aspetta te*: each diff as one item (what
 `apply … confirm` rewrites, what is lost if the dev added items by hand) and each orphan with its
 consequence and remedy (publish the draft, create the page, or remove the label from the kit);
-*Prossimo passo*: the `confirm` runs in a new conversation → prompt ready to paste. Item counts,
+*Prossimo passo*: what the dev writes to confirm each diff; `apply … confirm` runs in the turn
+that follows the answer, in this conversation, with no prompt to paste. Item counts,
 `ref` before → after, the curl check and a skipped or failed step go to the `## Log decisioni`
 row (a failed step is also one line in *Esito*). Inside `fse-build` the same content enters its
 gate-4 message. Never the password (none is needed: the script runs through WP-CLI).

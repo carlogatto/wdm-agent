@@ -50,8 +50,9 @@ e si chiude con il report del sito in WordPress; le osservazioni sul sito live t
 revisioni del kit. A ogni gate le osservazioni tornano all'agente come revisioni; il gate si
 chiude con un ok esplicito in un turno successivo, che la skill registra in `DESIGN.md`. Ogni
 consegna è un messaggio in quattro punti (esito · cosa è cambiato · cosa aspetta te · prossimo
-passo, con il prompt pronto solo per ciò che richiede una conversazione nuova: un `confirm`, una
-reinstallazione, una password): i controlli passati non si elencano, il dettaglio tecnico sta in
+passo). Un `confirm` si dà nella stessa conversazione, in un turno successivo, senza prompt da
+incollare; una conversazione nuova serve solo dopo un aggiornamento del plugin. I controlli
+passati non si elencano, il dettaglio tecnico sta in
 `DESIGN.md → ## Log decisioni` (fondamenta §10). La build è rieseguibile su tutto il sito: applica
 solo la differenza, corregge da sola il kit quando è il kit a sbagliare (una classe che WP
 aggiunge in render), e una cancellazione (blocco, pagina, voce di menu) viene mostrata e si

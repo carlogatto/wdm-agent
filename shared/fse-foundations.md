@@ -51,11 +51,14 @@ gate. Requests a dev makes at a gate are their decisions: applied and logged, no
 mechanics and the agent does it **in the same conversation, without being asked**: the ok to a
 telaio or page kit starts `fse-build` at once (whole perimeter: the approved item is built, the
 aligned rows answer "0 differenze"), the build report is followed by the kit of the next `da
-progettare` row, a kit error found during the build is fixed in the kit by the build. A **new
-conversation** is needed only for the Stop class of the charter (§10): a `confirm`, a plugin
-reinstall, a password change. The dev who prefers to stop after a report simply stops: the state
-is in `DESIGN.md` and the next conversation resumes from there. Never a "prompt ready to paste"
-for a step the agent can take itself.
+progettare` row, a kit error found during the build is fixed in the kit by the build. A `confirm`
+(a deletion, a menu rewrite) is given in a **later turn of the same conversation**: the dev
+answers the diff whenever they want, also while the next kit is under review, and the agent
+applies it in the turn that follows the answer, never in the turn that computed the diff. A
+**new conversation** is needed only after a plugin update (the new skills load when Claude Code
+restarts). The dev who prefers to stop after a report simply stops: the state is in `DESIGN.md`
+(one `⏳` line per pending `confirm`) and the next conversation resumes from there. Never a
+"prompt ready to paste" for a step the agent can take itself.
 
 **Blocks are born inside pages.** A block or a new variant is designed only inside the kit of the
 page (or the telaio) that needs it and reviewed with that page, never as an item of its own with
@@ -725,11 +728,12 @@ seconds, fits on one screen, and answers four questions **in this order, with th
    Nothing open → one line, "Niente da confermare". When commits wait for the dev's push, one
    line says how many and in which repo.
 4. **Prossimo passo** — at a gate: "ok o osservazioni" and what the agent does right after the
-   ok, in this conversation (§1: the build, then the next kit). Otherwise only what the dev alone
-   can do (a `confirm`, a plugin reinstall, a password change): those need a **new conversation**
-   → the prompt **ready to paste**, in a code block, the skill and the exact items by id (never a
-   password line: the password lives in `.env`). Never a prompt for a step the agent can take
-   itself (a build after an ok, a kit correction, the next page kit). Nothing to do → "Nessun
+   ok, in this conversation (§1: the build, then the next kit). With a `confirm` pending:
+   what the dev writes to confirm, item by item with its id ("scrivi `confirm` per cancellare la
+   pagina Servizi, id 55"), and that the agent applies it in the next turn of this conversation.
+   After a plugin update: "riavvia Claude Code", the only case that needs a new conversation (the
+   state is in `DESIGN.md`). Never a prompt to paste for a `confirm`, and never for a step the
+   agent can take itself (a build after an ok, a kit correction, the next page kit). Nothing to do → "Nessun
    passo successivo: la sessione è chiusa".
 
 **Silence.** Checks that passed are not listed (build, `npm run check`, `debug.log`, hooks,

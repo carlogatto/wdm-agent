@@ -229,10 +229,10 @@ answer — the run does not stop for it. `DESIGN.md → ## Navigazione` is writt
    - *Cosa aspetta te*: one item per `confirm` (page: id, URL, what is deleted with it — kit,
      html, row — and the menu items that go orphan; menu: what `apply … confirm` rewrites), one
      per gap the visitor can hit (404 links, placeholder images), one per `[da confermare]`.
-   - *Prossimo passo*: only a `confirm` needs a **new conversation** → the prompt ready to
-     paste, naming `fse-build 2j` / `fse-menu-build apply … confirm` and every item by id (never
-     a password line: it lives in `.env`). Then the next `da progettare` row of `## Pagine`, in
-     one line: the agent goes on with its kit (point 3), no prompt is written for it.
+   - *Prossimo passo*: a pending `confirm` is answered in this conversation: say what the dev
+     writes for each item, by id, and apply it in the turn that follows the answer (`fse-build
+     2j` / `fse-menu-build apply … confirm`); no prompt to paste. Then the next `da progettare`
+     row of `## Pagine`, in one line: the agent goes on with its kit (point 3).
    Everything else (counts, scripts, intermediate fixes, green checks) stays in the log row.
 3. **Go on, or stop.** A `## Pagine` row `da progettare` → read
    `${CLAUDE_PLUGIN_ROOT}/skills/fse-kit/SKILL.md` and start its kit in the same conversation
@@ -304,4 +304,4 @@ the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are th
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
 - [ ] Commit of the verified run, before the handover (pages left `kit` by a gap stay out) (fse-foundations §10: main branch, files added by name); the push is the dev's
-- [ ] Log row written; handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, prompt pronto solo per i `confirm`); tab closed; next `da progettare` kit started in the same conversation (or none left)
+- [ ] Log row written; handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, nessun prompt da incollare); tab closed; next `da progettare` kit started in the same conversation (or none left)
