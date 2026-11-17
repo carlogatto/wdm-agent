@@ -1,6 +1,7 @@
 // Le skill citano i file del plugin con ${CLAUDE_PLUGIN_ROOT}: ogni file citato esiste, e ogni
 // script citato si avvia (E2: una prova che cerca solo il testo resta verde con uno script
-// rotto). Qui gli script .js; gli .sh stanno in bash/, i .php in sito/.
+// rotto). Qui gli script .js; gli .sh stanno in bash/, i .php in sito/. Gli hook hanno la loro
+// prova (hook.test.js): qui se ne controlla solo la sintassi.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -42,7 +43,7 @@ test('ogni skill cita gli script che usa', () => {
 
 test('i testi citano file del plugin', () => {
   assert.ok(citati().length >= 8, `citati: ${citati().join(', ')}`);
-  assert.ok(citati('.js').length >= 1 && citati('.sh').length >= 3 && citati('.php').length >= 2);
+  assert.ok(citati('.js').length >= 3 && citati('.sh').length >= 1 && citati('.php').length >= 2);
 });
 
 for (const relativo of citati()) {
@@ -55,6 +56,7 @@ for (const relativo of citati('.js')) {
   test(`${relativo} si avvia`, () => {
     const sintassi = spawnSync(process.execPath, ['--check', assoluto(relativo)], { encoding: 'utf8' });
     assert.equal(sintassi.status, 0, sintassi.stderr);
+    if (relativo.startsWith('hooks/')) return;
     // Senza argomenti uno script del plugin spiega come si usa ed esce con 2: non va in errore.
     const lancio = spawnSync(process.execPath, [assoluto(relativo)], { encoding: 'utf8' });
     assert.equal(lancio.status, 2, lancio.stdout + lancio.stderr);

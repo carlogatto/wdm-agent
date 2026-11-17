@@ -6,12 +6,14 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-block-contract.sh\"",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/check-block-contract.js"],
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-design-tokens.sh\"",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/check-design-tokens.js"],
             "timeout": 30
           }
         ]

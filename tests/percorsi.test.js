@@ -1,4 +1,5 @@
-// Il plugin gira ovunque sia installato: nessun file contiene la cartella personale di qualcuno,
+// Il plugin gira ovunque sia installato: nessun file contiene la cartella personale di qualcuno
+// (nelle prove dei percorsi l'utente è sempre «Mario Rossi», che non esiste; Public è di Windows),
 // e fuori dalle prove nessuno cita ~/.claude. Restano fuori docs/ e README.md (raccontano la
 // storia del plugin) e i file locali non versionati.
 const test = require('node:test');
@@ -31,7 +32,7 @@ test('il plugin ha file da controllare', () => {
 });
 
 test('nessuna cartella personale, nemmeno nelle prove', () => {
-  assert.deepEqual(righe(TUTTI, /\/Users\/[\w.-]+|[A-Za-z]:\\+Users\\+[\w.-]+|\/home\/[\w.-]+/), []);
+  assert.deepEqual(righe(TUTTI, /\/Users\/(?!Mario Rossi\b|Public\b)[\w.-]+|[A-Za-z]:\\+Users\\+(?!Mario Rossi\b|Public\b)[\w.-]+|\/home\/[\w.-]+/), []);
 });
 
 test('fuori dalle prove nessun riferimento a ~/.claude', () => {

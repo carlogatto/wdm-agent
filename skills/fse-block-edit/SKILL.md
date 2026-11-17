@@ -90,7 +90,7 @@ parent's state; README of both.
 
 ## Step 3 — Build, hook, verify
 
-1. `npm run build` → exit 0; `check-block-contract.sh` silent on the `block.json` write.
+1. `npm run build` → exit 0; `check-block-contract.js` silent on the `block.json` write.
 2. Smoke test of the **changed behaviour** (fse-foundations §9): insert the block with the new
    attribute/variant, `updateBlockAttributes`, save not dirty, frontend renders it; 0 console
    errors.

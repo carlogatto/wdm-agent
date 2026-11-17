@@ -13,7 +13,6 @@ const COMANDI = [
   'claude plugin uninstall wdm-agent@wdm-agent',
   'claude plugin marketplace add ~/Documents/Development/wdm-agent',
   '/reload-plugins',
-  'brew install jq',
   'node tests/run.js',
   'claude plugin list',
   'wdm-agent:fse-brief',

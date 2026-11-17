@@ -125,7 +125,7 @@ implemented block whose README lists a variant/attribute the kit uses but the co
 non-additive change → stop condition.
 
 ### 2c. Build + smoke test
-`npm run build` exit 0; the hook `check-block-contract.sh` silent; registry: `{wp-cli} eval
+`npm run build` exit 0; the hook `check-block-contract.js` silent; registry: `{wp-cli} eval
 '…WP_Block_Type_Registry…'` lists every `{prefix}/{slug}` of K. For each block created in this
 run: Playwright smoke test (§9, points 1–5) → zero console errors, saved content as expected,
 frontend renders render.php. A failure here is fixed in this run (it is this run's code).
@@ -248,7 +248,7 @@ blocks of the theme (`image-text` for RichText/image/LinkButton/toggle, `hero` +
 for InnerBlocks + context + variant select + Swiper, `cards-carousel` + `card` for post-picker,
 query and ServerSideRender, `columns-wrapper` for free InnerBlocks) as templates to adapt — read
 them, do not reinvent.
-Write `block.json` **last** (after `render.php`, `src/`, README): `check-block-contract.sh`
+Write `block.json` **last** (after `render.php`, `src/`, README): `check-block-contract.js`
 exits 2 until every `file:` source and `render.php` exist.
 
 1. `block.json` (written last, see above): name/version/title/category/icon/description/
@@ -267,7 +267,7 @@ exits 2 until every `file:` source and `render.php` exist.
    placeholders/static previews (`@use 'editor/link-button'` when LinkButton is used),
    `src/view.js` (from the kit phase or per §5).
 5. `theme.json → styles.blocks["{prefix}/{slug}"].spacing.padding` top/bottom `section-lg` for
-   section blocks (read theme.json, add the entry). The hook `check-design-tokens.sh` will
+   section blocks (read theme.json, add the entry). The hook `check-design-tokens.js` will
    report the tokens as stale: this entry is **pre-authorised** by the README contract
    (fse-foundations §12) — do not ask, run
    `node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}`

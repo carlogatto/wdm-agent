@@ -26,7 +26,7 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 - `shared/fse-foundations.md`: le convenzioni, citate per § da ogni skill e dal `CLAUDE.md` dei progetti.
 - `shared/scripts/sync-theme-json-tokens.js`: genera la sezione Design Tokens di `DESIGN.md` e `assets/css/wp-global-styles.css` da `theme.json`.
 - `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff e cancellano solo dopo una conferma in un turno successivo.
-- `hooks/`: `check-block-contract.sh` (a ogni scrittura di un `block.json`: nome, cartella, `render`, sorgenti, README, versione) e `check-design-tokens.sh` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma al dev prima di rigenerare).
+- `hooks/`: due script Node. `check-block-contract.js` (a ogni scrittura di un `block.json` del tema: nome, prefisso, cartella, `render`, sorgenti, README, versione) e `check-design-tokens.js` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma al dev prima di rigenerare).
 
 ## Il flusso
 
@@ -61,9 +61,7 @@ esegue solo dopo l'ok.
 ## Prerequisiti
 
 - Claude Code aggiornato (CLI, app desktop o estensione VS Code).
-- `node` 18 o successivo.
-- `jq` (gli hook lo usano). Su macOS 15 o successivo è già nel sistema: `jq --version` risponde
-  `jq-1.7…-apple`. Se manca, si installa con [Homebrew](https://brew.sh): `brew install jq`.
+- `node` 22 o successivo (hook e script del plugin sono in Node, come la build del tema).
 - git (quello di Xcode Command Line Tools basta). Il repo è pubblico: non servono account GitHub,
   inviti o credenziali.
 - MAMP e WP-CLI non servono per installare il plugin: li prepara `fse-theme-setup` nel progetto.
@@ -151,7 +149,7 @@ gruppi esclusi.
 
 | Gruppo | Richiede |
 |---|---|
-| `tests/bash/` | `bash` e `jq`: sono le prove degli hook |
+| `tests/bash/` | `bash`: è la prova di `setup.sh` |
 | `tests/claude/` | la CLI `claude` con il plugin installato |
 | `tests/sito/` | il sito di prova |
 

@@ -163,7 +163,7 @@ blocks; `{prefix}/*` blocks are page content.
 - `version` is mandatory: outside `SCRIPT_DEBUG` the block CSS is cache-busted only by this
   key — **bump it at every release** of the block.
 - `editorStyle` only when `src/editor.scss` exists; `viewScriptModule` only when `src/view.js`
-  exists. The hook `check-block-contract.sh` verifies every `file:` has its source and that
+  exists. The hook `check-block-contract.js` verifies every `file:` has its source and that
   `README.md` and `render` exist.
 - Carousels: `"style": ["{prefix}-swiper", "file:./build/style-index.css"]` — the shared Swiper
   CSS is a registered handle (`{prefix}-swiper`: `library/custom.php`, `assets/css/swiper.css`),
@@ -870,14 +870,25 @@ the sync script; `## Project Config` by `fse-theme-setup` (created once, then on
 
 ## 12. Hooks (plugin `wdm-agent`, `hooks/hooks.json`, PostToolUse on Write|Edit)
 
-- `check-block-contract.sh` — on `blocks/*/block.json` (without `acf` key): name ↔ folder,
-  `render` present, every `file:` has its source (`build/index.js` ← `src/index.js`,
+Both hooks are Node scripts, run without a shell (`"command": "node"` with the script path in
+`args`), and judge only files inside `{site-root}/wp-content/themes/{theme}/` of an FSE project
+(`theme_family: fse`).
+
+- `check-block-contract.js` — on `blocks/{folder}/block.json` of the theme (without `acf` key):
+  `name` carries the project `{prefix}` and matches the folder, `render` present and its file
+  exists, every `file:` has its source (`build/index.js` ← `src/index.js`,
   `build/style-index.css` ← `src/style.scss`, `build/index.css` ← `src/editor.scss`,
-  `build/view.js` ← `src/view.js`), `README.md`, `version`. Violations → stderr, exit 2.
-- `check-design-tokens.sh` — on `theme.json` of an FSE project (`theme_family: fse`): runs
-  `sync-theme-json-tokens.js --check`; stale → show the diff to the dev and regenerate **only
-  after confirmation** (`node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js
-  {theme-root}` — also regenerates `assets/css/wp-global-styles.css`). **Pre-authorised
+  `build/view.js` ← `src/view.js`), `README.md`, non-empty `version`. A `block.json` that is not
+  valid JSON is a violation too. Violations → stderr, exit 2.
+- `check-design-tokens.js` — on `theme.json` of the theme: runs
+  `sync-theme-json-tokens.js --check` and reports one of three cases. **Tokens not aligned**
+  (sync exit 1) → show the diff to the dev and regenerate **only after confirmation** (`node
+  ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js {theme-root}` — also
+  regenerates `assets/css/wp-global-styles.css`). **theme.json changed outside the tokens**
+  (exit 3: the fingerprint stored in the Design Tokens block no longer matches, no token
+  differs, e.g. `styles.elements`) → regenerate at once, no confirmation: only the kit's global
+  CSS is behind. **Check failed** (any other exit, e.g. `theme.json` is not valid JSON) → fix
+  the cause the message names; nothing is verified until the check passes. **Pre-authorised
   exceptions**, where the sync runs at once without asking and is logged in `## Log decisioni`:
   (1) a `styles.blocks["{prefix}/{slug}"]` entry (section padding default) that the README
   contract of a block requires, written by `fse-build`/`fse-block-edit`: it is not a design
@@ -888,6 +899,6 @@ the sync script; `## Project Config` by `fse-theme-setup` (created once, then on
 **File references inside the plugin.** A SKILL.md cites a file of its own skill with a path
 relative to the skill folder (`scripts/setup.sh`); any other file of the plugin (`shared/…`,
 another skill) with `${CLAUDE_PLUGIN_ROOT}/…`. `${CLAUDE_PLUGIN_ROOT}` is expanded by Claude
-Code in SKILL.md bodies and in `hooks.json` commands, and exported to hook processes; it is
+Code in SKILL.md bodies and in the `command` and `args` of `hooks.json`; it is
 **not** set in the session shell, so never type it in a Bash command you compose yourself:
 copy the already-expanded path from the skill text.
