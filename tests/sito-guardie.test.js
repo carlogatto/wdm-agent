@@ -46,6 +46,12 @@ test('nome del database con caratteri che uscirebbero dalla query: rifiutato', (
   }
 });
 
+test('database di prova in più: solo nomi che finiscono con -test', () => {
+  for (const nome of ['cliente-db', 'wdm-theme-db', 'a b-test', '-test']) {
+    assert.throws(() => sito.databaseDiProva(nome), /-test/, nome);
+  }
+});
+
 test('cartella relativa: rifiutata', () => {
   assert.throws(() => sito.controlla(config({ site: 'prova-test' })), /assolut/);
 });

@@ -92,9 +92,23 @@ function wpRiuscito(args, options) {
 }
 
 // Il client mysql può non essere nel PATH: il database si raggiunge dal PHP della configurazione.
-function db(cfg, codice) {
+function db(cfg, codice, nome = cfg.db) {
   const php = `mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT); $m = new mysqli('localhost', 'root', 'root', '', 0, $argv[1]); $db = $argv[2]; ${codice}`;
-  return execFileSync(cfg.php, ['-r', php, '--', cfg.socket, cfg.db], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20000 }).trim();
+  return execFileSync(cfg.php, ['-r', php, '--', cfg.socket, nome], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], timeout: 20000 }).trim();
+}
+
+// Un database in più per le prove che ne creano uno (il setup). Stessa guardia del database del
+// sito di prova: il nome finisce con -test, così nessuna prova può toccare quello di un progetto.
+function databaseDiProva(nome) {
+  if (!/^[A-Za-z0-9_-]+-test$/.test(nome)) throw new Error(`database di prova: il nome deve finire con "-test" (${nome}).`);
+  const cfg = config();
+  return {
+    nome,
+    elimina: () => db(cfg, '$m->query("DROP DATABASE IF EXISTS `$db`");', nome),
+    collazione: () => db(cfg, '$s = $m->prepare("SELECT DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME = ?"); $s->bind_param("s", $db); $s->execute(); $r = $s->get_result()->fetch_row(); echo $r ? $r[0] : "";', nome),
+    tabelle: () => Number(db(cfg, '$s = $m->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?"); $s->bind_param("s", $db); $s->execute(); echo $s->get_result()->fetch_row()[0];', nome)),
+    creaTabella: () => db(cfg, '$m->select_db($db); $m->query("CREATE TABLE dati_di_un_altro_progetto (id INT)");', nome),
+  };
 }
 
 function tabelle(cfg) {
@@ -202,7 +216,7 @@ function stato() {
   return `cartella: ${fs.readdirSync(cfg.site).filter((voce) => voce !== SEGNO).length} elementi · database: ${tabelle(cfg)} tabelle`;
 }
 
-module.exports = { SEGNO, TEMA_BASE, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato, copiaBase, collegaModuli };
+module.exports = { SEGNO, TEMA_BASE, databaseDiProva, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato, copiaBase, collegaModuli };
 
 if (require.main === module) {
   const [comando, ...resto] = process.argv.slice(2);
