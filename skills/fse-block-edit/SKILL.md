@@ -19,8 +19,8 @@ All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 
 ## Step 0 — Guard and current state
 
-`theme_family` = `fse` (fse-foundations §0); any other value **or row missing** → STOP with the
-§0 message (wdm-starter: `dev-block-edit`). Nothing else is read after the stop. The
+`theme_family` = `fse` (fse-foundations §0); any other value, row missing or
+`DESIGN.md` missing → STOP with the §0 message for that case. Nothing else is read after the stop. The
 block must be `implementato` (`blocks/{prefix}-block-{slug}/build/index.asset.php` exists);
 otherwise stop and route: no folder → `fse-kit`; kit without code → `fse-build`. Find where the
 block is used: `{wp-cli} post list --post_type=page --post_status=any --fields=ID,post_title

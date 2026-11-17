@@ -19,9 +19,8 @@ All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 
 ## Step 0 — Guard and state
 
-`DESIGN.md → Project Config → theme_family` must be `fse` (fse-foundations §0); any other value
-**or row missing** (wdm-starter projects predate it) → STOP with the §0 message (wdm-starter
-project: `design-*`/`dev-*` skills). Nothing else is read after the stop. Then verify the state
+`DESIGN.md → Project Config → theme_family` must be `fse` (fse-foundations §0); any other value,
+row missing or `DESIGN.md` missing → STOP with the §0 message for that case. Nothing else is read after the stop. Then verify the state
 tables against the disk (§11) and report discrepancies in the opening line; `## Brief` missing →
 flag "brief assente: tono e mappa da DESIGN.md e dai kit esistenti" (never a stop). The item's
 row (Telaio/Pagine only: a Blocchi row is born `kit` at 3g, §11) stays `da progettare` until the

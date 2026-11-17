@@ -43,7 +43,7 @@ grep -qE '^\| *`theme_family` *\| *fse *\|' "$site_root/DESIGN.md" || exit 0
 
 check_output="$(node "$sync_script" "$theme_root" --check 2>&1)" && exit 0
 
-message="$(printf '⚠️ theme.json è stato modificato e i Design Tokens in DESIGN.md sono ora stale.\n%s\n\nPRIMA di rigenerare: mostra queste differenze al dev e chiedi conferma esplicita. Solo dopo la conferma esegui:\n  node "%s" "%s"\nSe il dev NON conferma, la modifica a theme.json va riconsiderata/ripristinata.' "$check_output" "$sync_script" "$theme_root")"
+message="$(printf '⚠️ theme.json è stato modificato e i Design Tokens in DESIGN.md sono ora stale.\n%s\n\nPRIMA di rigenerare: mostra queste differenze al dev e chiedi conferma esplicita. Solo dopo la conferma esegui:\n  node "%s" "%s"\nSe il dev NON conferma, la modifica a theme.json va riconsiderata/ripristinata.\nEccezioni già autorizzate (fondamenta §12), in cui si rigenera subito senza chiedere: la voce styles.blocks richiesta dal README di un blocco; i token scritti dentro fse-brief.' "$check_output" "$sync_script" "$theme_root")"
 
 jq -n --arg msg "$message" '{
   hookSpecificOutput: {

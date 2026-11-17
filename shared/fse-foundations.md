@@ -18,12 +18,19 @@ Config` (§11). `{theme-root}` = `{site-root}/wp-content/themes/{theme-folder}`.
 Every `fse-*` skill reads it at **Step 0**, before anything else:
 
 - value `fse` → proceed;
-- value `starter`, any other value, **or row missing** (every wdm-starter project predates it)
-  → **STOP**: "Questo progetto è della famiglia wdm-starter (theme_family ≠ fse): usa le skill
-  `dev-*`/`design-*`, non `fse-*`." No file is read or written after the stop.
+- any other value (`starter`, …) → **STOP**: "Questo progetto è della famiglia wdm-starter
+  (theme_family ≠ fse): le skill `fse-*` non valgono qui, si usano quelle di wdm-starter."
+- **row missing** → **STOP**: "In `DESIGN.md` manca la riga `theme_family`. In un progetto nato
+  da wdm-theme la riga c'è sempre: se è stata tolta per errore, rimetti
+  `` | `theme_family` | fse | `` in Project Config → Identity e rilancia. Se invece è un progetto
+  wdm-starter, le skill `fse-*` non valgono qui."
+- `DESIGN.md` missing → **STOP**, unless the skill is `fse-theme-setup` (which creates it): "Qui
+  non c'è `DESIGN.md`: il progetto non è ancora inizializzato. Lancia
+  `/wdm-agent:fse-theme-setup`."
 
-A `DESIGN.md` that does not exist at all → stop too, unless the skill is `fse-theme-setup`
-(which creates it). The guard is what makes the two skill families coexist on the same machine (the `fse-*`
+Each message says what to do and names only what the reader has: never a skill of another
+family. No file is read or written after a stop. The guard is what makes the two skill families
+coexist on the same machine (the `fse-*`
 family ships in the `wdm-agent` plugin, the starter family lives in the user-level skills folder); the
 project `CLAUDE.md` routing table is the second layer, the SKILL.md description ("for a
 wdm-theme FSE project") the third.
@@ -870,10 +877,12 @@ the sync script; `## Project Config` by `fse-theme-setup` (created once, then on
   `sync-theme-json-tokens.js --check`; stale → show the diff to the dev and regenerate **only
   after confirmation** (`node ${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js
   {theme-root}` — also regenerates `assets/css/wp-global-styles.css`). **Pre-authorised
-  exception**: a `styles.blocks["{prefix}/{slug}"]` entry (section padding default) that the
-  README contract of a block requires, written by `fse-build`/`fse-block-edit`, is not a design
-  change — run the sync at once without asking and log it in `## Log decisioni`. Every other
-  theme.json change (palette, fonts, spacing, layout, custom) waits for the dev.
+  exceptions**, where the sync runs at once without asking and is logged in `## Log decisioni`:
+  (1) a `styles.blocks["{prefix}/{slug}"]` entry (section padding default) that the README
+  contract of a block requires, written by `fse-build`/`fse-block-edit`: it is not a design
+  change; (2) the tokens `fse-brief` writes from the brief (palette, fonts, spacing): the whole
+  deliverable is under review at gate 1, where the dev judges them. Every other theme.json
+  change (palette, fonts, spacing, layout, custom) waits for the dev.
 
 **File references inside the plugin.** A SKILL.md cites a file of its own skill with a path
 relative to the skill folder (`scripts/setup.sh`); any other file of the plugin (`shared/…`,

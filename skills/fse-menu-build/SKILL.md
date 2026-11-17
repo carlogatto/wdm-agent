@@ -33,8 +33,8 @@ in any other part with a navigation block) every time the post changes.
 
 ## Step 0 — Guard and preconditions
 
-1. `theme_family` = `fse` (fse-foundations §0); any other value **or row missing** → STOP with
-   the §0 message (wdm-starter: `dev-menu-build`). Nothing else is read after the stop.
+1. `theme_family` = `fse` (fse-foundations §0); any other value, row missing or
+   `DESIGN.md` missing → STOP with the §0 message for that case. Nothing else is read after the stop.
 2. `Project Config` complete, `{wp-cli}` present (put it in a scratchpad script).
 3. The kit partials exist and contain `<nav aria-label="…"><ul>…</ul></nav>` (the aria-label is
    the menu title; no label → "Menu {part}"); the parts contain a `<!-- wp:navigation {…} -->`.

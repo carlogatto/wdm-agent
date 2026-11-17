@@ -27,7 +27,8 @@ Start immediately with Step 0 — no extra trigger phrase required.
 
 **Guard.** `{site-root}/DESIGN.md`:
 - exists with `theme_family` ≠ `fse`, **or without the row** (every wdm-starter project predates
-  it) → **STOP**: this is a wdm-starter project, the skill is `new-project-setup`;
+  it) → **STOP** with the fse-foundations §0 message for that case (a wdm-starter project, or a
+  `DESIGN.md` that lost the row);
 - exists with `theme_family: fse` and `wp-content/themes/wdm-theme` is gone → the setup already
   ran: offer only the verification of Phase 5, never a second `setup.sh`;
 - exists with `theme_family: fse`, `wp-content/themes/wdm-theme` still present and

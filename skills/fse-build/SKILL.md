@@ -44,9 +44,9 @@ after the dev's ok there, and this run builds only rows that passed them.
 
 ## Step 0 — Guard and preconditions (all blocking)
 
-1. `theme_family` = `fse` (fse-foundations §0); any other value **or row missing** (wdm-starter
-   projects predate it) → STOP with the §0 message — wdm-starter project (`dev-page-build`).
-   Nothing else is read after the stop.
+1. `theme_family` = `fse` (fse-foundations §0); any other value, row missing or
+   `DESIGN.md` missing → STOP with the §0 message for that case. Nothing else is read after the
+   stop.
 2. State on disk vs DESIGN.md (§11): update the tables to what the disk says; report. `## Brief`
    missing → flag "brief assente" (never a stop).
 3. `Project Config` complete (`{prefix}`, paths, `{local-url}`, `{agent-admin-user}`, `{wp-cli}`).
