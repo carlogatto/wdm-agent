@@ -21,15 +21,20 @@ All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 
 ## Principle
 
-**The kit is the source of the values, WordPress never loses anything without an ok.** The
+**The kit is the source of the values, WordPress never loses anything without an ok, and what
+the client changed by hand in WordPress stays the client's.** The
 build runs right after the dev's ok to a kit, **in the same conversation**, started by `fse-kit`
 (fse-foundations §1 "The ok continues"), and on its own when the dev asks to realign WP to the
 kits. One run builds the whole perimeter (telaio, every approved page, menus) and ends with one
 report; it is not a gate: the dev's remarks on the live site come back as kit revisions. It is
 **re-runnable**: every page goes through the diff of `scripts/wp-page.php` and receives only its
-difference; a second identical run answers "0 differenze" everywhere. Deletions (a block or a
-page the kit no longer has, a menu whose content differs) are shown in the report and executed
-only with the dev's ok **in a later turn** (`confirm`); they never stop the rest of the run.
+difference; a second identical run answers "0 differenze" everywhere. The kit's texts, images
+and links are placeholders: they fill a page at its first build, and from the moment someone
+edits that page by hand in WordPress its existing content is never rewritten (2d). Deletions (a
+block or a page the kit no longer has, a menu that would lose an item) are shown in the report
+and executed only with the dev's ok **in a later turn** (`confirm`); they never stop the rest of
+the run. A page that cannot be built (an element the README does not map, a page open in the
+editor) is **skipped and reported**: the run goes on with the next one.
 During the run the agent asks nothing: it decides under the charter (§10) and reports gaps at
 the end. Gates 2 (telaio kit) and 3 (one per page kit) are `fse-kit`'s: a row is `kit` only
 after the dev's ok there, and this run builds only rows that passed them.
@@ -38,7 +43,7 @@ after the dev's ok there, and this run builds only rows that passed them.
 
 | Input | Source |
 |---|---|
-| Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition: `fse-kit` puts the row back to `kit` when it revises the telaio after a build; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2i). Parents before children. Rows `da progettare` are skipped and named in the report. The perimeter is **always the whole site**: the prompt never narrows it (an aligned page costs one "0 differenze") |
+| Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition: `fse-kit` puts the row back to `kit` when it revises the telaio after a build; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2i). Parents before children. Rows `da progettare` are skipped and named in the report. The perimeter is **always the whole site**: the prompt never narrows it (an aligned page costs one "0 differenze"). "Riapplica la differenza della Home" still runs every page: the request says where the dev expects a change, not where to look |
 | Admin credentials | username = `DESIGN.md → Project Config → {agent-admin-user}`; password in `{site-root}/.env` (`AGENT_ADMIN_PASSWORD=…`, fse-foundations §9/§10: never read or echoed by the agent, substituted by the shell into the Playwright copy). `.env` missing or empty → no question: the run goes on without Playwright (2c smoke test, 2g editor check skipped), no page reaches `implementata` (it stays `kit`, report: "verifica editor mancante") and *Cosa aspetta te* asks the dev to create `.env` |
 | `{wp-cli}` | `DESIGN.md → Project Config → Paths`; put it in a scratchpad script for the session |
 
@@ -47,8 +52,8 @@ after the dev's ok there, and this run builds only rows that passed them.
 1. `theme_family` = `fse` (fse-foundations §0); any other value, row missing or
    `DESIGN.md` missing → STOP with the §0 message for that case. Nothing else is read after the
    stop.
-2. State on disk vs DESIGN.md (§11): update the tables to what the disk says; report. `## Brief`
-   missing → flag "brief assente" (never a stop).
+2. State on disk vs DESIGN.md (§11): the disk can demote or flag a row, never promote it (one
+   exception, the built block); report. `## Brief` missing → flag "brief assente" (never a stop).
 3. `Project Config` complete (`{prefix}`, paths, `{local-url}`, `{agent-admin-user}`, `{wp-cli}`).
 4. For every page of the perimeter `src/kit/{prefix}-{page}.kit` exists, and `npm run build`
    exits 0 (regenerates `html/`). `npm run dev` may stay on (the dev switches between kit and
@@ -107,22 +112,29 @@ Parse `html/{prefix}-{page}.html` → `<main>` → top-level `section` elements 
   (case/entity-insensitive, then slug), `postType` from the post found; no match → `postId: 0`
   and report ("card senza contenuto: titolo X non trovato"). Query variant: `postType`/`count`
   from `data-post-type`/`data-count` on the section when the kit has them, else the README
-  defaults. A `data-*`/`style` attribute the README does not map → stop condition (unknown).
+  defaults. A `data-*`/`style` attribute the README does not map → the page is skipped (below).
 - The README `## Attributi` "Note" column may name the kit selector explicitly (e.g. `kit:
   .__eyebrow`): it wins over the BEM naming convention above.
 - A top-level element of `<main>` that is not a `{prefix}-block-*` section but carries the root
   class of a theme pattern (`{prefix}-{x}` ↔ `patterns/{prefix}-{x}.php`) → the pattern's block
   markup (core blocks) with the kit's texts and extra `className`s; any other unmapped top-level
-  element → stop condition (never skipped).
+  element → the page is skipped (below): an element is never dropped to make the page pass.
 - Texts verbatim (entities decoded), placeholders `[da confermare]` included. Never rewritten.
   An HTML comment `<!-- {attribute} "value" [da confermare]: … -->` next to an element marks that
   value (typically a URL) as provisional: use it and report it.
+
+**A page that cannot be mapped is skipped, not the run.** An unknown element, modifier or
+attribute means the kit says something the README contract does not cover: nothing of that page
+is generated or written (never a partial page), its row stays as it is (`kit` stays `kit`), the
+report names the page, the element and the README that should map it, and the run goes on with
+the next page. The fix is a kit or README revision (`fse-kit`), not a question in the middle.
 
 ### 2b. Missing blocks → scaffold (Step 5), all variants
 For every distinct `slug` of K without `blocks/{prefix}-block-{slug}/block.json` → Step 5. An
 implemented block whose README lists a variant/attribute the kit uses but the code lacks →
 `fse-block-edit` inline, additive only (new attribute with a default, new variant); a
-non-additive change → stop condition.
+non-additive change (rename or removal of an attribute, a different structure) → the pages that
+use that block are skipped and reported: it is a decision of the dev.
 
 ### 2c. Build + smoke test
 `npm run build` exit 0; the hook `check-block-contract.js` silent; registry: `{wp-cli} eval
@@ -130,23 +142,42 @@ non-additive change → stop condition.
 run: Playwright smoke test (§9, points 1–5) → zero console errors, saved content as expected,
 frontend renders render.php. A failure here is fixed in this run (it is this run's code).
 
-### 2d. Diff kit ↔ WP — `scripts/wp-page.php`
-Generate `{scratchpad}/page-{slug}.html` from K with the README `## Markup di inserimento` of
+### 2d. Diff kit ↔ WP — `scripts/wp-page.php` (never skipped)
+`plan` is the only check that the page in WordPress is what the kit says: it runs for **every**
+page of the perimeter, in every run, also when "nothing changed" and also when the page will not
+be written. A run that skips it has verified nothing for that page, and the log row says which
+pages went through it. Generate `{scratchpad}/page-{slug}.html` from K with the README `## Markup di inserimento` of
 each block: `<!-- wp:{prefix}/{slug} {"attr":"value"} /-->`, children inside the parent, core
 blocks with their HTML, `imageId` always with `imageUrl` (+ `imageAlt`), defaults omitted. Ids
 (images, posts, forms, pages) are resolved from WP, never invented: the file is deterministic.
 ```bash
 {wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" plan "{scratchpad}/page-{slug}.html" page={slug}
 ```
-The script aligns the top-level blocks of the file (G) and of the page (W) by key (block name +
-variant; `page=` accepts the ID, the URL path `servizi/fisioterapia` or the slug) and compares
-normalized attributes, children included. Per block: `uguale` ·
-`modificato` (the kit wins; before → after in the report) · `nuovo` · `spostato` (reordered,
-nothing lost) · `da cancellare` (in WP, not in the kit: a block the kit dropped **or** one added
-by hand). Exit **0** no differences · **1** differences without deletions · **2** error (`pagina
-assente` → 2e creates it; `non è una pagina`) · **3** at least one deletion. A hand-edited
-attribute is overwritten by the kit and **reported** (the dev who wants it puts it in the kit:
-same rule as the menus). Keep the output: it is the page's section of the report.
+The script first checks the generated file: a block comment whose attributes are not a JSON
+object is an error (exit 2 with the block name — WordPress would read it as a block without
+attributes and the page would look fine): fix the file, never the script's verdict. Then it
+aligns the top-level blocks of the file (G) and of the page (W) by key (block name + variant;
+`page=` accepts the ID, the URL path `servizi/fisioterapia` or the slug) and compares normalized
+attributes, children included. What happens next depends on **whose page it is**, which the
+script reads from the fingerprint it saved at its last write (post meta `_fse_build`):
+
+- **Page not touched by hand** (development): the kit wins. Per block: `uguale` · `modificato`
+  (before → after in the report) · `nuovo` · `spostato` (reordered, nothing lost) · `da
+  cancellare` (in WP, not in the kit).
+- **Page modified by hand in WordPress** (the first line of the output says so): WordPress is
+  the master and stays so. Existing blocks are left exactly as they are, order included:
+  `protetto` where they differ from the kit. Only blocks **born in the kit after the last build**
+  enter (`nuovo`, placed after the block that precedes them in the kit). A block the client
+  removed does not come back (`tolto a mano`), one the client added stays without any
+  confirmation (`aggiunto a mano`), one the kit dropped is `da cancellare` and waits for
+  `confirm`. A revision of the kit's texts no longer reaches this page: that is the rule, not a
+  failure, and it is never turned into a question.
+
+Exit **0** no differences · **2** error (`pagina assente` → 2e creates it; `non è una pagina`; a
+malformed generated file) · **3** at least one deletion waiting · **5** differences to write ·
+**6** nothing to write on a page modified by hand that differs from the kit. Exit **1** is never
+the script's: WP-CLI or PHP failed, treat it as an error and read the output. Keep the output:
+it is the page's section of the log row.
 
 ### 2e. Write the difference (WP-CLI, the only write path)
 ```bash
@@ -155,12 +186,18 @@ ID=$({wp-cli} post create --post_type=page --post_title="{Titolo}" --post_name={
 {wp-cli} post meta update $ID {prefix}_show_title 0   # only if K[0] is a hero variant image and the meta differs (the h1 is in the content); else leave the default 1
 {wp-cli} post meta update $ID {prefix}_show_form 0    # only if the page content has a {prefix}/form block and the meta differs (no double form); else leave the default 1
 ```
-`apply` keeps the `uguale` blocks of WP (re-serialized, same attributes), takes
-`modificato`/`nuovo`/`spostato` from the file in
-the kit's order, writes only when there is a difference (exit 1 `scritto`, exit 0 `0 differenze,
-nessuna scrittura`). With deletions pending it **does not write** and exits 3: the page keeps its
-state, the diff goes to the report as a question, the run continues with the next page;
-`apply … confirm` runs only in a later turn, after the dev's answer. Title from `DESIGN.md →
+`apply` writes only when there is a difference (exit **5** `scritto`, exit **0** `0 differenze,
+nessuna scrittura`, exit **6** nothing to write on a page modified by hand). On a page not
+touched by hand it keeps the `uguale` blocks of WP (re-serialized, same attributes) and takes
+`modificato`/`nuovo`/`spostato` from the file in the kit's order; on a page modified by hand it
+only adds the `nuovo` blocks. With deletions pending it **does not write** and exits 3: the page
+keeps its state, the diff goes to the report as a question, the run continues with the next
+page; `apply … confirm` runs only in a later turn, after the dev's answer. A page **open in the
+editor** by a user is not written (exit **4**, with the user's name): the page is skipped and
+reported ("chiudi la scheda dell'editor: la riallineo al prossimo giro"), the run goes on.
+`apply … forza` makes the kit win again on a page modified by hand and turns it back into a page
+not touched by hand: only when the dev asks for it, for that page, in a turn after the one that
+showed them what `protetto` means there. Title from `DESIGN.md →
 Pagine`, slug = last URL segment, parent = page of the URL prefix. Page options (fse-foundations
 §7) are the kit's say: derived, written only when different, listed in the report.
 
@@ -189,7 +226,9 @@ check reported as missing.
 
 ### 2h. Documentation (no confirmation asked)
 - `DESIGN.md → Pagine`: `implementata` only when 2g is green (else stays `kit`, with the reason
-  in the report); `## Blocchi`: `implementato` for the blocks created, variants.
+  in the report); a page modified by hand (exit 6, or `protetto` rows) keeps the state it has:
+  its content is the client's and is not compared with the kit's. `## Blocchi`: `implementato`
+  for the blocks created, variants.
 - Each block created/edited: README completed where the kit revealed a gap; the theme README
   table of blocks (if the project keeps one) and project `CLAUDE.md → Existing Blocks`.
 - `version` of edited blocks bumped.
@@ -205,15 +244,18 @@ esempio", "Privacy Policy") is never touched: one line in the report, "fuori dal
 ## Step 3 — Menus (`fse-menu-build` inline)
 
 After the pages exist: `fse-menu-build` Step 1–5 with its script (`dump` → `plan` → `apply`),
-exactly as written there. `apply` exit 3 (an existing menu differs from the kit) → the diff enters
-the final report as a question; `apply … confirm` runs only in a later turn, after the dev's
-answer — the run does not stop for it. `DESIGN.md → ## Navigazione` is written by its Step 5.
+exactly as written there. Additions and reorders are written at once. `apply` exit 3 (WordPress
+would lose an item of the menu) → the diff enters the final report as a question; `apply …
+confirm` runs only in a later turn, after the dev's answer — the run does not stop for it. Exit
+4 (the menu is open in the editor) → reported like a page open in the editor. `DESIGN.md → ##
+Navigazione` is written by its Step 5.
 
 ## Step 4 — Close the run, report, go on
 
 1. **Log, not chat.** `DESIGN.md → ## Log decisioni`, one row for the run with everything
    technical: per page id, blocks created (with variants) and additive edits, the `wp-page.php`
-   counts (`uguale`/`modificato`/`nuovo`/`spostato`), hand-edited attributes overwritten, images
+   counts (`uguale`/`modificato`/`nuovo`/`spostato`; on a page modified by hand
+   `protetto`/`tolto a mano`/`aggiunto a mano`), pages skipped and why, images
    imported, page options set, parity differences, `#` and `[da confermare]` kept; per menu
    created / updated / 0 differenze / diff waiting, orphans; pages skipped (`da progettare`),
    `da eliminare` waiting, outside the flow; decisions taken under the charter; checks run and
@@ -228,8 +270,12 @@ answer — the run does not stop for it. `DESIGN.md → ## Navigazione` is writt
      blocks edited (name, version), telaio parts touched, menus created or updated. Opening line
      of Step 0 only if it demoted or flagged a row.
    - *Cosa aspetta te*: one item per `confirm` (page: id, URL, what is deleted with it — kit,
-     html, row — and the menu items that go orphan; menu: what `apply … confirm` rewrites), one
-     per gap the visitor can hit (404 links, placeholder images), one per `[da confermare]`.
+     html, row — and the menu items that go orphan; menu: the items WordPress would lose), one
+     per page skipped (what the kit or the README lacks, or who has it open in the editor), one
+     per gap the visitor can hit (404 links, placeholder images), one per `[da confermare]`. A
+     page modified by hand is **not** an item: one line in *Cosa è cambiato* the first time the
+     run meets it ("la pagina Chi siamo è stata modificata in WordPress: da ora i suoi testi
+     restano quelli di WordPress, dal kit entrano solo le sezioni nuove"), then silence.
    - *Prossimo passo*: a pending `confirm` is answered in this conversation: say what the dev
      writes for each item, by id, and apply it in the turn that follows the answer (`fse-build
      2i` / `fse-menu-build apply … confirm`); no prompt to paste. Then the next `da progettare`
@@ -280,19 +326,28 @@ exits 2 until every `file:` source and `render.php` exist.
 
 ## Stop conditions (the only ones)
 
-Guard fails · `npm run build` fails on code not written in this run · kit or compiled html
-missing for a row of the perimeter · a block of the kit without README/attribute table/markup · a
-block instance whose markup cannot be mapped to the README (unknown element/modifier) · parent
-page missing and not in the perimeter · post locked by another user · a non-additive change
-needed on an implemented block (attribute rename/removal, structure change) · console errors in
-a block implemented outside this run. **Deletions and menu diffs do not stop the run**: they
-close it with the questions in the report, and `confirm` runs in a later turn.
+**The run stops** only when no page could be built correctly: guard fails · `npm run build`
+fails on code not written in this run · `{wp-cli}` does not answer (Step 0.6) · a block of the
+kit without README/attribute table/markup (Step 0.5).
+
+**A page is skipped, the run goes on** (the row keeps its state, the report says why and what
+unblocks it): kit or compiled html missing for that row · a block instance whose markup cannot
+be mapped to the README (unknown element, modifier or attribute) · a non-additive change needed
+on an implemented block the page uses · parent page missing and not in the perimeter · the page
+open in the editor by a user (`apply` exit 4) · console errors in a block implemented outside
+this run (the page is written, it does not reach `implementata`).
+
+**Deletions and menu losses neither stop nor skip**: they close the run with the questions in
+the report, and `confirm` runs in a later turn.
 
 ## Never
 
 `save()` with markup · rename or remove attributes of an implemented block · delete a block, a
 page or a `wp_navigation` without `confirm` in a later turn · ask during the run (the charter
-decides, the report collects) · rewrite kit texts · write credentials anywhere · write through
+decides, the report collects) · skip 2d for a page, or narrow the perimeter because the prompt
+names one page · drop an unmapped element to make a page pass · `apply … forza` without the
+dev's explicit request for that page · rewrite a page modified by hand in any other way (`wp
+post update`, the editor) · rewrite kit texts · write credentials anywhere · write through
 the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are the write paths) ·
 `git push`, or any git command beyond the fse-foundations §10 rule · `@use 'swiper/swiper'` in a block.
 
@@ -300,7 +355,7 @@ the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are th
 
 - [ ] Guard passed, state on disk verified, perimeter and opening line reported
 - [ ] Missing blocks scaffolded with every README variant; build exit 0; hook silent; smoke test 0 console errors
-- [ ] Every page of the perimeter through `wp-page.php plan` → `apply`; deletions left to `confirm`; page options derived
+- [ ] Every page of the perimeter through `wp-page.php plan` → `apply` (2d never skipped); deletions left to `confirm`; pages modified by hand left to WordPress; pages skipped named with what unblocks them; page options derived
 - [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; parity: kit errors fixed in the kit in this run, design differences reported
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps

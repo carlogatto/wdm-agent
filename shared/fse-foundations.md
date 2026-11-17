@@ -678,7 +678,14 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   `grep` with output, no `echo` of the value): only the code it runs reads it (§9). Never asked in
   the prompt, never written anywhere else, never echoed. The dev who changes the password updates
   the file; an existing project without `.env` creates it by hand with that one line.
-- Never take over a post locked by another user; close the tab at the end.
+- Never take over a post locked by another user: `wp-page.php` and `wp-navigation.php` refuse
+  to write on a page or a menu a user has open in the editor (exit 4). Close the tab at the end.
+- **What the client changed in WordPress is the client's.** The kit's texts, images and links
+  are placeholders: they fill a page at its first build. From the moment a page is edited by
+  hand in WordPress, `wp-page.php` leaves its existing blocks as they are and only adds the
+  blocks born in the kit afterwards (fse-build 2d); the kit wins again only with `forza`, on the
+  dev's explicit request. A difference of content between kit and WordPress is not a
+  difference: never a question, never a correction.
 - `debug.log` empty at the end of every session (`WP_DEBUG_LOG` on); `npm run build` exit 0.
 - Browser-sync: if `https://localhost:8848/html/` already answers **and lists this theme's kits**
   (`{prefix}-*.html`), the dev's `npm run dev` is running — use it, never start a second watcher (it
@@ -711,7 +718,7 @@ and goes on.
 |---|---|---|
 | **Decide and log** | texts in the brief's tone (rewriting notes, titles, microcopy, alt texts, menu labels); layout (the section designed first, then the existing variant that renders it or a new block/variant — §4 "No catalogue constraint"; order of the map's sections, columns, `headingLevel`, backgrounds from the palette); ids and anchors; slugs from titles; images chosen among the provided ones; **verifiable numbers** from the code or the DB (counts, versions, repo dates); links to pages and anchors of the map; README contracts of new blocks and variants; attributes and defaults; configuration of approved plugins | where it lives (kit, README, `DESIGN.md`); **one** `## Log decisioni` row per deliverable with the non-obvious choices and why |
 | **Default + `[da confermare]`** | facts about the client the brief lacks (phone, address, hours, prices, names, VAT id); numbers and claims that cannot be verified; external URLs not in the brief; legal and policy texts; missing images; points where the brief contradicts itself; a font without files | text: `[da confermare]` inline, worded as the question itself ("[da confermare] telefono dello studio"); non-text value: a plausible default plus an adjacent comment `<!-- attr "value" [da confermare]: why -->` (a placeholder inside `href`, `src` or a number is a broken value); all collected in the **review table** of the gate with the chosen default; after the gate only what the dev left open stays in `## Domande aperte` |
-| **Stop** | guard; the deliverable's input is missing (empty brief, missing kit, block without README); deletions (pages, blocks, menu items, `wp_navigation`) → the diff is shown and applied only with an ok in a **later turn**; rename or removal of implemented attributes; post locked by another user; request outside the skill | the turn ends with the diff or **one** question with a proposal |
+| **Stop** | guard; the deliverable's input is missing (empty brief, missing kit, block without README); deletions (pages, blocks, menu items, `wp_navigation`) → the diff is shown and applied only with an ok in a **later turn**; rename or removal of implemented attributes; request outside the skill. Inside a site build a stop that concerns **one page** (an element the README does not map, a page open in the editor by a user) skips that page and the run goes on: it is reported at the end, never asked in the middle | the turn ends with the diff or **one** question with a proposal |
 
 "Niente da confermare" is a normal outcome, said in one line. A dev's remark at a gate is their
 decision: applied and logged as "richiesta del dev", not discussed. Anything still open at the
