@@ -1,6 +1,6 @@
 ---
 name: fse-build
-description: Use to build the whole site in WordPress from the approved kits for a wdm-theme FSE project — every `kit`/`implementata` row of DESIGN.md (telaio, pages, menus) in one run, re-runnable: it applies only the kit ↔ WP difference — "costruisci il sito", "build del sito", "monta la home in WP", "riallinea WP ai kit", "prosegui con la build", or when a DESIGN.md row is `kit` and not yet implemented. Missing native blocks are created along the way. Not for wdm-starter projects (`dev-page-build`).
+description: 'Use to build the whole site in WordPress from the approved kits for a wdm-theme FSE project — every `kit`/`implementata` row of DESIGN.md (telaio, pages, menus) in one run, re-runnable: it applies only the kit ↔ WP difference — "costruisci il sito", "build del sito", "monta la home in WP", "riallinea WP ai kit", "prosegui con la build", or when a DESIGN.md row is `kit` and not yet implemented. Missing native blocks are created along the way. Not for wdm-starter projects (`dev-page-build`).'
 ---
 
 # FSE Build — approved kits → native blocks → the WordPress site, autonomously and re-runnable

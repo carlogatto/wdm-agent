@@ -1,6 +1,6 @@
 ---
 name: fse-block-edit
-description: Use when modifying an implemented native block for a wdm-theme FSE project — "modifica il blocco X", "aggiungi un attributo/opzione al blocco X", "nuova variante di X", "cambia lo stile/layout di X", "aggiungi il JS a X" — on a block that already has block.json, render.php and edit.js. Blocks still at `kit` state are built by `fse-build`; the kit/README of a new variant is designed with `fse-kit`.
+description: 'Use when modifying an implemented native block for a wdm-theme FSE project — "modifica il blocco X", "aggiungi un attributo/opzione al blocco X", "nuova variante di X", "cambia lo stile/layout di X", "aggiungi il JS a X" — on a block that already has block.json, render.php and edit.js. Blocks still at `kit` state are built by `fse-build`; the kit/README of a new variant is designed with `fse-kit`.'
 ---
 
 # FSE Block Edit — modify an implemented block, additively

@@ -1,6 +1,6 @@
 ---
 name: fse-menu-build
-description: Use to create or realign the WordPress navigation (`wp_navigation` posts and the `ref` of the `core/navigation` blocks in header and footer) from the kit header/footer menus for a wdm-theme FSE project — "popola il menu", "crea il menu WP", "allinea il menu al kit", "il menu mostra il contenuto di una pagina", or when the frontend shows a page list instead of the designed menu. Runs inline as the last step of the `fse-build` site build and stays available on its own for maintenance, whenever the kit menu or the pages change. Not for wdm-starter projects (`dev-menu-build`).
+description: 'Use to create or realign the WordPress navigation (`wp_navigation` posts and the `ref` of the `core/navigation` blocks in header and footer) from the kit header/footer menus for a wdm-theme FSE project — "popola il menu", "crea il menu WP", "allinea il menu al kit", "il menu mostra il contenuto di una pagina", or when the frontend shows a page list instead of the designed menu. Runs inline as the last step of the `fse-build` site build and stays available on its own for maintenance, whenever the kit menu or the pages change. Not for wdm-starter projects (`dev-menu-build`).'
 ---
 
 # FSE Menu Build — kit `<nav><ul>` → `wp_navigation` + `ref` in the parts

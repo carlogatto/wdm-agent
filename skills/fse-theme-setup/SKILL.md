@@ -1,6 +1,6 @@
 ---
 name: fse-theme-setup
-description: Use to scaffold a new client project from wdm-theme for a wdm-theme FSE project (block theme, native Gutenberg blocks) — when the dev starts a new site from the wdm-theme repo, invokes `/fse-theme-setup`, or asks "nuovo progetto da wdm-theme", "inizializza il tema per il cliente X". Not for wdm-starter projects (those use `new-project-setup`) and never on a project already set up.
+description: 'Use to scaffold a new client project from wdm-theme for a wdm-theme FSE project (block theme, native Gutenberg blocks) — when the dev starts a new site from the wdm-theme repo, invokes `/fse-theme-setup`, or asks "nuovo progetto da wdm-theme", "inizializza il tema per il cliente X". Not for wdm-starter projects (those use `new-project-setup`) and never on a project already set up.'
 ---
 
 # FSE Theme Setup — wdm-theme → new client project

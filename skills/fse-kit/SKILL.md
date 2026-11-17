@@ -1,6 +1,6 @@
 ---
 name: fse-kit
-description: Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. One page, one review at the end (kit + README contracts + SCSS); on the dev's ok the skill runs `fse-build` in the same conversation. Blocks are never designed on their own: they are born inside the page that needs them.
+description: 'Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "aggiungi la variante Z al blocco Y", or when a DESIGN.md row is `da progettare`. One page, one review at the end (kit + README contracts + SCSS); on the dev''s ok the skill runs `fse-build` in the same conversation. Blocks are never designed on their own: they are born inside the page that needs them.'
 ---
 
 # FSE Kit — design in HTML: telaio or one page with its blocks (one item, one review, then the build)

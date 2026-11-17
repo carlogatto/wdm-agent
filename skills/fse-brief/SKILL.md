@@ -1,6 +1,6 @@
 ---
 name: fse-brief
-description: Use to turn the designer's brief into the site contract for a wdm-theme FSE project — reads every file in `docs/brief/` (site root) and delivers, for one review, the site map, the tokens applied to theme.json, the tone, the plugins and the images, writing `DESIGN.md → ## Brief`, `## Pagine` and `## Telaio` — "leggi il brief", "partiamo dal brief", "prepara il brief del progetto", `/fse-brief`, or when `## Pagine` has only the Home created by the setup. Runs after `fse-theme-setup`, before `fse-kit`.
+description: 'Use to turn the designer''s brief into the site contract for a wdm-theme FSE project — reads every file in `docs/brief/` (site root) and delivers, for one review, the site map, the tokens applied to theme.json, the tone, the plugins and the images, writing `DESIGN.md → ## Brief`, `## Pagine` and `## Telaio` — "leggi il brief", "partiamo dal brief", "prepara il brief del progetto", `/fse-brief`, or when `## Pagine` has only the Home created by the setup. Runs after `fse-theme-setup`, before `fse-kit`.'
 ---
 
 # FSE Brief — `docs/brief/` → the site contract (gate 1)
