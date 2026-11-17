@@ -118,6 +118,21 @@ describe('hook del plugin', () => {
     assert.equal(fs.readFileSync(path.join(sito, 'DESIGN.md'), 'utf8'), design);
   });
 
+  it('(a4) theme.json cambiato fuori dai token: si rigenera subito, senza chiedere conferma', () => {
+    const sito = path.join(tmp, 'fuori-dai-token');
+    fs.cpSync(sitoFse, sito, { recursive: true });
+    const file = path.join(sito, 'wp-content', 'themes', 't', 'theme.json');
+    const theme = JSON.parse(fs.readFileSync(file, 'utf8'));
+    theme.styles = { ...(theme.styles || {}), elements: { button: { border: { radius: '99px' } } } };
+    fs.writeFileSync(file, JSON.stringify(theme));
+    const r = hook(RADICE, 'check-design-tokens.js', file);
+    assert.equal(r.status, 0, r.stderr);
+    const contesto = JSON.parse(r.stdout).hookSpecificOutput.additionalContext;
+    assert.match(contesto, /fuori dai token/);
+    assert.match(contesto, /non serve una conferma/);
+    assert.doesNotMatch(contesto, /chiedi conferma/);
+  });
+
   it('(a3) theme.json rotto: il messaggio dice «non valido», non «non allineati» (U26)', () => {
     const sito = path.join(tmp, 'rotto');
     fs.cpSync(sitoFse, sito, { recursive: true });

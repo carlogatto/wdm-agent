@@ -113,3 +113,182 @@ describe('sync-theme-json-tokens.js', () => {
     assert.ok(!fs.existsSync(css), 'il CSS è stato scritto con un output che non è CSS');
   });
 });
+
+// Ogni caso parte da un progetto appena generato: non dipendono l'uno dall'altro.
+describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
+  const IMPRONTA = /^# impronta theme\.json: [0-9a-f]{64}$/m;
+  let radice, n = 0;
+
+  // Un progetto FSE nuovo. `wpCli`: le righe che il finto WP-CLI stampa (senza: nessuna riga {wp-cli}).
+  const progetto = (wpCli) => {
+    const sito = path.join(radice, `progetto ${++n}`);
+    const tema = path.join(sito, 'wp-content', 'themes', 't');
+    const design = path.join(sito, 'DESIGN.md');
+    const finto = path.join(sito, 'finto wp cli.js');
+    fs.cpSync(path.join(FIXTURE, 'tema'), tema, { recursive: true });
+    let testo = fs.readFileSync(path.join(FIXTURE, 'fse-site', 'DESIGN.md'), 'utf8');
+    if (wpCli !== undefined) {
+      fs.writeFileSync(finto, `require('node:fs').writeFileSync(__filename + '.argv', JSON.stringify(process.argv.slice(2)));\nprocess.stdout.write(${JSON.stringify(wpCli.join('\n') + '\n')});\n`);
+      testo += `\n### Paths\n| Variable | Value |\n|---|---|\n| \`{wp-cli}\` | "${process.execPath}" "${finto}" --path=/x |\n`;
+    }
+    fs.writeFileSync(design, testo + '\n## Design Tokens\n\n');
+    const p = {
+      sito, tema, design, finto,
+      sync: (...args) => {
+        const r = spawnSync(process.execPath, [SCRIPT, tema, ...args], { encoding: 'utf8' });
+        return { status: r.status, out: r.stdout + r.stderr };
+      },
+      leggi: () => fs.readFileSync(design, 'utf8'),
+      theme: (cambia) => {
+        const file = path.join(tema, 'theme.json');
+        const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+        cambia(json);
+        fs.writeFileSync(file, JSON.stringify(json, null, 2));
+      },
+    };
+    return p;
+  };
+  const generato = (wpCli) => {
+    const p = progetto(wpCli);
+    const r = p.sync();
+    assert.equal(r.status, 0, r.out);
+    return p;
+  };
+
+  before(() => { radice = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-sync2-')); });
+  after(() => fs.rmSync(radice, { recursive: true, force: true }));
+
+  it('il blocco generato porta l\'impronta di theme.json; --check è allineato', () => {
+    const p = generato();
+    assert.match(p.leggi(), IMPRONTA);
+    assert.equal(p.sync('--check').status, 0);
+  });
+
+  it('theme.json riformattato senza cambiare i valori: resta allineato', () => {
+    const p = generato();
+    p.theme(() => {});
+    assert.equal(p.sync('--check').status, 0);
+  });
+
+  it('theme.json cambiato fuori dai token (styles.elements.button): exit 3, nessun token cambiato (U27)', () => {
+    const p = generato();
+    p.theme((t) => { t.styles = { ...(t.styles || {}), elements: { button: { border: { radius: '99px' } } } }; });
+    const r = p.sync('--check');
+    assert.equal(r.status, 3, r.out);
+    assert.match(r.out, /nessun token è cambiato/);
+    assert.match(r.out, /wp-global-styles\.css/);
+  });
+
+  it('un token cambiato: exit 1 con la differenza, senza la riga dell\'impronta', () => {
+    const p = generato();
+    p.theme((t) => { t.settings.layout.contentSize = '1px'; });
+    const r = p.sync('--check');
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, /1px/);
+    assert.doesNotMatch(r.out, /impronta theme\.json/);
+  });
+
+  it('blocco senza impronta (progetto di prima) e token uguali: allineato, con l\'invito a rigenerare', () => {
+    const p = generato();
+    fs.writeFileSync(p.design, p.leggi().replace(/^# impronta theme\.json: .*\n/m, ''));
+    const r = p.sync('--check');
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /impronta/);
+    const dopo = p.sync();
+    assert.equal(dopo.status, 0, dopo.out);
+    assert.match(p.leggi(), IMPRONTA);
+  });
+
+  it('WP-CLI fallisce: DESIGN.md non viene riscritto, così --check resta non allineato', () => {
+    const p = generato([':root{--a:1}']);
+    fs.writeFileSync(p.finto, 'process.exit(1);\n');
+    const prima = p.leggi();
+    p.theme((t) => { t.settings.layout.contentSize = '1px'; });
+    const r = p.sync();
+    assert.equal(r.status, 1, r.out);
+    assert.equal(p.leggi(), prima);
+    assert.equal(p.sync('--check').status, 1);
+  });
+
+  it('{wp-cli} con percorsi tra virgolette e spazi: eseguito senza shell, argomenti interi', () => {
+    const p = generato([':root{--a:1}']);
+    assert.deepEqual(JSON.parse(fs.readFileSync(p.finto + '.argv', 'utf8')), ['--path=/x', 'eval', 'echo wp_get_global_stylesheet();']);
+    assert.match(fs.readFileSync(path.join(p.tema, 'assets', 'css', 'wp-global-styles.css'), 'utf8'), /:root\{--a:1\}/);
+    assert.doesNotMatch(fs.readFileSync(SCRIPT, 'utf8'), /execSync|shell:\s*true/);
+  });
+
+  it('{wp-cli} che non parte: errore leggibile, niente stack', () => {
+    const p = progetto();
+    fs.writeFileSync(p.design, p.leggi().replace('\n## Design Tokens', () => '\n### Paths\n| Variable | Value |\n|---|---|\n| `{wp-cli}` | /php/che/non/esiste --path=/x |\n\n## Design Tokens'));
+    const r = p.sync();
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, /\{wp-cli\}/);
+    assert.doesNotMatch(r.out, /\bat .*\.js:\d+/);
+  });
+
+  it('il marker citato in una riga di prosa non conta: si riscrive solo il blocco vero', () => {
+    const p = generato();
+    const nota = 'Nota: il blocco tra <!-- AUTO-GENERATED:design-tokens e <!-- /AUTO-GENERATED:design-tokens --> non si modifica a mano.';
+    fs.writeFileSync(p.design, p.leggi().replace('## Project Config', () => `${nota}\n\nTesto da conservare.\n\n## Project Config`));
+    p.theme((t) => { t.settings.layout.contentSize = '2px'; });
+    const r = p.sync();
+    assert.equal(r.status, 0, r.out);
+    assert.ok(p.leggi().includes(`${nota}\n\nTesto da conservare.\n\n## Project Config`), 'la prosa che cita il marker è stata toccata');
+    assert.match(p.leggi(), /contentSize: 2px/);
+    assert.equal(p.leggi().match(/^<!-- AUTO-GENERATED:design-tokens/gm).length, 1);
+  });
+
+  it('due blocchi con il marker a inizio riga: exit 2, nessuna scrittura', () => {
+    const p = generato();
+    const blocco = /^<!-- AUTO-GENERATED:design-tokens[\s\S]*?^<!-- \/AUTO-GENERATED:design-tokens -->$/m.exec(p.leggi())[0];
+    fs.writeFileSync(p.design, `${p.leggi()}\n${blocco}\n`);
+    const prima = p.leggi();
+    for (const args of [['--check'], []]) {
+      const r = p.sync(...args);
+      assert.equal(r.status, 2, r.out);
+      assert.match(r.out, /ripetuto/);
+    }
+    assert.equal(p.leggi(), prima);
+  });
+
+  it('un token con $& nel valore arriva alla lettera in DESIGN.md', () => {
+    const p = generato();
+    p.theme((t) => { t.settings.color.palette[0].name = 'Base $& $1 $$'; });
+    const r = p.sync();
+    assert.equal(r.status, 0, r.out);
+    assert.ok(p.leggi().includes('# Base $& $1 $$'), 'il nome con $& non è arrivato alla lettera');
+    assert.equal(p.sync('--check').status, 0);
+  });
+
+  it('un breakpoint con parentesi nel valore si legge intero', () => {
+    const p = progetto();
+    const scss = path.join(p.tema, 'src', 'scss', '_breakpoints.scss');
+    fs.writeFileSync(scss, fs.readFileSync(scss, 'utf8').replace('lg: 992px', 'lg: calc(900px + 92px)'));
+    p.theme((t) => { t.settings.custom.breakpoints.lg = 'calc(900px + 92px)'; });
+    const r = p.sync();
+    assert.equal(r.status, 0, r.out);
+    assert.equal(p.sync('--check').status, 0);
+  });
+
+  it('theme.json che non è un oggetto: exit 2 «non valido», niente stack', () => {
+    for (const contenuto of ['null', '[]', '"testo"']) {
+      const p = progetto();
+      fs.writeFileSync(path.join(p.tema, 'theme.json'), contenuto);
+      const r = p.sync('--check');
+      assert.equal(r.status, 2, `${contenuto}: ${r.out}`);
+      assert.match(r.out, /non valido/);
+      assert.doesNotMatch(r.out, /TypeError|\bat .*\.js:\d+/);
+    }
+  });
+
+  it('i messaggi di errore dicono cosa fare', () => {
+    const senzaDesign = progetto();
+    fs.rmSync(senzaDesign.design);
+    assert.match(senzaDesign.sync('--check').out, /fse-theme-setup/);
+    const starter = progetto();
+    fs.writeFileSync(starter.design, starter.leggi().replace('| fse |', '| starter |'));
+    const r = starter.sync('--check');
+    assert.equal(r.status, 2, r.out);
+    assert.match(r.out, /theme_family/);
+  });
+});
