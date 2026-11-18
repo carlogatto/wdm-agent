@@ -166,7 +166,7 @@ function togliGenerati(tema) {
     if (fs.existsSync(dir)) for (const nome of fs.readdirSync(dir)) if (tieni(nome)) togli(path.join(dir, nome));
   };
   sotto('html', (nome) => nome.endsWith('.html'));
-  sotto('assets/css', (nome) => ['main.css', 'fonts.css', 'swiper.css'].includes(nome) || nome.endsWith('.map'));
+  sotto('assets/css', (nome) => ['main.css', 'fonts.css', 'swiper.css', 'kit.css'].includes(nome) || nome.endsWith('.map'));
   sotto('assets/js', (nome) => nome.endsWith('.js') || nome.endsWith('.map'));
 }
 

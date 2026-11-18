@@ -231,7 +231,10 @@ background) via `{prefix}_render_image( …, [ 'decorative' => true ] )` → `al
 `post_status => publish` explicit; a parent renders its children itself — `render_block()` on the
 parsed block array (cards-carousel → card), or `new WP_Block( $parsed, $context )` when each child
 needs an index or a context of its own (hero → hero-slide) — never `require_once` of a file of
-another block: one wrapper, one markup.
+another block: one wrapper, one markup. A parent that renders its children this way is named in
+the `$render_own_children` list of `blocks/blocks.php`, which registers it with
+`skip_inner_blocks`: otherwise WordPress renders every child a first time to fill a `$content`
+nobody uses.
 
 ### index.js / edit.js
 ```js

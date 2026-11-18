@@ -99,6 +99,12 @@ function controllaRinomina(sitoRoot, url, php) {
   const tema = path.join(sitoRoot, 'wp-content', 'themes', VALORI.slug);
   const leggi = (...relativo) => fs.readFileSync(path.join(tema, ...relativo), 'utf8');
   assert.ok(fs.existsSync(tema) && !fs.existsSync(path.join(sitoRoot, 'wp-content', 'themes', 'wdm-theme')), 'cartella del tema non rinominata');
+  // I CSS compilati del tema base non restano: li ricrea la build con i nomi nuovi (kit.css compreso).
+  // (vale finché la build non è girata: dopo, html/ ha di nuovo i kit compilati)
+  const compilati = fs.existsSync(path.join(tema, 'html')) ? fs.readdirSync(path.join(tema, 'html')).filter((f) => f.endsWith('.html')) : [];
+  if (compilati.length === 0) {
+    for (const css of ['main.css', 'fonts.css', 'swiper.css', 'kit.css']) assert.ok(!fs.existsSync(path.join(tema, 'assets', 'css', css)), `assets/css/${css} del tema base è rimasto`);
+  }
 
   const delSito = ['README.md', '.gitignore'].map((f) => path.join(sitoRoot, f));
   assert.deepEqual(residui([...tuttiIFile(tema), ...delSito], sitoRoot), []);
