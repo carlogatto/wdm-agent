@@ -225,15 +225,16 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
     });
   });
 
+  // Una cartella personale finta: il registro dei plugin di Claude Code punta a questo checkout.
+  const casa = (conPlugin) => {
+    const dir = fs.mkdtempSync(path.join(tmp, 'casa-'));
+    fs.mkdirSync(path.join(dir, '.claude', 'plugins'), { recursive: true });
+    const plugins = conPlugin ? { 'wdm-agent@wdm-agent': [{ installPath: RADICE }] } : {};
+    fs.writeFileSync(path.join(dir, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ version: 2, plugins }));
+    return { HOME: dir, USERPROFILE: dir };
+  };
+
   describe('check-design-tokens (sync --check dentro npm run check, U28)', () => {
-    // Una cartella personale finta: il registro dei plugin di Claude Code punta a questo checkout.
-    const casa = (conPlugin) => {
-      const dir = fs.mkdtempSync(path.join(tmp, 'casa-'));
-      fs.mkdirSync(path.join(dir, '.claude', 'plugins'), { recursive: true });
-      const plugins = conPlugin ? { 'wdm-agent@wdm-agent': [{ installPath: RADICE }] } : {};
-      fs.writeFileSync(path.join(dir, '.claude', 'plugins', 'installed_plugins.json'), JSON.stringify({ version: 2, plugins }));
-      return { HOME: dir, USERPROFILE: dir };
-    };
 
     it('token allineati: passa', async () => {
       const r = await nodo('tools/check-design-tokens.js', [], casa(true));
@@ -251,6 +252,48 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
       const r = await nodo('tools/check-design-tokens.js', [], casa(false));
       assert.equal(r.status, 0, r.out);
       assert.match(r.out, /SKIP.*wdm-agent/);
+    });
+  });
+
+  // La parità tra kit e sito (D4) dentro npm run check: lo script è del plugin, il tema lo lancia.
+  describe('check-parita', () => {
+    // Il «sito» serve, per ogni pagina implementata di DESIGN.md, il suo kit compilato: stessa
+    // struttura per costruzione. La riga in più è ciò da cui si riconosce il tema.
+    const servi = (cambia = (html) => html) => {
+      const design = fs.readFileSync(path.join(tema, '..', '..', '..', 'DESIGN.md'), 'utf8');
+      pagine = {};
+      for (const riga of design.split('\n')) {
+        const m = /^\| [^|]+ \| (\/[^ |]*) \| implementata \| src\/kit\/([a-z0-9-]+)\.kit \|/.exec(riga);
+        if (m) pagine[m[1]] = `${cambia(fs.readFileSync(file(`html/${m[2]}.html`), 'utf8'), m[1])}<!-- /themes/wdm-theme/ -->`;
+      }
+      assert.ok(Object.keys(pagine).length >= 3, 'in DESIGN.md del tema base non trovo le pagine implementate');
+    };
+
+    it('plugin non installato: SKIP dichiarato ed exit 0', async () => {
+      const r = await nodo('tools/check-parita.js', [], casa(false));
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /SKIP check-parita.*wdm-agent/);
+    });
+
+    it('sito irraggiungibile: SKIP con il motivo ed exit 0, come gli altri controlli sul frontend', async () => {
+      const r = await nodo('tools/check-parita.js', [], { ...casa(true), SITE_URL: 'https://127.0.0.1:1' });
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /SKIP check-parita: il sito non risponde/);
+    });
+
+    it('sito con la stessa struttura dei kit: passa', async () => {
+      servi();
+      const r = await nodo('tools/check-parita.js', [], { ...casa(true), SITE_URL: url });
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /PASS check-parita/);
+    });
+
+    it('una sezione in meno su una pagina del sito: fallisce e dice dove', async () => {
+      servi((html, percorso) => (percorso === '/' ? html.replace(/<section class="[^"]*wdm-block-steps[\s\S]*?<\/section>/, '') : html));
+      const r = await nodo('tools/check-parita.js', [], { ...casa(true), SITE_URL: url });
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /Home \(\/\)\n {2}solo nel kit: wdm-main › .*wdm-block-steps/);
+      assert.match(r.out, /FAIL check-parita/);
     });
   });
 
@@ -290,9 +333,9 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
   });
 
   describe('npm run check', () => {
-    it('lancia i cinque controlli, tutti in Node', () => {
+    it('lancia i sei controlli, tutti in Node', () => {
       const check = JSON.parse(fs.readFileSync(file('package.json'), 'utf8')).scripts.check;
-      for (const nome of ['check-tokens.js', 'check-fonts.js', 'check-swiper.js', 'check-perf.js', 'check-design-tokens.js']) {
+      for (const nome of ['check-tokens.js', 'check-fonts.js', 'check-swiper.js', 'check-perf.js', 'check-design-tokens.js', 'check-parita.js']) {
         assert.ok(check.includes(`node tools/${nome}`), `manca ${nome}: ${check}`);
       }
     });

@@ -374,6 +374,32 @@ existing blocks is a worse page, not a cheaper one. What the system fixes is the
 tokens of theme.json and the anatomy (one `<section>` per block, BEM, parity): inside them the
 layout, the rhythm and the composition of a section are free.
 
+**Parity in both directions: structure yes, content no.** Kit, theme code and the page in
+WordPress must have the same **structure** at any time: which blocks, their order, the variant,
+the BEM elements and their classes. A change on one side must reach the other: the side that
+changed last wins, the agent aligns the other one and writes a line in the log; only when both
+sides changed the same point in different ways, one question with a proposal. **Content**
+(texts, images, icons, links, how many items a repeated series has) belongs to whoever writes
+in WordPress: the kit's content is a placeholder that fills the page at its first build (§10),
+and a difference of content is not a difference.
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/parita.js" "{site-root}"
+```
+is the check. It compares the compiled kit (`html/`) with the HTML WordPress serves, on the
+skeleton of the elements that carry a project class (`{prefix}-…`, plus colour and alignment
+classes): header and footer once (the `implementato` rows of `## Telaio`), then the content of
+every `implementata` page. It only reads. Silent, exit 0 → aligned. Exit 1 → one line per
+difference and the side that changed last (last commit on the kit against the date the page or
+the part was modified): act on it without asking. The kit changed last → `fse-build` brings it
+to WordPress. WordPress or the theme changed last → correct the kit (the page kit, the block
+kit and its README), `npm run build`, run the check again. Exit 3 → it could not verify and
+says why (servers stopped, kit not compiled): never a pass. Tolerated by design: the classes
+WordPress and Swiper add, a core block that prints the same classes on two nested elements
+(navigation), `{prefix}-header__toggle` (kit only, §7). It runs at the start of every
+conversation (project `CLAUDE.md`) and at the end of every session inside `npm run check`
+(`tools/check-parita.js` of the theme finds the plugin through the registry; exit 3 there is a
+declared `SKIP`). Menu items are not its matter: `wp-navigation.php` owns them.
+
 Verification of a kit: `npm run dev` → `https://localhost:8848/html/` (browser-sync lists the
 compiled pages); never open `html/*.html` from `file://` — the `type="module"` view.js are
 blocked by CORS and the carousels do not start.
@@ -705,7 +731,9 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   blocks born in the kit afterwards (fse-build 2d); the kit wins again only with `forza`, on the
   dev's explicit request. A difference of content between kit and WordPress is not a
   difference: never a question, never a correction.
-- `debug.log` empty at the end of every session (`WP_DEBUG_LOG` on); `npm run build` exit 0.
+- `debug.log` empty at the end of every session (`WP_DEBUG_LOG` on); `npm run build` exit 0;
+  `npm run check` exit 0, parity included (§4): a structure difference between kit and site is
+  aligned before closing, not handed over.
 - Browser-sync: if `https://localhost:8848/html/` already answers **and lists this theme's kits**
   (`{prefix}-*.html`), the dev's `npm run dev` is running — use it, never start a second watcher (it
   would take another port and compile everything twice). Start `npm run dev` only when 8848 is

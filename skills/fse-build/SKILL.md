@@ -209,20 +209,27 @@ order, modifier classes as derived, first text of each block = kit (normalized: 
 ### 2g. Page parity + QA (Playwright, §9 "Per page": the model `pw-pagina.js`)
 Editor: the page opens with 0 invalid / 0 `core/missing` blocks, `isEditedPostDirty() === false`,
 block count = N. Frontend at 1440/768/390: `scrollWidth === innerWidth`, exactly one h1,
-`swiper-initialized` where expected, every in-page anchor target exists. Parity vs
-`html/{prefix}-{page}.html`: per section (top-level of `<main>` plus the default form part after it), class set —
-order free: WP and the kit print the same classes in a different order — minus the runtime
-classes WP/Swiper generate (`swiper-*`, `wp-container-*`, `is-layout-*`, `has-global-padding`),
-element count per tag (modulo a repeated series), normalized text, links (except the
-permalinks of post-derived cards). Screenshots editor + frontend ×3 in
-`.playwright-mcp/shots/`. A difference where **WP is right and the kit is wrong** — a class core
-adds in render (`wp-block-paragraph`), a class `render.php` always prints (`is-style-inverted`),
-a stale kit comment, a value the README fixes — is **fixed in the kit in this run** (the files
-`fse-kit` would touch, structure and texts untouched), `npm run build`, parity re-checked, one
-line in the log row: never handed back to the dev, never a `## Domande aperte` item. Only a
-difference that changes the design (text, order, variant, missing element) goes in the report
-with block and attribute. Without the browser (see Inputs): frontend checks via `curl` only,
-editor check reported as missing.
+`swiper-initialized` where expected, every in-page anchor target exists. Screenshots editor +
+frontend ×3 in `.playwright-mcp/shots/`. On a page written from the kit in this run also the
+texts must be the kit's (2f): a wrong text there is a mapping error of this run, fixed in the
+generated file and applied again.
+
+**Structure parity** is checked by the script, for the whole site at once (fse-foundations §4):
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/parita.js" "{site-root}"
+```
+It looks at header, footer and every `implementata` page, so it runs after 2h has written the
+rows of the pages that passed the checks above, and again at Step 4. Silent → aligned. Exit 1
+on a page of this run: a difference where **WP is right and the kit is wrong** (a class
+`render.php` always prints, an element the README fixes, a stale kit) is **fixed in the kit in
+this run** (the files `fse-kit` would touch, texts untouched), `npm run build`, check again, one
+line in the log row: never handed back to the dev, never a `## Domande aperte` item. A
+difference where the kit is right is a mapping error: fix the generated file, `apply` again. A
+difference that stays (it would change the design: order, variant, a missing element on a page
+modified by hand) goes in the report with the line the script printed, and the row of a page
+built in this run goes back to `kit`. Exit 3 → say why in the report; the pages keep their
+state. Without the browser (see Inputs): frontend checks via `curl` only, editor check reported
+as missing; the parity script needs no browser.
 
 ### 2h. Documentation (no confirmation asked)
 - `DESIGN.md → Pagine`: `implementata` only when 2g is green (else stays `kit`, with the reason
@@ -252,7 +259,8 @@ Navigazione` is written by its Step 5.
 
 ## Step 4 — Close the run, report, go on
 
-1. **Log, not chat.** `DESIGN.md → ## Log decisioni`, one row for the run with everything
+1. **Parity, then log, not chat.** `parita.js` (2g) once more on the whole site and `npm run
+   check` exit 0. `DESIGN.md → ## Log decisioni`, one row for the run with everything
    technical: per page id, blocks created (with variants) and additive edits, the `wp-page.php`
    counts (`uguale`/`modificato`/`nuovo`/`spostato`; on a page modified by hand
    `protetto`/`tolto a mano`/`aggiunto a mano`), pages skipped and why, images
@@ -357,7 +365,7 @@ the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are th
 - [ ] Guard passed, state on disk verified, perimeter and opening line reported
 - [ ] Missing blocks scaffolded with every README variant; build exit 0; hook silent; smoke test 0 console errors
 - [ ] Every page of the perimeter through `wp-page.php plan` → `apply` (2d never skipped); deletions left to `confirm`; pages modified by hand left to WordPress; pages skipped named with what unblocks them; page options derived
-- [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; parity: kit errors fixed in the kit in this run, design differences reported
+- [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; `parita.js` silent on the whole site (kit errors fixed in the kit in this run, differences that stay reported)
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
 - [ ] Log row written; commit of the verified run (fse-foundations §10: main branch, files added by name; the push is the dev's); handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, nessun prompt da incollare); tab closed; next `da progettare` kit started in the same conversation (or none left)

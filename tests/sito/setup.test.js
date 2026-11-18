@@ -19,6 +19,7 @@ const { valore, imposta, argomenti } = require(path.join(RADICE, 'shared', 'scri
 const SETUP = assoluto('skills/fse-theme-setup/scripts/setup.js');
 const MAMP = assoluto('skills/fse-theme-setup/scripts/mamp.js');
 const SESSIONE = path.join(RADICE, 'shared', 'scripts', 'sessione.js');
+const PARITA = path.join(RADICE, 'shared', 'scripts', 'parita.js');
 const SYNC = assoluto('shared/scripts/sync-theme-json-tokens.js');
 const NAV = assoluto('skills/fse-menu-build/scripts/wp-navigation.php');
 const PROTETTI = ['carlogatto/wdm-theme', 'wdm-agent', 'wdm-starter'];
@@ -420,6 +421,23 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       assert.match(chiudi.out, /sessioni attive: 0/);
       // La cartella degli script del browser è fuori da git, come dichiara il .gitignore del progetto.
       fs.rmSync(path.join(cfg.site, '.playwright-mcp'), { recursive: true, force: true });
+    });
+
+    it('parità: header e footer del progetto nuovo hanno la stessa struttura nel kit e in WordPress', () => {
+      // Step 5a della skill: le pagine dimostrative del tema base non sono pagine del progetto.
+      const design = path.join(cfg.site, 'DESIGN.md');
+      fs.writeFileSync(design, fs.readFileSync(design, 'utf8').replaceAll('| implementata |', '| da progettare |'));
+      const r = lancia(process.execPath, [PARITA, cfg.site]);
+      assert.equal(r.status, 0, r.out);
+      assert.equal(r.out.trim(), '');
+      // Non è un silenzio a vuoto: senza il footer nel kit compilato la differenza si vede.
+      const copia = path.join(tmp, 'html-senza-footer');
+      fs.cpSync(path.join(tema, 'html'), copia, { recursive: true });
+      const blocchi = path.join(copia, `${VALORI.prefix}-blocks.html`);
+      fs.writeFileSync(blocchi, fs.readFileSync(blocchi, 'utf8').replace(new RegExp(`class="${VALORI.prefix}-footer__inner`), `class="${VALORI.prefix}-footer__dentro`));
+      const diverso = lancia(process.execPath, [PARITA, cfg.site, '--html', copia]);
+      assert.equal(diverso.status, 1, diverso.out);
+      assert.match(diverso.out, /footer \(telaio\)/);
     });
 
     it('a setup finito nel progetto non resta nessun riferimento a wdm, nemmeno nei file compilati', () => {
