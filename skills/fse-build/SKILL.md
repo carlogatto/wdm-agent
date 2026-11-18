@@ -44,7 +44,7 @@ after the dev's ok there, and this run builds only rows that passed them.
 | Input | Source |
 |---|---|
 | Perimeter | the `## Telaio` rows at `kit` (an `implementato` telaio is aligned by definition: `fse-kit` puts the row back to `kit` when it revises the telaio after a build; a kit-only row with no part or template is named in the report and left as is) and every row of `## Pagine` whose state is **not** `da progettare`: `kit` and `implementata` go through the diff (an aligned page answers "0 differenze"; a kit revised after the gate does not demote the row: the next run applies the difference), `da eliminare` enters as a deletion (2i). Parents before children. Rows `da progettare` are skipped and named in the report. The perimeter is **always the whole site**: the prompt never narrows it (an aligned page costs one "0 differenze"). "Riapplica la differenza della Home" still runs every page: the request says where the dev expects a change, not where to look |
-| Admin credentials | username = `DESIGN.md → Project Config → {agent-admin-user}`; password in `{site-root}/.env` (`AGENT_ADMIN_PASSWORD=…`, fse-foundations §9/§10: never read or echoed by the agent, substituted by the shell into the Playwright copy). `.env` missing or empty → no question: the run goes on without Playwright (2c smoke test, 2g editor check skipped), no page reaches `implementata` (it stays `kit`, report: "verifica editor mancante") and *Cosa aspetta te* asks the dev to create `.env` |
+| Backend login | no password: a temporary session for `DESIGN.md → Project Config → {agent-admin-user}`, opened with `sessione.js apri` and closed with `sessione.js chiudi` around every Playwright run (fse-foundations §9). `apri` exits 1 (servers stopped, agent user missing) or the session has no `browser_*` tool → no question: the run goes on without the browser (2c smoke test, 2g editor check skipped), no page reaches `implementata` (it stays `kit`, report: "verifica editor mancante") and *Cosa aspetta te* says what `apri` answered |
 | `{wp-cli}` | `DESIGN.md → Project Config → Paths`; put it in a scratchpad script for the session |
 
 ## Step 0 — Guard and preconditions (all blocking)
@@ -139,8 +139,8 @@ use that block are skipped and reported: it is a decision of the dev.
 ### 2c. Build + smoke test
 `npm run build` exit 0; the hook `check-block-contract.js` silent; registry: `{wp-cli} eval
 '…WP_Block_Type_Registry…'` lists every `{prefix}/{slug}` of K. For each block created in this
-run: Playwright smoke test (§9, points 1–5) → zero console errors, saved content as expected,
-frontend renders render.php. A failure here is fixed in this run (it is this run's code).
+run: Playwright smoke test (§9, points 1–5: the model `pw-blocco.js`) → zero console errors,
+saved content as expected, frontend renders render.php. A failure here is fixed in this run (it is this run's code).
 
 ### 2d. Diff kit ↔ WP — `scripts/wp-page.php` (never skipped)
 `plan` is the only check that the page in WordPress is what the kit says: it runs for **every**
@@ -206,7 +206,7 @@ Pagine`, slug = last URL segment, parent = page of the URL prefix. Page options 
 order, modifier classes as derived, first text of each block = kit (normalized: whitespace,
 `wptexturize` quotes/ellipsis/dashes, entities).
 
-### 2g. Page parity + QA (Playwright, §9 "Per page")
+### 2g. Page parity + QA (Playwright, §9 "Per page": the model `pw-pagina.js`)
 Editor: the page opens with 0 invalid / 0 `core/missing` blocks, `isEditedPostDirty() === false`,
 block count = N. Frontend at 1440/768/390: `scrollWidth === innerWidth`, exactly one h1,
 `swiper-initialized` where expected, every in-page anchor target exists. Parity vs
@@ -221,8 +221,8 @@ a stale kit comment, a value the README fixes — is **fixed in the kit in this 
 `fse-kit` would touch, structure and texts untouched), `npm run build`, parity re-checked, one
 line in the log row: never handed back to the dev, never a `## Domande aperte` item. Only a
 difference that changes the design (text, order, variant, missing element) goes in the report
-with block and attribute. Without `.env` (no password): frontend checks via `curl` only, editor
-check reported as missing.
+with block and attribute. Without the browser (see Inputs): frontend checks via `curl` only,
+editor check reported as missing.
 
 ### 2h. Documentation (no confirmation asked)
 - `DESIGN.md → Pagine`: `implementata` only when 2g is green (else stays `kit`, with the reason
@@ -261,7 +261,8 @@ Navigazione` is written by its Step 5.
    `da eliminare` waiting, outside the flow; decisions taken under the charter; checks run and
    the screenshot folder. `⏳ build sito` removed; `## Domande aperte` with one `⏳` line per
    pending `confirm` (what gets deleted or rewritten, and what follows) and one line per gap with
-   its consequence. Close the browser tab. Never the password. Then commit the run
+   its consequence. `sessione.js chiudi` answered `sessioni attive: 0`; close the browser tab.
+   Then commit the run
    (fse-foundations §10): the handover says how many commits wait for the push.
 2. **Handover message** in the shape of fse-foundations §10 "The handover message":
    - *Esito*: `⚠️ chiuso, con attese` when a `confirm` or a gap is open, `✅ chiuso` otherwise;

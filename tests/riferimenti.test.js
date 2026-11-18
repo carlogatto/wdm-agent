@@ -86,7 +86,8 @@ for (const relativo of citati('.js')) {
   test(`${relativo} si avvia`, () => {
     const sintassi = spawnSync(process.execPath, ['--check', assoluto(relativo)], { encoding: 'utf8' });
     assert.equal(sintassi.status, 0, sintassi.stderr);
-    if (relativo.startsWith('hooks/')) return;
+    // Hook e modelli Playwright non sono comandi: hanno le loro prove (hook.test.js, sessione.test.js).
+    if (relativo.startsWith('hooks/') || relativo.startsWith('shared/playwright/')) return;
     // Senza argomenti uno script del plugin spiega come si usa ed esce con 2: non va in errore.
     const lancio = spawnSync(process.execPath, [assoluto(relativo)], { encoding: 'utf8' });
     assert.equal(lancio.status, 2, lancio.stdout + lancio.stderr);

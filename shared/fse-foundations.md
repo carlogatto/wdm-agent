@@ -618,25 +618,46 @@ self-documenting, no opaque ACF keys); the editor JS API is used for the smoke t
 
 ## 9. Playwright checklist (agent user)
 
-Scripts live in `{site-root}/.playwright-mcp/` (gitignored): `browser_run_code_unsafe` with
-`filename` accepts only files there; screenshots in `.playwright-mcp/shots/`. Template per block
-`pw-{slug}.js` (copy an existing one), `pw-catalog.js` (catalogue page at 3 widths),
-`pw-telaio.js`, `pw-site-editor.js`. Login with `{agent-admin-user}` (username from DESIGN.md,
-password from `{site-root}/.env`, lines `AGENT_ADMIN_USER=…` / `AGENT_ADMIN_PASSWORD=…` — see §10
-"Credentials"): scripts
-carry the placeholder `'{password}'`; to run one, let the **shell** substitute it into a temporary
-copy, run that copy by `filename`, delete it right after — a `pw-*.js` never holds the literal and
-the value never appears in a tool output:
+**The agent enters the backend without a password**: a temporary WordPress session for
+`{agent-admin-user}`, created through `{wp-cli}` and always revoked. The agent user has no
+password anybody knows: none in a file, none in the prompt, none to change.
+
 ```bash
-[ -s "{site-root}/.env" ] || echo ".env assente o vuoto"   # the only check: never cat/Read/grep the file
-PW="$(sed -n 's/^AGENT_ADMIN_PASSWORD=//p' {site-root}/.env)" perl -pe 's/\{password\}/$ENV{PW}/g' {site-root}/.playwright-mcp/pw-{slug}.js > {site-root}/.playwright-mcp/_run.js && echo ok
-# → browser_run_code_unsafe filename=.playwright-mcp/_run.js (never the code inline) → rm .playwright-mcp/_run.js
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" apri "{site-root}" "${CLAUDE_PLUGIN_ROOT}/shared/playwright/pw-pagina.js" id=<ID>
+# → browser_run_code_unsafe filename=.playwright-mcp/_run.js (never the code inline)
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" chiudi "{site-root}"
 ```
-`.env` missing or empty → the skill runs "without password" (checks via `curl` only, editor
-checks reported as missing) and the handover asks the dev to create it. The kit on browser-sync
-(`https://localhost:8848`, self-signed certificate) needs a context with `ignoreHTTPSErrors: true`
-(`page.context().browser().newContext({ ignoreHTTPSErrors: true })`; the sandbox has no `require`). If the browser is "already in use":
-`pkill -f mcp-chrome-`.
+- `apri` closes any session left open, opens one that lasts 15 minutes and writes
+  `{site-root}/.playwright-mcp/_run.js`: the model with the session cookies in place of
+  `/*COOKIES*/` and the values in place of the `{{name}}` placeholders (`{{local-url}}`,
+  `{{prefix}}` and `{{shots}}` always; the others as `name=value` arguments). Exit 1 says what to
+  do, in Italian (servers of MAMP PRO stopped; the agent user missing in WordPress): pass it on
+  as it is.
+- `chiudi` runs after **every** execution, **also a failed one**: it revokes every session of
+  the agent user, releases the edit locks its browser left on the pages (Playwright closes a tab
+  without telling the editor) and deletes `_run.js`. It answers `sessioni attive: 0`. The agent
+  user belongs to the agent: nobody else logs in with it.
+- The Playwright tool echoes the code it runs, cookies included, into the transcript: they are
+  the credentials of a session that lives minutes, which is why `chiudi` is never optional. Three
+  layers make sure nothing stays open: `chiudi`; the plugin hook `chiudi-sessione.js` (Stop and
+  SessionEnd, §12), which closes whatever a turn left open; the 15-minute expiry.
+- Models live in the plugin, `shared/playwright/`: `pw-pagina.js` ("Per page" below: the page
+  opens in the editor with no invalid block, frontend at three widths; `id=`) and `pw-blocco.js`
+  ("Per block", points 1–5; `blocco={prefix}/{slug}` and `attributi='{…}'`, then delete the test
+  page it returns). A check they do not cover: copy the model to
+  `{site-root}/.playwright-mcp/pw-{name}.js` and adapt it (the folder is gitignored;
+  `browser_run_code_unsafe` with `filename` accepts only files there; screenshots in
+  `.playwright-mcp/shots/`). Rules of a model: one `async (page) => { … }`; `/*COOKIES*/` as the
+  argument of `addCookies`; placeholders only inside single-quoted strings; no `require` (the
+  sandbox has none); leave the editor by navigating away, never a login form.
+- No `browser_*` tool in the session (Playwright MCP not installed) → the skill goes on without
+  the browser: frontend checks via `curl`, editor checks reported as missing, and the handover
+  says how to install it (plugin README, "Prerequisiti").
+
+The kit on browser-sync (`https://localhost:8848`, self-signed certificate) needs no login but a
+context with `ignoreHTTPSErrors: true`
+(`page.context().browser().newContext({ ignoreHTTPSErrors: true })`). If the browser is "already
+in use": `pkill -f mcp-chrome-`.
 
 Per block (editor → frontend):
 1. `post-new.php?post_type=page`, wait for `wp.blocks.getBlockType('{prefix}/{slug}')` and the
@@ -655,8 +676,8 @@ Per block (editor → frontend):
 7. Measurements after scroll: `window.scrollTo({ top, behavior: 'instant' })` (the reset has
    `scroll-behavior: smooth`) and wait for the CSS transitions (`.2s`) before reading
    positions/colours; visitor view: `page.context().clearCookies()`.
-8. Clean up: delete test pages (`wp post delete --force`), close the tab (post lock),
-   `debug.log` empty.
+8. Clean up: `sessione.js chiudi` (session and post locks), delete test pages (`wp post delete
+   --force`), close the tab, `debug.log` empty.
 
 Per page: created via WP-CLI → opens in the editor with 0 invalid / 0 `core/missing` blocks,
 not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h1.
@@ -670,19 +691,17 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   (`⏳ build sito: pagina {Titolo} {M}/{N} (dal YYYY-MM-DD)`); removed when the gate closes or
   the run ends.
   Statuses alone cannot express "waiting".
-- Credentials: username from `DESIGN.md → {agent-admin-user}`; the same username and its password
-  in `{site-root}/.env`, two lines `AGENT_ADMIN_USER=…` and `AGENT_ADMIN_PASSWORD=…` (the user line
-  must equal `{agent-admin-user}`), created by `fse-theme-setup` (Step 2c)
-  and kept out of git by the site-root `.gitignore` whitelist (`/*` + `!…` lines: `.env` is
-  never whitelisted; `.env.example` may be). The agent **never reads the file** (no `cat`, `Read`,
-  `grep` with output, no `echo` of the value): only the code it runs reads it (§9). Never asked in
-  the prompt, never written anywhere else, never echoed. The dev who changes the password updates
-  the file; an existing project without `.env` creates it by hand with that one line.
+- Credentials: **the agent has none**. Its user is `DESIGN.md → {agent-admin-user}` (an
+  administrator created by `fse-theme-setup`, with a random password nobody ever sees) and it
+  enters with a temporary session, always revoked (§9). Never ask for a password, never set one,
+  never write one or a cookie in a file of the project, in `DESIGN.md` or in a message. A project
+  born before this rule may still have a `{site-root}/.env`: nothing reads it any more.
 - Never take over a post locked by another user: `wp-page.php` and `wp-navigation.php` refuse
   to write on a page or a menu a user has open in the editor (exit 4). Close the tab at the end.
 - **What the client changed in WordPress is the client's.** The kit's texts, images and links
   are placeholders: they fill a page at its first build. From the moment a page is edited by
-  hand in WordPress, `wp-page.php` leaves its existing blocks as they are and only adds the
+  hand in WordPress (`wp-page.php` knows it from the fingerprint of what it last wrote, post
+  meta `_fse_build`), the script leaves its existing blocks as they are and only adds the
   blocks born in the kit afterwards (fse-build 2d); the kit wins again only with `forza`, on the
   dev's explicit request. A difference of content between kit and WordPress is not a
   difference: never a question, never a correction.
@@ -765,7 +784,7 @@ says it. Internal mechanics (scripts, diff counters, intermediate bugs fixed, fi
 there) go to `DESIGN.md → ## Log decisioni`, which is where the dev looks for detail; the message
 cites a detail only when it changes a decision of theirs. A **failed** check or a deviation from
 the protocol is said in one line, with its effect on the dev ("regola saltata, nessun effetto:
-lo stato finale è lo stesso"). Never the password, never a wall of counts, no headings for empty
+lo stato finale è lo stesso"). Never a credential or a cookie, never a wall of counts, no headings for empty
 sections, bullets over tables when the rows are few. The dev who wants more asks: the log row
 and the files hold it.
 
@@ -883,12 +902,17 @@ Every demotion/flag is reported in the opening line of the run. `## Design Token
 the sync script; `## Project Config` by `fse-theme-setup` (created once, then only verified);
 `## Brief` by `fse-brief`.
 
-## 12. Hooks (plugin `wdm-agent`, `hooks/hooks.json`, PostToolUse on Write|Edit)
+## 12. Hooks (plugin `wdm-agent`, `hooks/hooks.json`)
 
-Both hooks are Node scripts, run without a shell (`"command": "node"` with the script path in
-`args`), and judge only files inside `{site-root}/wp-content/themes/{theme}/` of an FSE project
-(`theme_family: fse`).
+The hooks are Node scripts, run without a shell (`"command": "node"` with the script path in
+`args`). The two on PostToolUse (Write|Edit) judge only files inside
+`{site-root}/wp-content/themes/{theme}/` of an FSE project (`theme_family: fse`); the third
+runs when a turn or a session ends.
 
+- `chiudi-sessione.js` — on Stop and SessionEnd: if the project has a session of the agent user
+  still open (`{site-root}/.playwright-mcp/_sessione.json`, written by `sessione.js apri`), it
+  revokes it (§9). Without that file it exits at once. It never blocks the end of a turn: a
+  session it cannot revoke (servers stopped) expires by itself.
 - `check-block-contract.js` — on `blocks/{folder}/block.json` of the theme (without `acf` key):
   `name` carries the project `{prefix}` and matches the folder, `render` present and its file
   exists, every `file:` has its source (`build/index.js` ← `src/index.js`,

@@ -7,13 +7,45 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/check-block-contract.js"],
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/check-block-contract.js"
+            ],
             "timeout": 10
           },
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/check-design-tokens.js"],
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/check-design-tokens.js"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/chiudi-sessione.js"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PLUGIN_ROOT}/hooks/chiudi-sessione.js"
+            ],
             "timeout": 30
           }
         ]

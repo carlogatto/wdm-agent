@@ -18,6 +18,8 @@ const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const { comando } = require('../../shared/scripts/lib/design-md.js');
+
 const CHIAVI = ['site', 'url', 'db', 'php', 'socket', 'phar', 'base'];
 const TEMA_BASE = path.join('wp-content', 'themes', 'wdm-theme');
 const WP_VERSION = '7.1.3';
@@ -113,6 +115,15 @@ function databaseDiProva(nome) {
     tabelle: () => Number(db(cfg, '$s = $m->prepare("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = ?"); $s->bind_param("s", $db); $s->execute(); echo $s->get_result()->fetch_row()[0];', nome)),
     creaTabella: () => db(cfg, '$m->select_db($db); $m->query("CREATE TABLE dati_di_un_altro_progetto (id INT)");', nome),
   };
+}
+
+// Il DESIGN.md minimo di un progetto FSE che vive nel sito di prova: Project Config con la riga
+// {wp-cli} di questa macchina. `righe` sostituisce o aggiunge valori di Identity.
+function designMd(cfg, righe = {}) {
+  const identita = { theme_family: 'fse', '{prefix}': 'wdm', '{theme-folder}': 'wdm-theme', '{local-url}': `${cfg.url.replace(/\/+$/, '')}/`, '{agent-admin-user}': ADMIN, ...righe };
+  const riga = ([nome, valore]) => `| \`${nome}\` | ${valore} |`;
+  return ['# Design: sito di prova', '', '## Project Config', '', '### Identity', '| Variable | Value |', '|---|---|', ...Object.entries(identita).map(riga), '',
+    '### Paths', '| Variable | Value |', '|---|---|', riga(['{site-root}', cfg.site]), riga(['{wp-cli}', comando([cfg.php, ...argomentiWp(cfg)])]), ''].join('\n');
 }
 
 function tabelle(cfg) {
@@ -220,7 +231,7 @@ function stato() {
   return `cartella: ${fs.readdirSync(cfg.site).filter((voce) => voce !== SEGNO).length} elementi · database: ${tabelle(cfg)} tabelle`;
 }
 
-module.exports = { SEGNO, TEMA_BASE, databaseDiProva, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato, copiaBase, collegaModuli };
+module.exports = { SEGNO, TEMA_BASE, ADMIN, designMd, databaseDiProva, leggiConfig, controlla, nonDisponibile, wp, prepara, reset, stato, copiaBase, collegaModuli };
 
 if (require.main === module) {
   const [comando, ...resto] = process.argv.slice(2);

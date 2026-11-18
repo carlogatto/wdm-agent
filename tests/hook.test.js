@@ -36,6 +36,18 @@ describe('hooks.json', () => {
     ]);
   });
 
+  // La sessione dell'utente agente si chiude a fine turno e a fine sessione, comunque sia andato
+  // il lavoro (le prove dell'hook stanno in sessione.test.js e in sito/sessione.test.js).
+  it('registra la chiusura della sessione su Stop e SessionEnd, senza shell', () => {
+    const hooks = JSON.parse(fs.readFileSync(path.join(RADICE, 'hooks', 'hooks.json'), 'utf8')).hooks;
+    for (const evento of ['Stop', 'SessionEnd']) {
+      assert.deepEqual(hooks[evento].flatMap((g) => g.hooks.map((h) => [h.type, h.command, h.args])), [
+        ['command', 'node', ['${CLAUDE_PLUGIN_ROOT}/hooks/chiudi-sessione.js']],
+      ], evento);
+    }
+    assert.deepEqual(Object.keys(hooks).sort(), ['PostToolUse', 'SessionEnd', 'Stop']);
+  });
+
   it('nella cartella degli hook non restano script di shell', () => {
     const altri = fs.readdirSync(path.join(RADICE, 'hooks'), { recursive: true }).filter((f) => path.extname(f) !== '' && !/\.(js|json)$/.test(f));
     assert.deepEqual(altri, []);

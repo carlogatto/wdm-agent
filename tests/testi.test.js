@@ -51,3 +51,11 @@ test('«conversazione nuova» solo per l\'aggiornamento del plugin', () => {
   const nuova = /new\s+conversation|conversazione\s+nuova|nuova\s+conversazione/gi;
   assert.deepEqual(residui(TESTI, nuova, /plugin\s+update|aggiornamento\s+del\s+plugin/i), []);
 });
+
+// Il login dell'agente è una sessione temporanea (D2): nessuna password in un file, nessun
+// comando che la legga. Un progetto di prima può avere ancora un .env: lo si può dire, non usare.
+test('nessun residuo della password dell\'utente agente', () => {
+  assert.deepEqual(residui(TESTI, /AGENT_ADMIN_(USER|PASSWORD)|\{password\}|openssl|\bperl\b|\bsed -n\b|user_pass/g), []);
+  assert.deepEqual(residui(TESTI, /\.env\b/g, /nothing reads it|nessuno lo legge|No `\.env`|Niente `\.env`/i), []);
+});
+

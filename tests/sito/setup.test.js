@@ -18,6 +18,7 @@ const { valore, imposta, argomenti } = require(path.join(RADICE, 'shared', 'scri
 
 const SETUP = assoluto('skills/fse-theme-setup/scripts/setup.js');
 const MAMP = assoluto('skills/fse-theme-setup/scripts/mamp.js');
+const SESSIONE = path.join(RADICE, 'shared', 'scripts', 'sessione.js');
 const SYNC = assoluto('shared/scripts/sync-theme-json-tokens.js');
 const NAV = assoluto('skills/fse-menu-build/scripts/wp-navigation.php');
 const PROTETTI = ['carlogatto/wdm-theme', 'wdm-agent', 'wdm-starter'];
@@ -311,9 +312,15 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       const config = lancia(eseguibile, [...resto, 'config', 'create', `--dbname=${cfg.db}`, '--dbuser=root', '--dbpass=root', `--dbhost=${dbHost}`,
         '--dbcharset=utf8mb4', `--dbprefix=${VALORI.prefix}_`, '--extra-php', '--quiet'], { input: php });
       assert.equal(config.status, 0, config.out);
-      const installa = wp('core', 'install', `--url=${url}`, `--title=${VALORI.title}`, '--admin_user=testadmin',
-        `--admin_password=${crypto.randomBytes(24).toString('base64url')}`, '--admin_email=admin@example.com', '--skip-email', '--quiet');
+      // Come nella skill (Step 2c): nessuna password scelta né salvata. Quella del dev la genera
+      // WP-CLI e la stampa una volta; l'utente agente ne riceve una che nessuno vede.
+      const installa = wp('core', 'install', `--url=${url}`, `--title=${VALORI.title}`, '--admin_user=testadmin', '--admin_email=admin@example.com', '--skip-email');
       assert.equal(installa.status, 0, installa.out);
+      assert.match(installa.stdout, /^Admin password: \S+$/m);
+      const agente = wp('user', 'create', `${VALORI.prefix}adminclaude`, `${VALORI.prefix}adminclaude@${VALORI.slug}.local`, '--role=administrator', '--porcelain');
+      assert.equal(agente.status, 0, agente.out);
+      assert.match(agente.out.trim(), /^[0-9]+$/, 'la creazione dell\'utente agente ha stampato altro oltre all\'ID');
+      assert.ok(!fs.existsSync(path.join(cfg.site, '.env')), 'il setup non crea più .env');
       // Come nella skill: WP-CLI può aggiungere il percorso della cartella all'indirizzo.
       for (const opzione of ['siteurl', 'home']) assert.equal(wp('option', 'update', opzione, url.replace(/\/$/, '')).status, 0);
       assert.equal(wp('core', 'version').stdout.trim(), '7.1.3');
@@ -401,6 +408,18 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       assert.match(home.body, /wp-block-navigation/);
       const log = path.join(cfg.site, 'wp-content', 'debug.log');
       assert.equal(fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '', '');
+    });
+
+    it('login dell\'agente senza password: sessione.js entra con l\'utente di DESIGN.md e non lascia sessioni', () => {
+      const sessione = (...args) => lancia(process.execPath, [SESSIONE, ...args]);
+      const apri = sessione('apri', cfg.site, path.join(RADICE, 'shared', 'playwright', 'pw-pagina.js'), 'id=1');
+      assert.equal(apri.status, 0, apri.out);
+      assert.ok(fs.readFileSync(path.join(cfg.site, '.playwright-mcp', '_run.js'), 'utf8').includes(`"value":"${VALORI.prefix}adminclaude|`));
+      const chiudi = sessione('chiudi', cfg.site);
+      assert.equal(chiudi.status, 0, chiudi.out);
+      assert.match(chiudi.out, /sessioni attive: 0/);
+      // La cartella degli script del browser è fuori da git, come dichiara il .gitignore del progetto.
+      fs.rmSync(path.join(cfg.site, '.playwright-mcp'), { recursive: true, force: true });
     });
 
     it('a setup finito nel progetto non resta nessun riferimento a wdm, nemmeno nei file compilati', () => {

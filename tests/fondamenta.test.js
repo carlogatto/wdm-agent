@@ -12,8 +12,8 @@ const TERMINI = [
   '_motion.scss', '{prefix}-swiper', '--wp--custom--shadow--', 'keywords', 'in_array(',
   'aria-expanded', 'reverse', 'Six moments, three gates', 'The decision charter',
   '[da confermare]', 'da eliminare', '## Brief', 'kit {item} in revisione', 'build sito: pagina',
-  'The handover message', 'Prossimo passo', 'AGENT_ADMIN_USER', 'AGENT_ADMIN_PASSWORD',
-  '{site-root}/.env',
+  'The handover message', 'Prossimo passo', 'sessione.js', 'chiudi-sessione.js', 'pw-pagina.js',
+  'without a password', '_fse_build',
 ];
 
 for (const termine of TERMINI) {

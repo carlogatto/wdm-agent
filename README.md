@@ -25,9 +25,10 @@ si invocano per nome: `/wdm-agent:fse-kit`.
 
 - `shared/fse-foundations.md`: le convenzioni, citate per § da ogni skill e dal `CLAUDE.md` dei progetti.
 - `shared/scripts/sync-theme-json-tokens.js`: genera la sezione Design Tokens di `DESIGN.md` e `assets/css/wp-global-styles.css` da `theme.json`.
-- `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff e cancellano solo dopo una conferma in un turno successivo.
+- `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff, cancellano solo dopo una conferma in un turno successivo, non scrivono su una pagina aperta nell'editor e non toccano i contenuti che il cliente ha modificato a mano in WordPress.
 - `skills/fse-theme-setup/scripts/`: `mamp.js` (trova MAMP PRO, scarica WP-CLI, sceglie il PHP, crea il database del progetto e scrive `{wp-cli}` in `DESIGN.md`) e `setup.js` (rinomina il tema base nel tema del progetto; si può rilanciare dopo un'interruzione).
-- `hooks/`: due script Node. `check-block-contract.js` (a ogni scrittura di un `block.json` del tema: nome, prefisso, cartella, `render`, sorgenti, README, versione) e `check-design-tokens.js` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma al dev prima di rigenerare).
+- `shared/scripts/sessione.js` e `shared/playwright/`: il login dell'agente nel backend senza password (una sessione temporanea, sempre revocata) e i modelli degli script che esegue nel browser.
+- `hooks/`: tre script Node. `check-block-contract.js` (a ogni scrittura di un `block.json` del tema: nome, prefisso, cartella, `render`, sorgenti, README, versione), `check-design-tokens.js` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma al dev prima di rigenerare) e `chiudi-sessione.js` (a fine turno: chiude la sessione dell'utente agente se è rimasta aperta).
 
 ## Il flusso
 
@@ -67,11 +68,9 @@ esegue solo dopo l'ok.
   inviti o credenziali.
 - MAMP PRO non serve per installare il plugin: serve nei progetti, e va installato a parte. WP-CLI non va installato: lo scarica `fse-theme-setup` nel progetto.
 
-Nel progetto la password dell'utente agente (`{agent-admin-user}` di `DESIGN.md`) sta in
-`{site-root}/.env`, due righe `AGENT_ADMIN_USER=…` e `AGENT_ADMIN_PASSWORD=…`: le scrive `fse-theme-setup` (Step 2c), il
-`.gitignore` della site root la tiene fuori dal repo, le skill la leggono solo attraverso la shell
-per il login Playwright e non la stampano mai (fondamenta §9/§10). In un progetto nato prima di
-questa regola il dev crea il file a mano con quelle due righe.
+Nel progetto l'agente entra nel backend di WordPress **senza password**: per il suo utente
+(`{agent-admin-user}` di `DESIGN.md`) crea una sessione temporanea di quindici minuti e la revoca
+a fine lavoro. Non c'è nessuna password da scegliere, salvare o cambiare.
 
 ## Installazione
 
