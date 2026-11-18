@@ -103,7 +103,7 @@ function controllaRinomina(sitoRoot, url, php) {
   const delSito = ['README.md', '.gitignore'].map((f) => path.join(sitoRoot, f));
   assert.deepEqual(residui([...tuttiIFile(tema), ...delSito], sitoRoot), []);
   assert.ok(leggi('README.md').includes('carlogatto/wdm-agent'), 'il nome del plugin è stato rinominato nel README del tema');
-  assert.ok(fs.readFileSync(delSito[0], 'utf8').includes('claude plugin install wdm-agent@wdm-agent'));
+  assert.ok(fs.readFileSync(delSito[0], 'utf8').includes('github.com/carlogatto/wdm-agent#prerequisiti'), 'il nome del plugin è stato rinominato nel README del sito');
   assert.ok(fs.readFileSync(delSito[0], 'utf8').includes('github.com/carlogatto/wdm-theme'));
   assert.ok(fs.readFileSync(delSito[1], 'utf8').includes(`!wp-content/themes/${VALORI.slug}/`));
 

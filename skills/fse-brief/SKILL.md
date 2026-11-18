@@ -43,6 +43,12 @@ tone and tokens are **proposed** (decide and log); facts about the client are ne
    > l'elenco delle pagine, i testi o gli appunti per ogni pagina, le immagini da usare, i
    > riferimenti visivi (siti o schermate che ti piacciono), i plugin o le integrazioni richieste
    > (il form è Formidable), i contatti e i dati societari. Poi scrivi "leggi il brief".
+   > Se vuoi solo provare il flusso, scrivi "usa il brief di esempio": metto io in
+   > `docs/brief/` il brief di uno studio inventato e parto da lì.
+
+   "usa il brief di esempio" (here or as the opening request, with `docs/brief/` empty): copy
+   `esempio/brief.md` of this skill to `{site-root}/docs/brief/brief.md` and go on with Step 1.
+   Never over a `docs/brief/` that already has files: the project's brief wins, say so.
 5. Opening line of the report: "brief: {N} file in `docs/brief/` ({tipi}); DESIGN.md {con/senza}
    `## Brief`; pagine in `## Pagine`: {elenco}".
 
