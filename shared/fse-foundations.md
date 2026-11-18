@@ -106,13 +106,15 @@ start (§11).
   src/
     scss/   main.scss, _reset, _type, _telaio, _wp-blocks, _buttons, _forms, fonts.scss, swiper.scss,
             _breakpoints.scss and _section.scss (the two SCSS imports shared by blocks), _focus.scss, _motion.scss
-            (focus and reduced-motion rules, global), editor/_*.scss (shared editor components)
-    js/     main.js + _*.js (theme JS, concat), swiper.js (ESM entry of the shared `{prefix}-swiper` module), page-options.js (editor panel, §7), editor/ (shared edit.js components: link-button, post-picker, image-control)
+            (focus and reduced-motion rules, global), _svg.scss (inline SVGs take the text colour),
+            editor/_*.scss (shared editor components)
+    js/     main.js + _*.js (theme JS, concat), swiper.js (ESM entry of the shared `{prefix}-swiper` module), page-options.js (editor panel, §7), editor/ (shared edit.js components: link-button, post-picker, image-control, svg-control)
     kit/    {prefix}-home.kit, {prefix}-{page}.kit, {prefix}-blocks.kit (catalogue), main/header|footer, svg-vault
   html/      compiled kit (committed) — view via browser-sync, never file:// (§10)
   assets/    css/main.css fonts.css swiper.css kit.css (kit only, never enqueued by WP) wp-global-styles.css · js/main.js page-options.js · fonts/ · img/placeholder-*.jpg
   library/   custom.php (theme support, enqueue, shared style handles, pattern category)  admin.php  thumbnails.php
-             page-options.php (page options meta + render filters, §7)
+             page-options.php (page options meta + render filters, §7)  blocks-helpers.php (render helpers, §3)
+             svg-sanitizer.php (allow-list SVG cleaner)  svg.php (SVG upload: who may, cleaned before saving)
   build.js  package.json  (package.json WITHOUT "type": "module" — §6)
 ```
 
@@ -226,7 +228,17 @@ handled there); buttons via `{prefix}_render_button( $text, $url, [ 'new_tab' =>
 (the first hero rendered in the request takes the `h1` when the page title is off, every other
 title is `h2`: a block whose title can open the page calls it once); decorative images (the hero
 background) via `{prefix}_render_image( …, [ 'decorative' => true ] )` → `alt=""` +
-`role="presentation"`, the meaning stays in the title; all three in `library/blocks-helpers.php`;
+`role="presentation"`, the meaning stays in the title; an **SVG chosen from the media library**
+via `{prefix}_render_svg( $icon_id, [ 'class' => …, 'original_colors' => …, 'label' => … ] )` and
+never in any other way: an inline SVG can run code for every visitor, so the helper re-cleans the
+file at every print (allow-list cleaner, `library/svg-sanitizer.php`), checks that the attachment
+is an SVG inside `uploads`, drops `width`/`height`, gives each print its own ids, is decorative
+unless it gets a `label`, and falls back to an `<img>` over 64 KB; `''` when the attachment cannot
+be printed. A `render.php` **never reads a file itself** (`file_get_contents`, `readfile`,
+`get_attached_file`…) and never names an `.svg` file: `tools/check-blocks.js` fails on it. An icon
+of the theme set (a fixed list of theme files) is printed by `{prefix}_render_icon( $slug, $class )`;
+an `<svg>` written by hand in the markup is theme code and stays legal. All in
+`library/blocks-helpers.php`;
 **`is_post_type_viewable()`** before any query or lookup on a post type coming from an attribute,
 `post_status => publish` explicit; a parent renders its children itself — `render_block()` on the
 parsed block array (cards-carousel → card), or `new WP_Block( $parsed, $context )` when each child
@@ -267,8 +279,12 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
   imageAlt, onChange` — MediaPlaceholder when empty, MediaReplaceFlow + remove when set; the only
   image UI of every block), `PostPicker` (`postType, postId,
   onChange` — ComboboxControl + `useEntityRecords`, debounced search), `PostTypeSelect`
-  (viewable post types). Their editor styles live in `src/scss/editor/_*.scss`, loaded by the
-  block's `editor.scss` with `@use 'editor/link-button'`.
+  (viewable post types), `SvgControl` (`label, value: {id, originalColors}, onChange(next)` — in
+  `InspectorControls`: picks an SVG from the media library, replace, remove, the "Colori
+  originali" toggle) with `SvgPreview` (`id, originalColors, className, fallback` — in the canvas,
+  where render.php prints the icon span; the editor never inlines the file: it shows an `<img>`,
+  or a CSS mask filled with the text colour). Their editor styles live in
+  `src/scss/editor/_*.scss`, loaded by the block's `editor.scss` with `@use 'editor/link-button'`.
 - ServerSideRender previews (content derived from a post / a query): `<div ref={useDisabled()}>`
   around `<ServerSideRender block={metadata.name} attributes={attributes}
   skipBlockSupportAttributes />`, inside `useBlockProps()`; the inline-editable parts of the
@@ -297,14 +313,17 @@ registerBlockType(metadata.name, { edit: Edit, save: () => <InnerBlocks.Content 
 | latest N of a post type | `postType`, `count` | `InspectorControls`, preview `ServerSideRender` | `WP_Query` `post_status publish`, `is_post_type_viewable` |
 | background / text colour, padding | — | `supports.color`, `supports.spacing` (presets only) | `get_block_wrapper_attributes()` |
 | anchor id (`id` on the section in the kit) | `anchor` in the insertion markup (no block.json attribute) | `supports.anchor` | wrapper attributes |
-| raw HTML / embed / SVG | — | `core/html`, `core/embed`; SVG read from a file in render.php | never SVG in attributes (kses for non-admins) |
+| icon: an SVG of the media library, inline and coloured by the text | `iconId` int (0 = none), `iconOriginalColors` bool | `SvgControl` + `SvgPreview` (shared) | `{prefix}_render_svg()`; `''` → fall back to what the block printed before (the set icon), or omit |
+| icon of the theme set | `icon` string with `enum` (the slugs of `assets/img/icons/`) | `SelectControl` + `<Icon>` (`src/js/editor/icons.js`) | `{prefix}_render_icon()` |
+| raw HTML / embed | — | `core/html`, `core/embed` | never SVG markup in attributes (kses for non-admins): an SVG is an attachment id, printed by `{prefix}_render_svg()` |
 
 **Shared attribute vocabulary.** The same idea has the same name in every block, present or
 future, so a student learns one vocabulary: `variant` (layout/style variants, kebab-case values,
 CSS modifier `--{value}`, kit file `-{value}.kit`, README same word), `title`, `text`,
 `headingLevel`, `buttonText`/`buttonUrl`/`buttonNewTab`, `linkText`/`linkUrl` (a text link without
 new tab: card, feature), `imageId`/`imageUrl`/`imageAlt`, `columns`, `source` (data source
-`manual|query`: a mode, not a layout variant), `postType`/`postId` (`postId` > 0 content from the
+`manual|query`: a mode, not a layout variant), `icon` (slug of the theme set) and
+`iconId`/`iconOriginalColors` (an SVG of the media library, which wins over `icon`), `postType`/`postId` (`postId` > 0 content from the
 post, `0` manual mode with the block's own attributes), `count`. Booleans are for on/off options, never for a choice between two layouts. One-time
 exception recorded on 2026-10-26: `image-text` renamed `reverse` → `variant: image-left |
 image-right` while the theme was pre-1.0 and its only contents were local demos; from 1.0 on the

@@ -8,7 +8,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const RADICE = path.join(__dirname, '..');
-const ESCLUSI = ['.git', '.DS_Store', 'node_modules', 'docs', 'README.md', path.join('tests', 'sito.local.json')];
+// .impeccable: la cache che un altro plugin di Claude Code scrive nella cartella in cui lavora.
+const ESCLUSI = ['.git', '.DS_Store', 'node_modules', 'docs', 'README.md', '.impeccable', path.join('tests', 'sito.local.json')];
 
 function file(cartella) {
   return fs.readdirSync(cartella, { withFileTypes: true }).flatMap((e) => {

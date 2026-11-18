@@ -13,7 +13,8 @@ const TERMINI = [
   'aria-expanded', 'reverse', 'Six moments, three gates', 'The decision charter',
   '[da confermare]', 'da eliminare', '## Brief', 'kit {item} in revisione', 'build sito: pagina',
   'The handover message', 'Prossimo passo', 'sessione.js', 'chiudi-sessione.js', 'pw-pagina.js',
-  'without a password', '_fse_build',
+  'without a password', '_fse_build', '{prefix}_render_svg(', 'SvgControl', 'iconId',
+  'never reads a file itself',
 ];
 
 for (const termine of TERMINI) {

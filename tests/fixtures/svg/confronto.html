@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Confronto degli SVG prima e dopo la pulizia</title>
+<link rel="stylesheet" href="/main.css">
+</head>
+<body>
+<div id="palco"></div>
+<script>
+// Pagina della prova tests/sito/svg-campione.test.js. Legge /elenco.json, lavora e manda l'esito
+// a /esito. Non decide nulla: misura. Le soglie stanno nella prova.
+const LATO = 240;
+const colpi = [];
+window.alert = (testo) => colpi.push(String(testo));
+
+const immagine = (src) => new Promise((resolve) => {
+  const img = new Image();
+  img.onload = () => resolve(img);
+  img.onerror = () => resolve(null);
+  img.src = src;
+});
+
+// I pixel dell'immagine, disegnata in un riquadro di proporzioni date.
+function pixel(img, larghezza, altezza) {
+  const tela = document.createElement('canvas');
+  tela.width = larghezza;
+  tela.height = altezza;
+  const ctx = tela.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, larghezza, altezza);
+  return ctx.getImageData(0, 0, larghezza, altezza).data;
+}
+
+// Quanto differiscono due disegni: quota di pixel diversi (oltre 24 su 255 in un canale, dopo
+// aver pesato il colore con l'opacità) e quota di pixel disegnati nel primo.
+function differenza(a, b) {
+  let diversi = 0;
+  let disegnati = 0;
+  for (let i = 0; i < a.length; i += 4) {
+    if (a[i + 3] > 8) disegnati++;
+    let massimo = Math.abs(a[i + 3] - b[i + 3]);
+    for (let c = 0; c < 3; c++) massimo = Math.max(massimo, Math.abs(a[i + c] * a[i + 3] - b[i + c] * b[i + 3]) / 255);
+    if (massimo > 24) diversi++;
+  }
+  return { diversi: diversi / (a.length / 4), disegnati: disegnati / (a.length / 4) };
+}
+
+// Ciò che in un DOM nato da un SVG pulito non deve esistere.
+function difetti(contenitore, markup) {
+  const trovati = [];
+  const elementi = [...contenitore.querySelectorAll('*')];
+  if (contenitore.children.length !== 1 || contenitore.firstElementChild.localName !== 'svg') trovati.push('il contenitore non ha un solo <svg>');
+  if ([...contenitore.childNodes].some((n) => n.nodeType === 3 && n.nodeValue.trim())) trovati.push('testo fuori dall\'<svg>');
+  const aperti = (markup.match(/<[A-Za-z]/g) || []).length;
+  if (elementi.length !== aperti) trovati.push(`il parser HTML ha creato ${elementi.length} elementi da ${aperti} tag`);
+  for (const el of elementi) {
+    if (el.namespaceURI !== 'http://www.w3.org/2000/svg') trovati.push(`elemento fuori dal namespace SVG: ${el.localName}`);
+    if (/^(script|foreignobject|iframe|embed|object|a|style|set|animate.*|discard|feimage|handler|listener|link|meta|base)$/i.test(el.localName)) trovati.push(`elemento attivo: ${el.localName}`);
+    for (const attributo of el.attributes) {
+      const valore = attributo.value;
+      if (/^on/i.test(attributo.name)) trovati.push(`gestore di evento: ${attributo.name}`);
+      if (attributo.localName === 'href' && !/^#/.test(valore) && !/^data:image\/(png|jpeg);base64,/.test(valore)) trovati.push(`href esterno: ${valore.slice(0, 40)}`);
+      if (/url\(\s*(?!#)/i.test(valore) || /javascript:/i.test(valore)) trovati.push(`valore attivo in ${attributo.name}`);
+      if (attributo.name === 'style' && !/^((mix-blend-mode|mask-type|isolation):[a-z-]+;?)+$/.test(valore)) trovati.push('style non ricostruito');
+    }
+  }
+  return trovati;
+}
+
+// Mette il markup nella pagina come farebbe il tema (innerHTML = parser HTML) e prova a far
+// scattare ciò che può scattare.
+async function inPagina(markup) {
+  const palco = document.getElementById('palco');
+  const contenitore = document.createElement('div');
+  palco.replaceChildren(contenitore);
+  const prima = colpi.length;
+  contenitore.innerHTML = markup;
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  for (const el of contenitore.querySelectorAll('*')) {
+    for (const evento of ['click', 'mouseover', 'focusin', 'pointerdown']) el.dispatchEvent(new MouseEvent(evento, { bubbles: true, cancelable: true }));
+  }
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  return { contenitore, colpi: colpi.slice(prima) };
+}
+
+async function confronta(voce) {
+  const esito = { nome: voce.nome };
+  const originale = await immagine(`/originale/${voce.i}.svg`);
+  const pulito = await immagine(`/pulito/${voce.i}.svg`);
+  const markup = await (await fetch(`/inline/${voce.i}`)).text();
+  const { contenitore, colpi: partiti } = await inPagina(markup);
+  esito.dom = difetti(contenitore, markup);
+  esito.colpi = partiti;
+  if (!originale || !pulito) return { ...esito, errore: `immagine non caricata: ${originale ? 'pulito' : 'originale'}` };
+  // Il riquadro ha le proporzioni dell'originale: le tre versioni si disegnano tutte lì.
+  const scala = LATO / Math.max(originale.naturalWidth, originale.naturalHeight, 1);
+  const larghezza = Math.max(1, Math.round(originale.naturalWidth * scala));
+  const altezza = Math.max(1, Math.round(originale.naturalHeight * scala));
+  const a = pixel(originale, larghezza, altezza);
+  esito.pulito = differenza(a, pixel(pulito, larghezza, altezza));
+  // Passato dal parser HTML: l'albero che il browser ha davvero costruito, ridisegnato.
+  const svg = contenitore.firstElementChild;
+  const blob = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(svg)], { type: 'image/svg+xml' }));
+  const inline = await immagine(blob);
+  URL.revokeObjectURL(blob);
+  if (!inline) return { ...esito, errore: 'immagine non caricata: inline' };
+  esito.inline = differenza(a, pixel(inline, larghezza, altezza));
+  return esito;
+}
+
+async function colore(markup) {
+  const palco = document.getElementById('palco');
+  const letti = {};
+  for (const [nome, classe] of [['testo', 'wdm-svg'], ['originali', 'wdm-svg wdm-svg--original']]) {
+    palco.innerHTML = `<div style="color: rgb(200, 0, 0)">${markup.replace('class="wdm-svg"', `class="${classe}"`)}</div>`;
+    const forme = [...palco.querySelectorAll('svg [fill]:not([fill="none"])')];
+    const prima = forme.map((f) => getComputedStyle(f).fill);
+    palco.firstElementChild.style.color = 'rgb(0, 0, 200)';
+    letti[nome] = { attributi: forme.map((f) => f.getAttribute('fill')), prima, dopo: forme.map((f) => getComputedStyle(f).fill), radice: getComputedStyle(palco.querySelector('svg')).fill };
+  }
+  return letti;
+}
+
+(async () => {
+  const esito = { confronti: [], malevoli: [], errori: [] };
+  try {
+    const elenco = await (await fetch('/elenco.json')).json();
+    // Controllo del controllo: un SVG non ripulito deve far scattare qualcosa, altrimenti
+    // «nessuno script è partito» non proverebbe nulla.
+    esito.controllo = (await inPagina(await (await fetch('/grezzo')).text())).colpi;
+    for (const voce of elenco.confronti) esito.confronti.push(await confronta(voce));
+    for (const voce of elenco.malevoli) {
+      const markup = await (await fetch(`/malevolo/${voce.i}`)).text();
+      const { contenitore, colpi: partiti } = await inPagina(markup);
+      esito.malevoli.push({ nome: voce.nome, dom: difetti(contenitore, markup), colpi: partiti });
+    }
+    esito.colore = await colore(await (await fetch('/colore')).text());
+  } catch (errore) {
+    esito.errori.push(String(errore && errore.stack || errore));
+  }
+  await fetch('/esito', { method: 'POST', body: JSON.stringify(esito) });
+})();
+</script>
+</body>
+</html>

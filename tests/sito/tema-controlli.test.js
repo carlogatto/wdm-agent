@@ -113,6 +113,74 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
     });
   });
 
+  // Un SVG caricato si stampa solo con l'helper del tema, che lo ripulisce (D3): un render.php
+  // che legge un file da sé lo stamperebbe com'è.
+  describe('check-blocks: nessun render.php legge un file', () => {
+    const render = 'blocks/wdm-block-feature/render.php';
+    for (const [caso, riga] of [
+      ['file_get_contents', "$icon_html = file_get_contents( get_attached_file( $icon_id ) );"],
+      ['readfile', "readfile( wp_get_upload_dir()['basedir'] . '/icona.svg' );"],
+      ['il nome di un file .svg', "$icon_html = wdm_render_icon_file( 'assets/img/logo.svg' );"],
+    ]) {
+      it(`${caso}: fallisce e dice quale helper usare`, async () => {
+        const r = await con(render, (testo) => testo.replace("$classes = 'wdm-block-feature';", `${riga}\n$classes = 'wdm-block-feature';`), () => nodo('tools/check-blocks.js', ['feature']));
+        assert.equal(r.status, 1, r.out);
+        assert.match(r.out, /feature: render\.php — .*wdm_render_svg/);
+      });
+    }
+
+    it('un <svg> scritto a mano nel markup resta lecito (le frecce di cards-carousel)', async () => {
+      assert.match(fs.readFileSync(file('blocks/wdm-block-cards-carousel/render.php'), 'utf8'), /<svg /);
+      const r = await nodo('tools/check-blocks.js', ['cards-carousel']);
+      assert.equal(r.status, 0, r.out);
+    });
+  });
+
+  // Il pulitore degli SVG contro la serie scritta apposta (D3): il controllo deve accorgersi di
+  // un pulitore più debole, e dire che non ha controllato quando manca il PHP.
+  describe('check-svg', () => {
+    it('copia intatta: passa', async () => {
+      const r = await nodo('tools/check-svg.js');
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /PASS check-svg \(\d+ malevoli, \d+ legittimi, \d+ icone\)/);
+    });
+
+    it('pulitore indebolito (script tra gli ammessi): fallisce e nomina il caso', async () => {
+      const r = await con('library/svg-sanitizer.php', (testo) => {
+        assert.ok(testo.includes('svg g defs symbol use'), 'la lista degli elementi ammessi non è più dove la prova la cerca');
+        return testo.replace('svg g defs symbol use', 'svg g defs symbol use script');
+      }, () => nodo('tools/check-svg.js'));
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /malevoli\/script\.svg: contenuto attivo in uscita: script/);
+    });
+
+    it('un gestore di evento lasciato passare: fallisce', async () => {
+      const r = await con('library/svg-sanitizer.php', (testo) => {
+        const debole = testo.replace('x y x1 y1 x2 y2', 'onload x y x1 y1 x2 y2').replace('function wdm_svg_plain_value( $value ) {', 'function wdm_svg_plain_value( $value ) {\n  return true;');
+        assert.notEqual(debole, testo.replace('x y x1 y1 x2 y2', 'onload x y x1 y1 x2 y2'), 'il controllo dei valori non è più dove la prova lo cerca');
+        return debole;
+      }, () => nodo('tools/check-svg.js'));
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /malevoli\/onload\.svg: contenuto attivo in uscita: .*gestore di evento/);
+    });
+
+    it('un caso tolto dall\'elenco: fallisce, non sparisce in silenzio', async () => {
+      const r = await con('tools/svg/casi.json', (testo) => {
+        const casi = JSON.parse(testo);
+        casi.malevoli.shift();
+        return JSON.stringify(casi);
+      }, () => nodo('tools/check-svg.js'));
+      assert.equal(r.status, 1, r.out);
+      assert.match(r.out, /casi\.json e la cartella non coincidono/);
+    });
+
+    it('senza PHP: salta dichiarandolo', async () => {
+      const r = await nodo('tools/check-svg.js', [], { PHP_BIN: path.join(tmp, 'php-che-non-esiste') });
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.out, /^SKIP check-svg: PHP non trovato/);
+    });
+  });
+
   describe('check-fonts', () => {
     it('copia intatta: passa, con il peso totale', async () => {
       const r = await nodo('tools/check-fonts.js');

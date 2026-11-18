@@ -274,7 +274,7 @@ gruppi esclusi.
 | Gruppo | Richiede |
 |---|---|
 | `tests/claude/` | la CLI `claude` con il plugin installato |
-| `tests/sito/` | il sito di prova e una copia del tema base (wdm-theme) |
+| `tests/sito/` | il sito di prova e una copia del tema base (wdm-theme); per il confronto degli SVG nel browser (`svg-campione.test.js`) anche Google Chrome e i file del campione elencati nel repo del tema, che esistono solo sul computer dove l'elenco è stato raccolto |
 
 Il sito di prova è un WordPress usa e getta, in una cartella e in un database riservati alle
 prove: le prove che scrivono in WordPress scrivono solo lì, lo azzerano prima di cominciare e lo
