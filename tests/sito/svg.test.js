@@ -147,6 +147,35 @@ describe('SVG: caricamento e stampa inline', { skip: sito.nonDisponibile() || fa
       }
     });
 
+    // XML-RPC (le app e i vecchi programmi per scrivere articoli) salva i byte così come arrivano,
+    // senza passare dai filtri del caricamento: lì un SVG non può essere ripulito, quindi non entra.
+    it('XML-RPC (wp.uploadFile): un SVG è rifiutato, con cosa fare, e non arriva su disco', async () => {
+      const r = sito.wp(['user', 'application-password', 'create', sito.ADMIN, 'prova-xmlrpc', '--porcelain']);
+      assert.equal(r.status, 0, r.out);
+      const campo = (nome, valore) => `<member><name>${nome}</name><value>${valore}</value></member>`;
+      const chiamata = (nome, dati) => `<?xml version="1.0"?><methodCall><methodName>wp.uploadFile</methodName><params><param><value><int>1</int></value></param><param><value><string>${sito.ADMIN}</string></value></param><param><value><string>${r.stdout.trim()}</string></value></param><param><value><struct>${campo('name', `<string>${nome}</string>`)}${campo('type', '<string>image/svg+xml</string>')}${campo('bits', `<base64>${dati.toString('base64')}</base64>`)}</struct></value></param></params></methodCall>`;
+      for (const caso of ['script.svg', 'figma.svg']) {
+        const risposta = await richiesta('POST', 'xmlrpc.php', { headers: { 'Content-Type': 'text/xml' }, body: Buffer.from(chiamata(`xmlrpc-${caso}`, serie.find((c) => c.file === caso).dati)) });
+        assert.match(risposta.body, /<fault>/, `${caso}: caricato via XML-RPC`);
+        assert.match(risposta.body, /libreria media/, risposta.body);
+        assert.ok(!fs.existsSync(path.join(cfg.site, 'wp-content', 'uploads', new Date().getFullYear().toString())) || !fs.readdirSync(path.join(cfg.site, 'wp-content', 'uploads'), { recursive: true }).some((f) => String(f).includes(`xmlrpc-${caso}`)), `${caso}: il file è su disco`);
+      }
+      // La stessa strada dall'interno, e un file che non è un SVG deve continuare a passare.
+      assert.match(php('$u = wp_upload_bits( "bits.svg", null, "<svg xmlns=\\"http://www.w3.org/2000/svg\\" onload=\\"alert(1)\\"/>" ); echo $u["error"];'), /libreria media/);
+      assert.equal(php('$u = wp_upload_bits( "bits.txt", null, "testo" ); echo $u["error"] ? "errore" : basename( $u["file"] ); @unlink( $u["file"] );'), 'bits.txt');
+      assert.equal(sito.wp(['user', 'application-password', 'delete', sito.ADMIN, '--all']).status, 0);
+    });
+
+    it('un nome che WordPress salverebbe come .svg è trattato come SVG: a capo o spazi in fondo', () => {
+      for (const [i, nome] of ['coda.svg\n', 'coda.SVG ', 'coda.svg\t\r\n'].entries()) {
+        const file = path.join(tmp, `coda-${i}.tmp`);
+        fs.writeFileSync(file, serie.find((c) => c.file === 'script.svg').dati);
+        const esito = JSON.parse(php(`echo wp_json_encode( wdm_svg_upload_prefilter( array( "name" => ${JSON.stringify(nome)}, "tmp_name" => ${JSON.stringify(file)}, "size" => 1, "error" => 0 ) ) );`));
+        assert.equal(esito.error, 0, JSON.stringify(esito));
+        assert.deepEqual(svg.contenutoAttivo(fs.readFileSync(file, 'utf8')), [], `${JSON.stringify(nome)}: il file non è stato ripulito`);
+      }
+    });
+
     it('SVGZ: rifiutato, con cosa fare', () => {
       const file = path.join(tmp, 'compresso.svgz');
       fs.writeFileSync(file, require('node:zlib').gzipSync(serie.find((c) => c.file === 'figma.svg').dati));
@@ -189,6 +218,9 @@ describe('SVG: caricamento e stampa inline', { skip: sito.nonDisponibile() || fa
     it('un SVG della libreria: span decorativo con l\'SVG dentro, senza misure sulla radice', () => {
       const html = stampa(figma, 'array( "class" => "blocco__icon" )');
       assert.match(html, /^<span class="blocco__icon" aria-hidden="true"><svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" class="wdm-svg" viewBox="0 0 48 48"/);
+      // title e desc del file restano su disco ma non nella stampa: comparirebbero al passaggio del mouse.
+      assert.match(fs.readFileSync(allegati()['cli-sketch.svg'].file, 'utf8'), /<title>/);
+      assert.doesNotMatch(stampa(allegati()['cli-sketch.svg'].id), /<title|<desc/);
       assert.doesNotMatch(html.slice(0, html.indexOf('>', 60)), /\s(width|height)=/);
       assert.match(html, /<\/svg><\/span>$/);
       assert.deepEqual(svg.contenutoAttivo(html.replace(/^<span[^>]*>|<\/span>$/g, '')), []);

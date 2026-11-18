@@ -121,6 +121,12 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
       ['file_get_contents', "$icon_html = file_get_contents( get_attached_file( $icon_id ) );"],
       ['readfile', "readfile( wp_get_upload_dir()['basedir'] . '/icona.svg' );"],
       ['il nome di un file .svg', "$icon_html = wdm_render_icon_file( 'assets/img/logo.svg' );"],
+      ['WP_Filesystem', "$icon_html = $wp_filesystem->get_contents( $percorso );"],
+      ['include', "include wp_get_original_image_path( $icon_id );"],
+      ['una richiesta', "$icon_html = wp_remote_retrieve_body( wp_remote_get( wp_get_attachment_url( $icon_id ) ) );"],
+      ['simplexml_load_file', "$icon_html = simplexml_load_file( $percorso )->asXML();"],
+      ['DOMDocument', "$d = new DOMDocument(); $d->load( $percorso ); $icon_html = $d->saveXML();"],
+      ['una lettura dopo un indirizzo sulla stessa riga', "$u = 'https://example.com'; $icon_html = file_get_contents( $percorso );"],
     ]) {
       it(`${caso}: fallisce e dice quale helper usare`, async () => {
         const r = await con(render, (testo) => testo.replace("$classes = 'wdm-block-feature';", `${riga}\n$classes = 'wdm-block-feature';`), () => nodo('tools/check-blocks.js', ['feature']));
@@ -154,14 +160,16 @@ describe('controlli e build del tema base', { skip: sito.nonDisponibile() || fal
       assert.match(r.out, /malevoli\/script\.svg: contenuto attivo in uscita: script/);
     });
 
+    // Su un tracciato, non sulla radice: lì un attributo in più verrebbe scartato comunque dalla lista della radice.
     it('un gestore di evento lasciato passare: fallisce', async () => {
       const r = await con('library/svg-sanitizer.php', (testo) => {
-        const debole = testo.replace('x y x1 y1 x2 y2', 'onload x y x1 y1 x2 y2').replace('function wdm_svg_plain_value( $value ) {', 'function wdm_svg_plain_value( $value ) {\n  return true;');
-        assert.notEqual(debole, testo.replace('x y x1 y1 x2 y2', 'onload x y x1 y1 x2 y2'), 'il controllo dei valori non è più dove la prova lo cerca');
+        const conAttributo = testo.replace('x y x1 y1 x2 y2', 'onclick x y x1 y1 x2 y2');
+        const debole = conAttributo.replace('function wdm_svg_plain_value( $value ) {', 'function wdm_svg_plain_value( $value ) {\n  return true;');
+        assert.ok(conAttributo !== testo && debole !== conAttributo, 'la lista degli attributi o il controllo dei valori non sono più dove la prova li cerca');
         return debole;
       }, () => nodo('tools/check-svg.js'));
       assert.equal(r.status, 1, r.out);
-      assert.match(r.out, /malevoli\/onload\.svg: contenuto attivo in uscita: .*gestore di evento/);
+      assert.match(r.out, /malevoli\/eventi\.svg: contenuto attivo in uscita: .*gestore di evento/);
     });
 
     it('un caso tolto dall\'elenco: fallisce, non sparisce in silenzio', async () => {

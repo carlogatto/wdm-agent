@@ -9,6 +9,7 @@ const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const http = require('node:http');
+const os = require('node:os');
 const path = require('node:path');
 
 const sito = require('../lib/sito');
@@ -25,7 +26,8 @@ const RIFIUTI = { 'fa-brands-400.svg': 'empty' }; // un font in formato SVG: nes
 const ANIMAZIONE = /<(animate|animateTransform|animateMotion|set)\b[^>]*?(\/>|>[\s\S]*?<\/\1>)/g;
 
 describe('SVG: campione reale e confronto nel browser', { skip: sito.nonDisponibile() || chrome.nonDisponibile() || false }, () => {
-  let svg, campione, casi, tema, server, browser, esito;
+  let svg, campione, casi, tema, tmp, server, browser, esito;
+  const rete = [];
 
   before(async () => {
     const cfg = sito.leggiConfig();
@@ -42,11 +44,26 @@ describe('SVG: campione reale e confronto nel browser', { skip: sito.nonDisponib
 
     const file = campione.map((c) => c.file);
     svg.pulisci(file).forEach((r, i) => { campione[i].pulito = r; });
-    svg.pulisci(file, ['--strip-size', '--class=wdm-svg', '--id-prefix=wdm-svg-1-']).forEach((r, i) => { campione[i].inline = r; });
+    svg.pulisci(file, ['--inline', '--class=wdm-svg', '--id-prefix=wdm-svg-1-']).forEach((r, i) => { campione[i].inline = r; });
+
+    // Il server parte prima: i casi malevoli si provano con i loro indirizzi esterni puntati
+    // qui, così una richiesta che parte si vede (anche scritta con un escape CSS).
+    const stato = {};
+    const promessa = new Promise((resolve) => { stato.arrivato = resolve; });
+    server = http.createServer((req, res) => stato.rispondi ? stato.rispondi(req, res) : res.end());
+    await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const origine = `http://127.0.0.1:${server.address().port}`;
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-svg-campione-'));
 
     const serie = JSON.parse(fs.readFileSync(path.join(tema, 'tools', 'svg', 'casi.json'), 'utf8'));
-    casi = [...serie.malevoli.map((c) => ({ ...c, percorso: path.join(tema, 'tools', 'svg', 'malevoli', c.file) })), ...serie.legittimi.map((c) => ({ ...c, percorso: path.join(tema, 'tools', 'svg', 'legittimi', c.file), legittimo: true }))];
-    svg.pulisci(casi.map((c) => c.percorso), ['--strip-size', '--class=wdm-svg', '--id-prefix=wdm-svg-1-']).forEach((r, i) => { casi[i].inline = r; });
+    casi = [...serie.malevoli.map((c) => ({ ...c, cartella: 'malevoli' })), ...serie.legittimi.map((c) => ({ ...c, cartella: 'legittimi', legittimo: true }))];
+    for (const c of casi) {
+      const originale = fs.readFileSync(path.join(tema, 'tools', 'svg', c.cartella, c.file), 'utf8');
+      c.grezzo = c.legittimo ? originale : originale.replace(/(?:https:)?\/\/colpito\.example/g, `${origine}/colpito`);
+      c.percorso = path.join(tmp, `${c.cartella}-${c.file}`);
+      fs.writeFileSync(c.percorso, c.grezzo);
+    }
+    svg.pulisci(casi.map((c) => c.percorso), ['--inline', '--class=wdm-svg', '--id-prefix=wdm-svg-1-']).forEach((r, i) => { casi[i].inline = r; });
     svg.pulisci(casi.map((c) => c.percorso)).forEach((r, i) => { casi[i].pulito = r; });
 
     // Nel browser: il campione e i casi legittimi si confrontano come immagini, i malevoli si ispezionano.
@@ -55,35 +72,40 @@ describe('SVG: campione reale e confronto nel browser', { skip: sito.nonDisponib
     const affinity = campione.find((c) => c.gruppo === 'affinity-a-caso' && c.inline.ok && /fill="(?!none)/.test(c.inline.svg));
     const pagina = fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'svg', 'confronto.html'));
 
-    esito = await new Promise((resolve, reject) => {
-      const rispondi = (res, tipo, corpo) => { res.writeHead(200, { 'Content-Type': tipo, 'Cache-Control': 'no-store' }); res.end(corpo); };
-      server = http.createServer((req, res) => {
-        const [, cosa, quale] = /^\/([a-z.]+)(?:\/(\d+))?/.exec(req.url) || [];
-        const i = Number(quale);
-        if (req.method === 'POST' && cosa === 'esito') {
-          let corpo = '';
-          req.on('data', (d) => { corpo += d; });
-          req.on('end', () => { res.end('ok'); resolve(JSON.parse(corpo)); });
-        } else if (req.url === '/') rispondi(res, 'text/html; charset=utf-8', pagina);
-        else if (cosa === 'main.css') rispondi(res, 'text/css; charset=utf-8', fs.readFileSync(path.join(tema, 'assets', 'css', 'main.css')));
-        else if (cosa === 'elenco.json') rispondi(res, 'application/json', JSON.stringify({ confronti: confronti.map((c, n) => ({ i: n, nome: c.nome })), malevoli: malevoli.map((c, n) => ({ i: n, nome: c.file })) }));
-        else if (cosa === 'originale') rispondi(res, 'image/svg+xml', confronti[i].caratteristiche && confronti[i].caratteristiche.includes('animazione') ? fs.readFileSync(confronti[i].percorso, 'utf8').replace(ANIMAZIONE, '') : fs.readFileSync(confronti[i].percorso));
-        else if (cosa === 'pulito') rispondi(res, 'image/svg+xml', confronti[i].pulito.svg);
-        else if (cosa === 'inline') rispondi(res, 'text/plain; charset=utf-8', confronti[i].inline.svg);
-        else if (cosa === 'malevolo') rispondi(res, 'text/plain; charset=utf-8', malevoli[i].inline.svg);
-        else if (cosa === 'grezzo') rispondi(res, 'text/plain; charset=utf-8', fs.readFileSync(path.join(tema, 'tools', 'svg', 'malevoli', 'eventi.svg')));
-        else if (cosa === 'colore') rispondi(res, 'text/plain; charset=utf-8', affinity.inline.svg);
-        else { res.writeHead(404); res.end(); }
-      });
-      server.listen(0, '127.0.0.1', () => {
-        browser = chrome.apri(`http://127.0.0.1:${server.address().port}/`);
-        setTimeout(() => reject(new Error('Chrome non ha mandato l\'esito entro tre minuti')), 180000).unref();
-      });
-    });
+    const maschera = casi.find((c) => c.file === 'figma-tratto-interno.svg');
+    const sorgente = (markup) => `<!doctype html><html><head><meta charset="utf-8"><script>window.colpi = []; window.alert = (t) => window.colpi.push(String(t));</script></head><body><div id="contenitore">${markup}</div></body></html>`;
+    const rispondi = (res, tipo, corpo) => { res.writeHead(200, { 'Content-Type': tipo, 'Cache-Control': 'no-store' }); res.end(corpo); };
+    stato.rispondi = (req, res) => {
+      const [, cosa, quale] = /^\/([a-z.-]+)(?:\/(\d+))?/.exec(req.url) || [];
+      const i = Number(quale);
+      if (req.url.startsWith('/colpito')) { rete.push(req.url); res.writeHead(204); res.end(); }
+      else if (req.method === 'POST' && cosa === 'esito') {
+        let corpo = '';
+        req.on('data', (d) => { corpo += d; });
+        req.on('end', () => { res.end('ok'); stato.arrivato(JSON.parse(corpo)); });
+      } else if (req.url === '/') rispondi(res, 'text/html; charset=utf-8', pagina);
+      else if (cosa === 'main.css') rispondi(res, 'text/css; charset=utf-8', fs.readFileSync(path.join(tema, 'assets', 'css', 'main.css')));
+      else if (cosa === 'elenco.json') rispondi(res, 'application/json', JSON.stringify({ confronti: confronti.map((c, n) => ({ i: n, nome: c.nome })), malevoli: malevoli.map((c, n) => ({ i: n, nome: c.file })) }));
+      else if (cosa === 'originale') rispondi(res, 'image/svg+xml', confronti[i].caratteristiche && confronti[i].caratteristiche.includes('animazione') ? fs.readFileSync(confronti[i].percorso, 'utf8').replace(ANIMAZIONE, '') : fs.readFileSync(confronti[i].percorso));
+      else if (cosa === 'pulito') rispondi(res, 'image/svg+xml', confronti[i].pulito.svg);
+      else if (cosa === 'inline') rispondi(res, 'text/plain; charset=utf-8', confronti[i].inline.svg);
+      else if (cosa === 'malevolo') rispondi(res, 'text/plain; charset=utf-8', malevoli[i].inline.svg);
+      else if (cosa === 'sorgente') rispondi(res, 'text/html; charset=utf-8', sorgente(malevoli[i].inline.svg));
+      // I due controlli: file non ripuliti, che devono far scattare qualcosa e far partire una richiesta.
+      else if (cosa === 'grezzo') rispondi(res, 'text/plain; charset=utf-8', casi.find((c) => c.file === 'eventi.svg').grezzo + casi.find((c) => c.file === 'image-esterna.svg').grezzo.replaceAll('/colpito/', '/colpito-controllo/'));
+      else if (cosa === 'sorgente-grezzo') rispondi(res, 'text/html; charset=utf-8', sorgente(casi.find((c) => c.file === 'script.svg').grezzo));
+      else if (cosa === 'colore') rispondi(res, 'text/plain; charset=utf-8', affinity.inline.svg);
+      else if (cosa === 'maschera') rispondi(res, 'text/plain; charset=utf-8', maschera.inline.svg);
+      else { res.writeHead(404); res.end(); }
+    };
+    browser = chrome.apri(`${origine}/`);
+    esito = await Promise.race([promessa, new Promise((resolve, reject) => setTimeout(() => reject(new Error('Chrome non ha mandato l\'esito entro tre minuti')), 180000).unref())]);
+    esito.rete = { controllo: rete.filter((u) => u.startsWith('/colpito-controllo/')).length, altre: rete.filter((u) => !u.startsWith('/colpito-controllo/')) };
     esito.attesi = { confronti: confronti.length, malevoli: malevoli.length };
   });
 
   after(async () => {
+    if (tmp) fs.rmSync(tmp, { recursive: true, force: true });
     if (browser) await browser.chiudi();
     if (server) await new Promise((resolve) => server.close(resolve));
   });
@@ -111,6 +133,20 @@ describe('SVG: campione reale e confronto nel browser', { skip: sito.nonDisponib
     assert.equal(esito.malevoli.length, esito.attesi.malevoli);
     assert.ok(esito.attesi.malevoli >= 25, 'pochi casi malevoli arrivano al browser');
     assert.ok(esito.controllo.length > 0, 'un SVG non ripulito, messo nella pagina, non ha fatto scattare nulla: la prova non vedrebbe un difetto');
+    assert.ok(esito.controlloSorgente.length > 0, 'uno <script> non ripulito, scritto nel sorgente di una pagina, non è partito: la prova non lo vedrebbe');
+    assert.ok(esito.rete.controllo > 0, 'un\'immagine esterna non ripulita non ha fatto partire alcuna richiesta: la prova non la vedrebbe');
+  });
+
+  it('nessuna richiesta verso l\'esterno parte da un SVG ripulito', () => {
+    // Le sole richieste ammesse sono quelle del file di controllo, non ripulito apposta.
+    assert.deepEqual(esito.rete.altre, []);
+  });
+
+  it('ripulire un file già pulito non lo cambia, su tutto il campione', () => {
+    const puliti = campione.filter((c) => c.pulito.ok);
+    const file = puliti.map((c, i) => path.join(tmp, `due-${i}.svg`));
+    puliti.forEach((c, i) => fs.writeFileSync(file[i], c.pulito.svg));
+    svg.pulisci(file).forEach((r, i) => assert.equal(r.svg, puliti[i].pulito.svg, puliti[i].file));
   });
 
   it('stessa immagine prima e dopo: come <img>, e dopo il passaggio dal parser HTML', (t) => {
@@ -140,5 +176,9 @@ describe('SVG: campione reale e confronto nel browser', { skip: sito.nonDisponib
     assert.deepEqual([...new Set(testo.dopo)], ['rgb(0, 0, 200)']);
     assert.ok(originali.dopo.every((c) => c !== 'rgb(0, 0, 200)' && c !== 'rgb(200, 0, 0)'), `con i colori originali una forma ha preso il colore del testo: ${originali.dopo.join(', ')}`);
     assert.deepEqual(originali.prima, originali.dopo);
+  });
+
+  it('la regola di colore non tocca le maschere: un tratto interno di Figma resta visibile su testo nero', () => {
+    assert.deepEqual(esito.colore.maschera, { fill: 'rgb(255, 255, 255)', dentro: 'rgb(255, 255, 255)', tratto: 'rgb(0, 0, 0)' });
   });
 });

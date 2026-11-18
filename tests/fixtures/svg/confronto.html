@@ -62,8 +62,15 @@ function difetti(contenitore, markup) {
       if (attributo.localName === 'href' && !/^#/.test(valore) && !/^data:image\/(png|jpeg);base64,/.test(valore)) trovati.push(`href esterno: ${valore.slice(0, 40)}`);
       if (/url\(\s*(?!#)/i.test(valore) || /javascript:/i.test(valore)) trovati.push(`valore attivo in ${attributo.name}`);
       if (attributo.name === 'style' && !/^((mix-blend-mode|mask-type|isolation):[a-z-]+;?)+$/.test(valore)) trovati.push('style non ricostruito');
+      // Con un escape CSS un valore scrive url( senza scriverlo; e delle funzioni passano solo quelle dell'elenco.
+      if (valore.includes('\\')) trovati.push(`barra rovesciata in ${attributo.name}`);
+      if (attributo.localName !== 'href' && /(?<![\w-])(?!(?:rgb|rgba|hsl|hsla|matrix|translate|scale|rotate|skewX|skewY|url)\s*\()[A-Za-z][\w-]*\s*\(/.test(valore)) trovati.push(`funzione non ammessa in ${attributo.name}`);
     }
   }
+  // La radice non deve poter disegnare fuori dal suo riquadro, sopra il resto della pagina.
+  const radice = contenitore.firstElementChild;
+  for (const nome of ['transform', 'overflow', 'filter', 'mask', 'clip-path', 'x', 'y', 'style']) if (radice && radice.hasAttribute(nome)) trovati.push(`la radice ha ${nome}`);
+  if (radice && getComputedStyle(radice).overflow === 'visible') trovati.push('la radice non taglia ciò che esce dal riquadro');
   return trovati;
 }
 
@@ -81,6 +88,20 @@ async function inPagina(markup) {
   }
   await new Promise((resolve) => setTimeout(resolve, 30));
   return { contenitore, colpi: colpi.slice(prima) };
+}
+
+// Lo stesso markup scritto nel sorgente di una pagina, come lo stampa il tema: lì uno <script>
+// rimasto partirebbe (con innerHTML no). La pagina sta in un iframe servito dalla prova.
+async function nelSorgente(indirizzo, markup) {
+  const cornice = document.createElement('iframe');
+  await new Promise((resolve) => { cornice.onload = resolve; cornice.src = indirizzo; document.body.append(cornice); });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  const contenitore = cornice.contentDocument.getElementById('contenitore');
+  for (const el of contenitore.querySelectorAll('*')) el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  const esito = { dom: markup === null ? [] : difetti(contenitore, markup), colpi: [...cornice.contentWindow.colpi] };
+  cornice.remove();
+  return esito;
 }
 
 async function confronta(voce) {
@@ -108,7 +129,7 @@ async function confronta(voce) {
   return esito;
 }
 
-async function colore(markup) {
+async function colore(markup, maschera) {
   const palco = document.getElementById('palco');
   const letti = {};
   for (const [nome, classe] of [['testo', 'wdm-svg'], ['originali', 'wdm-svg wdm-svg--original']]) {
@@ -118,6 +139,10 @@ async function colore(markup) {
     palco.firstElementChild.style.color = 'rgb(0, 0, 200)';
     letti[nome] = { attributi: forme.map((f) => f.getAttribute('fill')), prima, dopo: forme.map((f) => getComputedStyle(f).fill), radice: getComputedStyle(palco.querySelector('svg')).fill };
   }
+  // Una maschera decide cosa si vede con il suo colore: la regola non deve toccarla, nemmeno
+  // quando il colore sta sull'elemento <mask> (l'export di Figma per un tratto interno).
+  palco.innerHTML = `<div style="color: rgb(0, 0, 0)">${maschera}</div>`;
+  letti.maschera = { fill: getComputedStyle(palco.querySelector('mask')).fill, dentro: getComputedStyle(palco.querySelector('mask > *')).fill, tratto: getComputedStyle(palco.querySelector('svg > path')).stroke };
   return letti;
 }
 
@@ -128,13 +153,15 @@ async function colore(markup) {
     // Controllo del controllo: un SVG non ripulito deve far scattare qualcosa, altrimenti
     // «nessuno script è partito» non proverebbe nulla.
     esito.controllo = (await inPagina(await (await fetch('/grezzo')).text())).colpi;
+    esito.controlloSorgente = (await nelSorgente('/sorgente-grezzo', null)).colpi;
     for (const voce of elenco.confronti) esito.confronti.push(await confronta(voce));
     for (const voce of elenco.malevoli) {
       const markup = await (await fetch(`/malevolo/${voce.i}`)).text();
       const { contenitore, colpi: partiti } = await inPagina(markup);
-      esito.malevoli.push({ nome: voce.nome, dom: difetti(contenitore, markup), colpi: partiti });
+      const sorgente = await nelSorgente(`/sorgente/${voce.i}`, markup);
+      esito.malevoli.push({ nome: voce.nome, dom: [...difetti(contenitore, markup), ...sorgente.dom.map((d) => `nel sorgente: ${d}`)], colpi: [...partiti, ...sorgente.colpi] });
     }
-    esito.colore = await colore(await (await fetch('/colore')).text());
+    esito.colore = await colore(await (await fetch('/colore')).text(), await (await fetch('/maschera')).text());
   } catch (errore) {
     esito.errori.push(String(errore && errore.stack || errore));
   }
