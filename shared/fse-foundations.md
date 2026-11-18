@@ -110,7 +110,7 @@ start (§11).
     js/     main.js + _*.js (theme JS, concat), swiper.js (ESM entry of the shared `{prefix}-swiper` module), page-options.js (editor panel, §7), editor/ (shared edit.js components: link-button, post-picker, image-control)
     kit/    {prefix}-home.kit, {prefix}-{page}.kit, {prefix}-blocks.kit (catalogue), main/header|footer, svg-vault
   html/      compiled kit (committed) — view via browser-sync, never file:// (§10)
-  assets/    css/main.css fonts.css swiper.css wp-global-styles.css · js/main.js page-options.js · fonts/ · img/placeholder-*.jpg
+  assets/    css/main.css fonts.css swiper.css kit.css (kit only, never enqueued by WP) wp-global-styles.css · js/main.js page-options.js · fonts/ · img/placeholder-*.jpg
   library/   custom.php (theme support, enqueue, shared style handles, pattern category)  admin.php  thumbnails.php
              page-options.php (page options meta + render filters, §7)
   build.js  package.json  (package.json WITHOUT "type": "module" — §6)
@@ -333,11 +333,13 @@ kit file per variant; the page kit imports one per block instance:
 <!-- @import "../../blocks/{prefix}-block-{slug}/kit/_{prefix}-block-{slug}-{variant}.kit" -->
 ```
 Page kit (`src/kit/{prefix}-{page}.kit`): `<!-- $title = … -->`, `@import "main/header/_header.kit"`,
-`<main class="{prefix}-main">` with the block imports in page order, then after `</main>` `@import
-"main/form/_form-contacts.kit"` (the default form part, §7 — omitted only when the page content
-has its own `{prefix}/form`), `@import "main/footer/_footer.kit"`. `src/kit/{prefix}-blocks.kit` is the catalogue of every variant of
+`<main class="{prefix}-main">` with the block imports in page order and, as its last element,
+`@import "main/form/_form-contacts.kit"` (the default form part, §7: it is page content, so it
+stays inside the `main` landmark — omitted only when the page content has its own
+`{prefix}/form`), then `</main>` and `@import "main/footer/_footer.kit"`. `src/kit/{prefix}-blocks.kit` is the catalogue of every variant of
 every block (one page, used for the screenshot comparison). Kit CSS comes from
-`_css-shared.kit`: `fonts.css`, `wp-global-styles.css`, `main.css`, `swiper.css`, then one
+`_css-shared.kit`: `fonts.css`, `wp-global-styles.css`, `main.css`, `swiper.css`, `kit.css`
+(styles only the kits need, `src/scss/kit.scss`), then one
 `../blocks/{prefix}-block-{slug}/build/style-index.css` per block (add the line when a block is
 born); `_js-shared.kit` loads the `build/view.js` modules.
 
@@ -547,7 +549,9 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
   **Default form**: `parts/form-contacts.html` ("Form di default", area `uncategorized`,
   `theme.json → templateParts`) holds one `{prefix}/form` block (title, text, `formId`): the
   single place where the site's default form is chosen; included by `page.html` and
-  `single.html` after `</main>`, before the footer, as `template-part {"slug":"form-contacts",
+  `single.html` as the last block **inside** the `main` group (a form is page content: outside
+  the `main` landmark a screen-reader user who jumps to the content never meets it), as
+  `template-part {"slug":"form-contacts",
   "className":"{prefix}-form-contacts"}`; kit `src/kit/main/form/_form-contacts.kit` imports
   the block's centered kit; when the part's values (title, text, form) differ from that variant
   kit, the part kit inlines the part's values (as a page kit does). `archive/search/index/404` print their own h1. **No `front-page.html`** (it

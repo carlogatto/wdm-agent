@@ -181,9 +181,9 @@ in its "kit" column until `fse-block-edit`/`fse-build` implements it.
          <main class="{prefix}-main">
            <!-- @import "../../blocks/{prefix}-block-hero/kit/_{prefix}-block-hero-image.kit" -->
            <section class="wp-block-{prefix}-image-text alignfull {prefix}-block-image-text"> … real texts … </section>
+   <!-- @import "main/form/_form-contacts.kit" -->
          </main>
 
-   <!-- @import "main/form/_form-contacts.kit" -->
    <!-- @import "main/footer/_footer.kit" -->
    ```
    Each block instance is either an `@import` of a variant kit (placeholder content, early
@@ -205,7 +205,7 @@ in its "kit" column until `fse-block-edit`/`fse-build` implements it.
    The default form part (`main/form/_form-contacts.kit`, fse-foundations §7) is shown on every
    page (meta default 1, as in wdm-starter); the build turns it off only on a page whose content
    already has a `{prefix}/form` block — so the page kit imports `main/form/_form-contacts.kit`
-   after `</main>` unless its content has a `{prefix}/form`.
+   as the last element inside `<main>` unless its content has a `{prefix}/form`.
 4. Each section is designed first (content, tone, rhythm, free layout — §4 "No catalogue
    constraint"), then mapped: an existing variant that renders it as designed → imported; no such
    variant → Step 3 (new variant, or new block) before the page kit imports it. Never the

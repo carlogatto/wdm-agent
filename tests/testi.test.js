@@ -82,3 +82,8 @@ test('fse-theme-setup: le tabelle di DESIGN.md si scrivono prima dei controlli c
   assert.ok(skill.indexOf('### Step 4e — DESIGN.md tables') !== -1 && skill.indexOf('### Step 4e — DESIGN.md tables') < skill.indexOf('PASS check-parita'), 'check-parita viene prima della scrittura delle tabelle');
 });
 
+// Il form di default è contenuto della pagina: sta dentro <main>, nel kit come nei template (U24).
+test('nessun testo mette il form di default dopo </main>', () => {
+  assert.deepEqual(residui(SKILL_E_FONDAMENTA, /after\s+`<\/main>`|<\/main>\s*(?:\n\s*)*<!-- @import "main\/form\/_form-contacts\.kit" -->/g), []);
+});
+
