@@ -7,8 +7,9 @@ description: 'Use to scaffold a new client project from wdm-theme for a wdm-them
 
 **MANDATORY first steps, in order:**
 1. Read `${CLAUDE_PLUGIN_ROOT}/shared/fse-foundations.md` — §0 (guard), §2 (structure), §7
-   (telaio: menu `ref`, front page, permalinks, `WP_DEVELOPMENT_MODE`), §8 (WP-CLI), §11
-   (DESIGN.md format: this skill creates it).
+   (telaio: menu `ref`, front page, permalinks, `WP_DEVELOPMENT_MODE`), §8 (WP-CLI), §9 (the
+   login without a password), §10 (git, the handover message), §11 (DESIGN.md format: this skill
+   creates it).
 2. Read `{site-root}/DESIGN.md → ## Project Config` **if it exists** — the guard of Step 0
    (`theme_family`: a value other than `fse` = wdm-starter project → stop) comes before anything
    else; this skill is the one that creates the row when DESIGN.md does not exist yet.
@@ -31,13 +32,16 @@ Start immediately with Step 0 — no extra trigger phrase required.
 - exists with `theme_family` ≠ `fse`, **or without the row** (every wdm-starter project predates
   it) → **STOP** with the fse-foundations §0 message for that case (a wdm-starter project, or a
   `DESIGN.md` that lost the row);
-- exists with `theme_family: fse` and `wp-content/themes/wdm-theme` is gone → the setup already
-  ran: offer only the verification of Phase 5, never a setup restarted from Phase 1;
+- exists with `theme_family: fse`, `wp-content/themes/wdm-theme` is gone and WordPress is
+  installed here (`{site-root}/wp-config.php` exists) → the setup already ran: offer only the
+  verification of Phase 5, never a setup restarted from Phase 1;
+- exists with `theme_family: fse`, `wp-content/themes/wdm-theme` is gone and there is **no**
+  `wp-config.php` → the project was set up on another computer and cloned here: go to "A project
+  cloned on another computer" at the end of this file. Never `setup.js`, never Phase 3a;
 - exists with `theme_family: fse`, `wp-content/themes/wdm-theme` still present and
   `{site-root}/SETUP.md` present → an earlier session stopped mid-setup: **resume**. Every value
   comes from `DESIGN.md → Project Config` (ask nothing), `SETUP.md` and `DESIGN.md` stay as they
-  are, the work restarts from the first unchecked step of `SETUP.md` (a `[MANUAL]` step gets its
-  message again). A checked step is not rerun; an unchecked `mamp.js` or `setup.js` step is
+  are, the work restarts from the first unchecked step of `SETUP.md`. A checked step is not rerun; an unchecked `mamp.js` or `setup.js` step is
   simply relaunched with the same values (both resume from where they stopped).
 - does not exist, or exists as the copy shipped by the wdm-theme repo (its `{prefix}` is
   `wdm`) → proceed: the skill creates/rewrites `## Project Config`.
@@ -45,22 +49,46 @@ Start immediately with Step 0 — no extra trigger phrase required.
 **Anti-scaffold.** `{site-root}/wp-content/themes/wdm-theme/` must exist (clone or ZIP of the
 wdm-theme repo). Missing → stop: the skill renames the starter, it does not create a theme.
 
-**Ask the dev for every value before doing anything** (do not proceed until confirmed; on a
-resume they come from `DESIGN.md`, nothing is asked):
+**One opening message, then no more questions.** Four values only the dev knows; everything
+else has a default the message declares. Values already given in the dev's request are not asked
+again; on a resume they all come from `DESIGN.md`. Send this, adapted to what is already known,
+and wait for the answer — it is the only wait of the whole setup:
+
+> Per creare il progetto mi servono quattro cose:
+> 1. **Nome del progetto**, in minuscolo e senza spazi (es. `pincopallino`): diventa il nome
+>    del sito locale, del database e della cartella del tema.
+> 2. **Prefisso**: tre o quattro lettere minuscole (es. `pnc`), diverse da `wdm`. Stanno
+>    davanti ai nomi dei blocchi e delle classi del tema.
+> 3. **Titolo del progetto** (es. `Pinco Pallino`): il nome che si legge nel sito e nell'editor.
+> 4. **La tua email**, per il tuo utente di WordPress.
+>
+> Il resto lo imposto io, se non mi dici altro: indirizzo locale `https://NOME.local:8890/`,
+> titolo del sito uguale al titolo del progetto, il tuo utente di WordPress con il nome che
+> precede la `@` della tua email.
+>
+> Prima di rispondere controlla due cose in MAMP PRO: che esista un sito `NOME.local` con SSL
+> attivo e come cartella (**Site Folder**) questa cartella, e che i server siano avviati
+> (**Start**). I passi sono nel README del plugin wdm-agent, «Il primo progetto».
+> Quando rispondi parto, e proseguo da solo fino alla fine.
+
+From the answer:
 
 1. **Project slug** — kebab-case (e.g. `pincopallino`): MAMP folder, local URL, DB name, theme
-   folder, text domain default.
-2. **Prefix** — lowercase, alphanumeric, not `wdm` (e.g. `abc`): replaces `wdm` in block names
-   (`abc/hero`), folders (`abc-block-hero`), functions (`abc_`), classes (`abc-header`),
+   folder, text domain.
+2. **Prefix** — lowercase, alphanumeric, not `wdm` (e.g. `pnc`): replaces `wdm` in block names
+   (`pnc/hero`), folders (`pnc-block-hero`), functions (`pnc_`), classes (`pnc-header`),
    categories.
-3. **Text domain** — default `{slug}`.
-4. **Project title** — human name (e.g. `Pinco Pallino`): Theme Name, block/pattern category
-   title, kit/footer texts (replaces "WDM Theme").
-5. **Local URL** — default `https://{slug}.local:8890/`.
-6. **Site title, dev admin username + email** for `wp core install`; **agent admin username**
-   (default `{prefix}adminclaude`). No password is chosen or stored: WordPress generates the
-   dev's one, shown **once**; the agent's user has a random one nobody sees and logs in with a
-   temporary session (Step 2c, fse-foundations §9).
+3. **Project title** — human name (e.g. `Pinco Pallino`): Theme Name, block/pattern category
+   title, kit/footer texts (replaces "WDM Theme"), and the site title.
+4. **Dev email** — `wp core install`; dev admin username = the part before `@`.
+
+Defaults, used unless the dev says otherwise: text domain `{slug}`; local URL
+`https://{slug}.local:8890/`; site title = project title; agent admin username
+`{prefix}adminclaude`. No password is chosen or stored: WordPress generates the dev's one,
+shown **once**; the agent's user has a random one nobody sees and logs in with a temporary
+session (Step 2c, fse-foundations §9). `setup.js` validates slug, prefix and title before
+touching the disk (Step 3a): a value it refuses is the only reason to ask again, and only that
+value.
 
 Never ask where MAMP is, which PHP it runs or how the database is reached: `mamp.js` (Step 1b)
 finds all of it and writes `{db-socket}` and `{wp-cli}` in `DESIGN.md`. Derived: DB
@@ -86,7 +114,7 @@ Project Config values, keep the tables (`setup.js` renames `wdm` → `{prefix}` 
 # Setup: {slug}
 
 ## Phase 1 — Environment
-- [ ] Step 1a — MAMP host and project folder confirmed
+- [ ] Step 1a — project folder and MAMP host verified
 - [ ] Step 1b — MAMP found, database created, {wp-cli} written in DESIGN.md
 
 ## Phase 2 — WordPress
@@ -108,29 +136,33 @@ Project Config values, keep the tables (`setup.js` renames `wdm` → `{prefix}` 
 
 ## Phase 5 — Handover
 - [ ] Step 5a — DESIGN.md tables, CLAUDE.md and site-root README.md verified
-- [ ] Step 5b — Git repo and first commit (agent), dev check in the browser
+- [ ] Step 5b — Git repo and first commit (agent), handover
 ```
 
-Rules (same as `new-project-setup`): update `SETUP.md` after every step, before the next;
-`[MANUAL]` steps are the dev's — send the quoted message verbatim, STOP, wait for **fatto**,
-never automate them; git follows fse-foundations §10 (the agent commits, the dev pushes; a
-missing `.git` is expected until Step 5b);
-re-read this SKILL.md from disk at every phase boundary.
+Rules: update `SETUP.md` after every step, before the next. **No step waits for the dev**: after
+the opening message the setup runs to the end. It stops only when a script or a check says that
+something only the dev can fix is missing (MAMP PRO not installed, servers stopped, host
+missing, git without an identity): send the message verbatim, STOP, and resume from that step
+after their **fatto**. Git follows fse-foundations §10 (the agent commits, the dev pushes; a
+missing `.git` is expected until Step 5b); re-read this SKILL.md from disk at every phase
+boundary.
 
 ---
 
 ## Phase 1 — Environment
 
-### Step 1a — MAMP host and folder `[MANUAL]`
-> Prima di procedere, verifica:
-> - **MAMP PRO**: server `{slug}.local`, document root `{site-root}/`, PHP 8.x, server avviato.
-> - **Cartella** `{site-root}/`: contenuto del repo **wdm-theme** (`CLAUDE.md`, `README.md`,
->   `.gitignore`, `docs/`, `wp-content/themes/wdm-theme/`). I file core di WordPress li scarico io
->   se mancano.
->
-> (Il repository git lo creo io alla fine, con il primo commit: a te restano il remoto e il push —
-> Step 5b.)
-> Quando tutto è pronto scrivi: **confermato**
+### Step 1a — Folder and MAMP host `[AGENT]`
+The folder is checked by the guard (anti-scaffold). The host is checked by asking it:
+```bash
+curl -sk -o /dev/null -w '%{http_code}' "{local-url}"
+```
+Any HTTP code (403, 404, 500: WordPress is not there yet) → the host exists, go on. `000` → the
+host does not answer: send this and STOP; after **fatto**, check again.
+
+> Non riesco a raggiungere `{local-url}`. In MAMP PRO controlla che esista il sito
+> `{slug}.local` (sezione **Sites**, pulsante **+**, tipo **Empty**), che la sua cartella
+> (**Site Folder**) sia `{site-root}`, che nella scheda **SSL** sia attivo SSL, poi premi
+> **Save** e **Start**. Quando è fatto scrivimi **fatto**.
 
 ### Step 1b — MAMP, WP-CLI and database `[AGENT]`
 ```bash
@@ -204,7 +236,9 @@ the `build.js` proxy; fixes the site-root `.gitignore`, `README.md` and `DESIGN.
 the generated files (`build/`, `html/`, compiled css/js — rebuilt in 3b) and the demo page kits
 of the base theme (only `{prefix}-blocks.kit` and `{prefix}-telaio.kit` stay in `src/kit/`);
 in the parts it sets `formId` to 0 and drops the `ref` of the navigation blocks (ids of the
-base theme's database: Step 4b writes the new ones); last, it renames the theme folder.
+base theme's database: Step 4b writes the new ones); last, it renames the theme folder. In the
+site root it removes `docs/superpowers/` (the base theme's own working documents) and creates
+`docs/brief/` (a brief already there is left as it is).
 `CLAUDE.md` is not touched (placeholders resolved from DESIGN.md).
 
 Exit 0 → done. Exit 1 → it stopped half-way or found `wdm` references it could not replace: the
@@ -256,7 +290,10 @@ cd "{theme-root}" && npm run build   # html/ with the regenerated global styles
 ```
 
 ### Step 4e — Checks
-- `curl -sk -o /dev/null -w '%{http_code}' {local-url}` → 200; page source without `Fatal|Warning`.
+- `cd "{theme-root}" && npm run check` → exit 0, with the frontend checks executed (no `SKIP`
+  line for the Home: a `SKIP … non raggiungibile` here means the host stopped answering) and
+  `PASS check-parita`: header and footer of the new project have the same structure in the kit
+  and in WordPress.
 - Login as `{agent-admin-user}` (fse-foundations §9: `sessione.js apri` with the model
   `pw-pagina.js` and the Home's id, then `chiudi`) → the Home opens in the editor without
   invalid blocks and shows header/footer with the menu on the frontend.
@@ -303,7 +340,7 @@ Parti)".
   name `wdm-agent` and the base repo URL `carlogatto/wdm-theme`. Missing from the clone → say so
   in the handover; never write it from scratch.
 
-### Step 5b — Git `[AGENT]`, then dev check `[MANUAL]`
+### Step 5b — Git and handover `[AGENT]`
 Git first (fse-foundations §10: `git init` and `git add .` are allowed in this step only).
 `{site-root}/.git` missing → `git init` in `{site-root}`; already there → no init. Then the
 first commit, on the main branch: the whole project is the work, so `git add .` (the
@@ -311,36 +348,64 @@ first commit, on the main branch: the whole project is the work, so `git add .` 
 `node_modules` out). Before committing,
 `git status --short | grep -E '\.playwright-mcp/|wp-admin/|wp-includes/|wp-config\.php|wp-cli\.phar|node_modules/|uploads/'`
 must print nothing: any line → stop, nothing is committed. Message: `chore: setup del progetto
-{slug} da wdm-theme`. Never a remote, never a push: they are the dev's. Two cases add one line
-to the message below:
-- the commit is refused because git has no identity on this machine (`user.name`,
-  `user.email`): do not configure it (§10), leave Step 5b unchecked and replace the first
-  sentence with "Il setup è completo, ma il primo commit non è ancora fatto: git su questo
-  computer non ha ancora il tuo nome e la tua email. Apri il Terminale e lancia `git config
-  --global user.name "Nome Cognome"` e `git config --global user.email "tu@esempio.it"`, poi
-  scrivimi **fatto**: il commit lo faccio io.";
-- `.git` was already there with a remote `origin` that points to `carlogatto/wdm-theme`: add "Il
-  repository punta ancora al tema base wdm-theme: cambia il remoto prima del push."
+{slug} da wdm-theme`. Never a remote, never a push: they are the dev's, from Sourcetree.
 
-> Il setup è completo e il primo commit è fatto. Controlla nel browser `{local-url}` (home con
-> header/footer e menu) e `wp-admin` con il tuo utente. Il remoto e il push sono tuoi, quando
-> vuoi. Ricorda di cambiare la password che ti ho mostrato: è l'unica del progetto, l'utente
-> agente entra senza password.
-> Quando hai finito scrivi: **fatto**
+Git without an identity on this computer (`git config user.name` or `git config user.email`
+prints nothing; reading the configuration is allowed, writing it never is — §10): do not
+commit, leave Step 5b unchecked, send this and STOP. After **fatto**, commit and go on.
 
-Remind the dev: `style.css` header (Theme Name/Description/Author), `screenshot.png`,
-`assets/img/` placeholders, `SETUP.md` can be deleted once the repo is created. Next session:
-`fse-brief` (the designer deposits the brief in `{site-root}/docs/brief/`), then `fse-kit`.
+> Il progetto è pronto, ma non posso ancora salvare il primo commit: git su questo computer non
+> conosce il tuo nome e la tua email. Apri Sourcetree → Impostazioni → Generali → «Informazioni
+> utente predefinite», scrivi nome completo ed email e lascia attiva «Permetti a SourceTree di
+> modificare i tuoi file di configurazione globali Git e Mercurial». Poi scrivimi **fatto**: il
+> commit lo faccio io.
 
-After the dev's **fatto**, the closing message has the shape of fse-foundations §10 "The handover
-message": *Esito* `✅ chiuso`; *Cosa è cambiato* = site URL, admin user, theme folder, the two
-pages that exist; *Cosa aspetta te* = the dev's password to change and the manual
-items above;
-*Prossimo passo* = the `fse-brief` conversation with its prompt ready to paste ("Leggi il brief
-in docs/brief/ con wdm-agent:fse-brief"), once the designer has deposited the files.
+When every step of `SETUP.md` is checked, delete `SETUP.md` (it is this skill's own progress
+file). Then the **handover**, in the shape of fse-foundations §10 "The handover message" — it is
+not a question and nothing waits for an answer:
+
+- *Esito*: `✅ chiuso`.
+- *Cosa è cambiato*: the site at `{local-url}` (home with header, footer and menu), the theme
+  folder, the dev's WordPress user with its password — shown here, **once** — and the first
+  commit, visible in Sourcetree.
+- *Cosa aspetta te*: change that password from your profile in WordPress (it is the only one of
+  the project: the agent enters without a password); the remote on GitHub and the push, from
+  Sourcetree, when you want; if `.git` was already there with a remote `origin` that points to
+  `carlogatto/wdm-theme`, add "il repository punta ancora al tema base wdm-theme: cambia il
+  remoto prima del push". One line for the things the project will replace along the way:
+  `screenshot.png` and the placeholder images in `assets/img/`.
+- *Prossimo passo*: the brief. `{site-root}/docs/brief/` already has files → no question: read
+  `${CLAUDE_PLUGIN_ROOT}/skills/fse-brief/SKILL.md` and start `fse-brief` **in the same
+  conversation**, right after the handover (fse-foundations §1 "The ok continues"). Empty → "metti
+  in `docs/brief/` il materiale del progetto (brand, logo, font, elenco delle pagine, testi,
+  immagini) e scrivi «leggi il brief»; per provare senza un cliente scrivi «usa il brief di
+  esempio»". Never a prompt to paste.
+
+## A project cloned on another computer
+
+`DESIGN.md` says `theme_family: fse`, the theme folder already has the project's name and there
+is no `wp-config.php`: the repo is complete, WordPress and its database are not here. Nothing is
+renamed and no value is asked except the dev's email (one message, with the MAMP PRO check of
+the opening message: the host `{site-folder}.local` on this folder, servers started). Then, in
+order, with the values of `DESIGN.md → Project Config`:
+
+1. Step 1a (the host answers) and Step 1b: `mamp.js --site "{site-root}" --db "{site-folder}-db"`.
+   The rows `{db-socket}` and `{wp-cli}` cloned from the other computer carry **its** paths:
+   `mamp.js` rewrites them with this computer's. Rewrite `{site-root}` and `{theme-root}` too.
+2. Step 2a, 2b, 2c: WordPress core, `wp-config.php` (`--dbprefix={prefix}_`), install, the agent
+   user `{agent-admin-user}`.
+3. Step 3b (`npm install && npm run build`), Step 4a (activate), Step 4c (Home, front page,
+   permalinks), Step 4f (Formidable).
+4. `fse-build`, whole perimeter: pages and menus are rebuilt from the kits of the repo. The
+   `ref` it writes in the parts are the ids of **this** database: if they differ from the
+   committed ones, leave that change out of the commit and say so in the handover.
+5. Step 4e (checks) and the handover: what the kits do not contain — content written by hand in
+   WordPress, uploaded media, form entries — is not in the repo and arrives only with an export
+   of the other computer's database, which this skill does not do.
 
 ## What is NOT automated
-The MAMP PRO host (GUI) · the git remote and the push · the dev's browser check · password changes.
+The MAMP PRO host (its interface has no command) · the git identity, the remote and the push
+(Sourcetree) · the change of the dev's password.
 
 ## Never
 Rename by hand what `setup.js` renames · empty or delete a database that already has tables · touch the starter repo · persist the dev's password (chat only, once) ·

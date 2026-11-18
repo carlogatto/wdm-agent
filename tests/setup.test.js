@@ -3,6 +3,7 @@
 // per ogni tipo di file e lascia stare i nomi che non sono prefissi (U03, U04).
 const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
@@ -172,5 +173,30 @@ describe('setup.js da riga di comando', () => {
     assert.equal(r.status, 3, r.stdout + r.stderr);
     assert.match(r.stderr, /wdm-theme/);
     assert.doesNotMatch(r.stderr, /\bat .*\.js:\d+/);
+  });
+
+  // Il progetto nuovo parte senza i documenti di lavoro del tema base e con la cartella del brief.
+  it('toglie docs/superpowers, crea docs/brief e lascia stare un brief già depositato; anche al rilancio', () => {
+    const sito = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-setup-docs-'));
+    const scrivi = (relativo, testo) => {
+      fs.mkdirSync(path.dirname(path.join(sito, relativo)), { recursive: true });
+      fs.writeFileSync(path.join(sito, relativo), testo);
+    };
+    try {
+      scrivi('wp-content/themes/wdm-theme/style.css', '/* Theme Name: WDM Theme */\n');
+      scrivi('docs/superpowers/plans/piano.md', 'documenti di lavoro di wdm-theme\n');
+      scrivi('docs/brief/logo.txt', 'il brief del cliente, depositato prima del setup\n');
+      let r = lancia(...tutti({ target: sito }));
+      assert.equal(r.status, 0, r.stdout + r.stderr);
+      assert.ok(!fs.existsSync(path.join(sito, 'docs', 'superpowers')), 'docs/superpowers è rimasta');
+      assert.equal(fs.readFileSync(path.join(sito, 'docs', 'brief', 'logo.txt'), 'utf8'), 'il brief del cliente, depositato prima del setup\n');
+      // Un progetto senza cartella docs: il rilancio crea docs/brief.
+      fs.rmSync(path.join(sito, 'docs'), { recursive: true });
+      r = lancia(...tutti({ target: sito }));
+      assert.equal(r.status, 0, r.stdout + r.stderr);
+      assert.deepEqual(fs.readdirSync(path.join(sito, 'docs')), ['brief']);
+    } finally {
+      fs.rmSync(sito, { recursive: true, force: true });
+    }
   });
 });

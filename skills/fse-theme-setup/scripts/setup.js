@@ -15,7 +15,8 @@
 // prefisso, text domain e titolo in ogni file di testo del tema; mette formId a 0 nelle parts;
 // rinomina cartelle e file che portano il prefisso; imposta il proxy di build.js; aggiorna
 // .gitignore, README.md e DESIGN.md della site root; per ultima rinomina la cartella del tema;
-// infine controlla che non restino riferimenti a «wdm».
+// toglie docs/superpowers (i documenti di lavoro del tema base) e crea docs/brief; infine
+// controlla che non restino riferimenti a «wdm».
 //
 // Ogni passo si può ripetere: se lo script si interrompe, rilanciarlo con gli stessi valori
 // riprende; a lavoro già finito rifà solo il controllo ed esce con 0. CLAUDE.md non si tocca
@@ -269,6 +270,11 @@ function rinomina(v) {
   } else {
     console.log(`▶ Il tema è già stato rinominato in "${v.slug}": rifaccio solo il controllo.`);
   }
+
+  // I documenti di lavoro del tema base non sono del progetto; il brief del progetto sta in
+  // docs/brief/ (fse-brief). Si fa a ogni lancio: un brief già depositato resta com'è.
+  togli(path.join(sito, 'docs', 'superpowers'));
+  fs.mkdirSync(path.join(sito, 'docs', 'brief'), { recursive: true });
 
   // DESIGN.md resta fuori dal controllo: la sua storia cita il tema base, e lo riscrive la skill.
   const rimasti = residui([...file(tema), ...delSito.filter((f) => path.basename(f) !== 'DESIGN.md')], sito);

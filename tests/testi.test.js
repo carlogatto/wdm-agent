@@ -59,3 +59,14 @@ test('nessun residuo della password dell\'utente agente', () => {
   assert.deepEqual(residui(TESTI, /\.env\b/g, /nothing reads it|nessuno lo legge|No `\.env`|Niente `\.env`/i), []);
 });
 
+// Il setup ha una sola attesa: il messaggio iniziale (U13). Gli altri fermi scattano solo se
+// manca qualcosa che può sistemare soltanto chi usa il sistema.
+test('fse-theme-setup: un solo messaggio iniziale, nessun passo manuale, nessun «fatto» finale', () => {
+  const skill = fs.readFileSync(path.join(RADICE, 'skills', 'fse-theme-setup', 'SKILL.md'), 'utf8');
+  assert.doesNotMatch(skill, /\[MANUAL\]/);
+  assert.doesNotMatch(skill, /Quando hai finito scrivi|Quando tutto è pronto scrivi|git config --global/);
+  assert.match(skill, /the only wait of the whole setup/);
+  assert.match(skill, /Apri Sourcetree → Impostazioni → Generali/);
+  assert.match(skill, /start `fse-brief` \*\*in the same\s+conversation\*\*/);
+});
+
