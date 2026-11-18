@@ -70,3 +70,15 @@ test('fse-theme-setup: un solo messaggio iniziale, nessun passo manuale, nessun 
   assert.match(skill, /start `fse-brief` \*\*in the same\s+conversation\*\*/);
 });
 
+// Il contenuto di una pagina si scrive solo con wp-page.php: una ricetta che lo sostituisce con
+// `wp post update` scavalcherebbe la protezione dei contenuti del cliente (U53).
+test('nessuna ricetta che riscrive il contenuto di una pagina senza wp-page.php', () => {
+  assert.deepEqual(righe(SKILL_E_FONDAMENTA, (riga) => /post update \$?\{?ID\}? "\{scratchpad\}|post create "?\{scratchpad\}\/page-/.test(riga)), []);
+});
+
+// La parità legge le righe di DESIGN.md: nel setup si controlla dopo che la skill le ha scritte.
+test('fse-theme-setup: le tabelle di DESIGN.md si scrivono prima dei controlli che le leggono', () => {
+  const skill = fs.readFileSync(path.join(RADICE, 'skills', 'fse-theme-setup', 'SKILL.md'), 'utf8');
+  assert.ok(skill.indexOf('### Step 4e — DESIGN.md tables') !== -1 && skill.indexOf('### Step 4e — DESIGN.md tables') < skill.indexOf('PASS check-parita'), 'check-parita viene prima della scrittura delle tabelle');
+});
+

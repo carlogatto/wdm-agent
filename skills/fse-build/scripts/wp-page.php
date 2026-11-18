@@ -287,7 +287,7 @@ function fpg_check_generated( $content ) {
   }
   foreach ( parse_blocks( $content ) as $b ) {
     $stray = fpg_stray_comment( $b );
-    if ( $stray !== '' ) fpg_err( "file generato: commento di blocco non riconosciuto ($stray…) — correggi il file e rilancia, nulla è stato scritto" );
+    if ( $stray !== '' ) fpg_err( "file generato: commento di blocco non riconosciuto ({$stray}…) — correggi il file e rilancia, nulla è stato scritto" );
   }
 }
 
@@ -324,6 +324,18 @@ function fpg_state( $post, $w ) {
   $revisions = $w ? wp_get_post_revisions( $post->ID, array( 'numberposts' => 1 ) ) : array();
   $last      = $revisions ? reset( $revisions ) : null;
   return array( 'manual' => $last && (int) $last->post_author !== 0, 'base' => array_map( 'fpg_key', $w ), 'meta' => false, 'why' => 'l\'ultima revisione è stata salvata da un utente' );
+}
+
+// Su una pagina del cliente senza nulla da scrivere: le chiavi del kit di oggi diventano la
+// base. Così un blocco che il kit ha tolto per riallinearsi a WordPress non viene più preso,
+// quando nel kit ne nasce uno con la stessa chiave, per «tolto a mano».
+function fpg_save_base( $post_id, $g ) {
+  $meta = get_post_meta( $post_id, FPG_META, true );
+  if ( ! is_array( $meta ) || ! isset( $meta['wp'] ) ) return;
+  $keys = array_map( 'fpg_key', $g );
+  if ( isset( $meta['blocchi'] ) && $meta['blocchi'] === $keys ) return;
+  $meta['blocchi'] = $keys;
+  update_post_meta( $post_id, FPG_META, $meta );
 }
 
 function fpg_save_state( $post_id, $g, $manual ) {
@@ -454,6 +466,7 @@ if ( $n['da cancellare'] > 0 && ! $confirm ) {
 }
 if ( $write === 0 ) {
   if ( $left > 0 ) {
+    fpg_save_base( $post->ID, $g );
     echo "nessuna scrittura: la pagina è stata modificata a mano in WordPress e resta com'è\n";
     fpg_halt( 6 );
   }

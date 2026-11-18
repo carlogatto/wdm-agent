@@ -171,7 +171,12 @@ script reads from the fingerprint it saved at its last write (post meta `_fse_bu
   removed does not come back (`tolto a mano`), one the client added stays without any
   confirmation (`aggiunto a mano`), one the kit dropped is `da cancellare` and waits for
   `confirm`. A revision of the kit's texts no longer reaches this page: that is the rule, not a
-  failure, and it is never turned into a question.
+  failure, and it is never turned into a question. Two limits to say in the report when they
+  apply: a block whose **variant** changed in the kit shows as `da cancellare` + `nuovo`, and
+  the block to delete carries the client's texts (say so in the `confirm` question); a page
+  built before the fingerprint existed and then edited by hand has no record of what the kit
+  was, so a block the client added shows as `da cancellare` (it waits for `confirm`, nothing is
+  lost) and one the client removed comes back as `nuovo`.
 
 Exit **0** no differences · **2** error (`pagina assente` → 2e creates it; `non è una pagina`; a
 malformed generated file) · **3** at least one deletion waiting · **5** differences to write ·

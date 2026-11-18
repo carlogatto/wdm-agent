@@ -10,7 +10,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { eFse } = require('../shared/scripts/lib/design-md.js');
-const { chiudi, file } = require('../shared/scripts/sessione.js');
+const { chiudi, pulisci, file } = require('../shared/scripts/sessione.js');
 
 // La site root del progetto FSE che contiene `cartella` (le skill lavorano anche dentro il tema).
 function sitoDi(cartella) {
@@ -30,10 +30,19 @@ function cwd() {
   }
 }
 
+// La sessione è già scaduta se il segno lo dice: WordPress non serve, basta togliere i file.
+function scaduta(sito) {
+  try {
+    return JSON.parse(fs.readFileSync(file(sito).segno, 'utf8')).scade < Date.now() / 1000;
+  } catch {
+    return false;
+  }
+}
+
 const sito = sitoDi(cwd());
 if (sito && fs.existsSync(file(sito).segno)) {
   try {
-    chiudi(sito);
+    if (scaduta(sito)) pulisci(sito); else chiudi(sito);
   } catch (errore) {
     // Non blocca la fine del turno: la sessione scade da sola, e il prossimo turno riprova.
     console.error(`chiudi-sessione: sessione dell'utente agente non revocata (${errore.message}). Scade da sola entro 15 minuti.`);

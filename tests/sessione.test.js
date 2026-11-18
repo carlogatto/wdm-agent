@@ -61,6 +61,11 @@ describe('sessione.js senza WordPress', () => {
     assert.deepEqual(new Function(`return ${fatto.replace('[]', '')}`)(), JSON.parse(json));
   });
 
+  it('componi: un a capo di qualunque tipo resta dentro la stringa; un valore che cita COOKIES non riceve i cookie', () => {
+    const fatto = componi("/*COOKIES*/ '{{testo}}'", { testo: 'uno\rdue\r\ntre\nquattro /*COOKIES*/' }, [{ name: 'a' }]);
+    assert.equal(fatto, '[{"name":"a"}] \'uno\\ndue\\ntre\\nquattro /*COOKIES*/\'');
+  });
+
   it('componi: un segnaposto senza valore, o un modello senza COOKIES, è un errore che dice cosa fare', () => {
     assert.throws(() => componi("/*COOKIES*/ '{{id}}' '{{blocco}}'", {}, []), /il modello chiede \{\{id\}\}, \{\{blocco\}\}: aggiungi id=valore blocco=valore/);
     assert.throws(() => componi("async (page) => '{{id}}'", { id: 1 }, []), /non ha il segnaposto \/\*COOKIES\*\//);

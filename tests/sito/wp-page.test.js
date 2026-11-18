@@ -159,7 +159,8 @@ describe('wp-page.php', { skip: sito.nonDisponibile() || false }, () => {
     atteso(page('plan', SLUG), 2, 'blocco wdm/cta', 'non sono un oggetto JSON valido');
     atteso(page('apply', SLUG, 'confirm'), 2, 'blocco wdm/cta');
     scriviKit('<!-- wp:wdm/cta {"variant":"split","title":"Senza chiusura" /-->');
-    atteso(page('apply', SLUG, 'confirm'), 2, 'commento di blocco non riconosciuto');
+    atteso(page('apply', SLUG, 'confirm'), 2, 'commento di blocco non riconosciuto (<!-- wp:wdm/cta');
+    assert.doesNotMatch(page('plan', SLUG).out, /Warning|Undefined variable/);
     assert.equal(contenuto(), prima, 'un file generato rotto è stato scritto');
   });
 
@@ -267,6 +268,22 @@ describe('wp-page.php', { skip: sito.nonDisponibile() || false }, () => {
       atteso(page('apply', SLUG), 0, '0 differenze');
       scriviKit(cta('Di nuovo il kit'), cta('Nuovo', 'centered'), HERO_A);
       atteso(page('plan', SLUG), 5, '2 uguale · 1 modificato');
+    });
+
+    // Il cliente toglie un blocco, il kit viene riallineato a WordPress, poi nel kit nasce un
+    // blocco nuovo con la stessa chiave: deve entrare, non essere preso per quello tolto a mano.
+    it('(w) dopo il riallineamento del kit, un blocco nuovo con la stessa chiave di uno tolto a mano entra', () => {
+      scriviKit(cta('Primo'), HERO_A, cta('Secondo'));
+      atteso(page('apply', SLUG, 'forza', 'confirm'), 5);
+      aMano(contenuto().replace('Primo', 'Primo del cliente').replace(/\s*<!-- wp:wdm\/cta \{[^}]*"Secondo"[^}]*\} \/-->/, ''));
+      assert.ok(!contenuto().includes('Secondo'));
+      atteso(page('apply', SLUG), 6, '1 protetto', '1 tolto a mano');
+      scriviKit(cta('Primo'), HERO_A);
+      atteso(page('apply', SLUG), 6, '1 protetto · 0 nuovo · 0 tolto a mano');
+      scriviKit(cta('Primo'), HERO_A, cta('Nato dopo'));
+      atteso(page('plan', SLUG), 5, '1 protetto · 1 nuovo · 0 tolto a mano');
+      atteso(page('apply', SLUG), 5);
+      assert.ok(contenuto().includes('Primo del cliente') && contenuto().includes('Nato dopo'), contenuto());
     });
   });
 });

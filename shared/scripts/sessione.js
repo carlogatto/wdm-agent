@@ -60,7 +60,8 @@ function progetto(sito) {
 // Lancia sessione.php con la riga {wp-cli}, senza shell. Restituisce il JSON stampato.
 function wp(p, comando) {
   const [php, ...resto] = p.wp;
-  const r = spawnSync(php, [...resto, 'eval-file', PHP, comando, p.utente], { encoding: 'utf8', timeout: 60000 });
+  // 20 secondi: meno del tempo che Claude Code concede all'hook di fine turno (hooks.json).
+  const r = spawnSync(php, [...resto, 'eval-file', PHP, comando, p.utente], { encoding: 'utf8', timeout: 20000 });
   if (r.error || r.status !== 0) {
     const dettaglio = r.error ? r.error.message : (r.stderr || r.stdout || '').trim();
     const mio = /^sessione: /m.test(dettaglio);
@@ -76,20 +77,21 @@ function wp(p, comando) {
 // Nei modelli un segnaposto sta sempre dentro una stringa JS tra apici singoli: il valore si
 // scrive in modo che la stringa resti quella (un JSON con virgolette e apostrofi compreso).
 function inStringa(valore) {
-  return String(valore).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n');
+  return String(valore).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r\n?|\n/g, '\\n');
 }
 
 // Il modello con i valori al posto dei segnaposto. Un segnaposto senza valore è un errore.
 function componi(modello, valori, cookie) {
   if (!modello.includes('/*COOKIES*/')) throw new Errore('il modello non ha il segnaposto /*COOKIES*/: senza, il browser non entra nel backend.');
   const mancanti = new Set();
-  const testo = modello.replace(/\{\{([a-z][a-z0-9-]*)\}\}/g, (tutto, nome) => {
+  // Prima i cookie, poi i valori: un valore che cita il segnaposto dei cookie resta testo.
+  const testo = modello.replace('/*COOKIES*/', () => JSON.stringify(cookie)).replace(/\{\{([a-z][a-z0-9-]*)\}\}/g, (tutto, nome) => {
     if (nome in valori) return inStringa(valori[nome]);
     mancanti.add(nome);
     return tutto;
   });
   if (mancanti.size) throw new Errore(`il modello chiede ${[...mancanti].map((n) => `{{${n}}}`).join(', ')}: aggiungi ${[...mancanti].map((n) => `${n}=valore`).join(' ')} al comando.`);
-  return testo.replace('/*COOKIES*/', () => JSON.stringify(cookie));
+  return testo;
 }
 
 function apri(sito, modelloFile, coppie) {
@@ -104,7 +106,14 @@ function apri(sito, modelloFile, coppie) {
   const modello = fs.readFileSync(modelloFile, 'utf8');
   componi(modello, valori, []);   // tutto ciò che può fallire, prima di creare la sessione
   const f = file(sito);
-  const sessione = wp(p, 'crea');
+  let sessione;
+  try {
+    sessione = wp(p, 'crea');
+  } catch (errore) {
+    // WordPress può aver creato la sessione prima di fallire: non deve restare aperta.
+    try { wp(p, 'revoca'); } catch { /* WordPress non risponde: non c'è nulla da revocare */ }
+    throw errore;
+  }
   try {
     fs.mkdirSync(path.join(cartella(sito), 'shots'), { recursive: true });
     fs.writeFileSync(f.segno, JSON.stringify({ utente: p.utente, scade: sessione.scade }) + '\n');
@@ -146,7 +155,13 @@ function chiudi(sito) {
   return sessioni;
 }
 
-module.exports = { apri, chiudi, componi, file, Errore };
+// Solo i file: per una sessione già scaduta, che WordPress ha chiuso da sé.
+function pulisci(sito) {
+  togli(file(sito).run);
+  togli(file(sito).segno);
+}
+
+module.exports = { apri, chiudi, pulisci, componi, file, Errore };
 
 if (require.main === module) {
   const [comando, sito, ...resto] = process.argv.slice(2);

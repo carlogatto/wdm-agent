@@ -97,9 +97,10 @@ is a `wp_navigation`, else by title), serializes the items with core's own
   log row;
 - post present and WordPress **would lose something** → prints the diff and the line `WordPress
   perderebbe: …`, exits **3 without writing**. What counts as a loss: an item of the menu that
-  the plan does not have (recognised by its label), an item whose address was typed by hand and
-  that the plan would replace, a block that is not a menu item (a search field added from the
-  Site Editor);
+  the plan does not have (recognised by its label), an item whose destination was chosen by hand
+  (a page linked from the Site Editor, a typed address) and that the plan would change, a block
+  that is not a menu item (a search field added from the Site Editor). An orphan (`#`) that the
+  plan now links to its page is not a loss;
 - the menu post is **open in the editor** by a user → exit **4 without writing**: say who has
   it open, ask the dev to close the tab, relaunch `apply` in a later turn.
 

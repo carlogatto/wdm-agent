@@ -131,7 +131,7 @@ Project Config values, keep the tables (`setup.js` renames `wdm` → `{prefix}` 
 - [ ] Step 4b — the four wp_navigation created, ref written in header AND footer
 - [ ] Step 4c — Home page, show_on_front=page, permalinks
 - [ ] Step 4d — Design Tokens + wp-global-styles.css synced
-- [ ] Step 4e — Checks: home 200, Site Editor 200, debug.log empty
+- [ ] Step 4e — DESIGN.md tables written; checks: npm run check (frontend and parity), editor, debug.log empty
 - [ ] Step 4f — Formidable installed
 
 ## Phase 5 — Handover
@@ -289,7 +289,11 @@ node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-ro
 cd "{theme-root}" && npm run build   # html/ with the regenerated global styles
 ```
 
-### Step 4e — Checks
+### Step 4e — DESIGN.md tables, then checks
+First write the `## Telaio`, `## Pagine`, `## Blocchi` and `## Navigazione` rows as Step 5a says:
+the parity check below reads them, and with the base theme's rows still there (five pages
+`implementata` whose kits Step 3a removed) it could only answer `SKIP`.
+
 - `cd "{theme-root}" && npm run check` → exit 0, with the frontend checks executed (no `SKIP`
   line for the Home: a `SKIP … non raggiungibile` here means the host stopped answering) and
   `PASS check-parita`: header and footer of the new project have the same structure in the kit
@@ -318,6 +322,8 @@ Parti)".
 ## Phase 5 — Handover
 
 ### Step 5a — DESIGN.md, CLAUDE.md and README.md `[AGENT]`
+The four state tables are written at Step 4e, before the checks; here they are verified
+together with the rest.
 - `## Telaio`: header, footer, templates, form di default `implementato` (inherited from the starter; the project
   kit will redesign them with `fse-kit`).
 - `## Pagine`: Home `/` `da progettare` (the WP page exists, empty; its kit is the project's;

@@ -5,9 +5,19 @@
 'use strict';
 
 const VUOTI = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
-// Commento · elemento il cui contenuto non è HTML da leggere · tag di chiusura · tag di apertura.
-const PEZZO = /<!--[\s\S]*?-->|<(script|style|template|svg|noscript)\b[^>]*>[\s\S]*?<\/\1\s*>|<\/([a-zA-Z][\w:-]*)\s*>|<([a-zA-Z][\w:-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g;
-const CLASSE = /(?:^|\s)class\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i;
+// Commento · elemento il cui contenuto non è HTML da leggere (non chiuso su se stesso: un
+// <svg … /> non ha contenuto) · tag di chiusura · tag di apertura.
+const ATTRIBUTI = `(?:[^>"']|"[^"]*"|'[^']*')*`;
+const PEZZO = new RegExp(`<!--[\\s\\S]*?-->|<(script|style|template|svg|noscript)\\b${ATTRIBUTI}(?<!\\/)>[\\s\\S]*?<\\/\\1\\s*>|<\\/([a-zA-Z][\\w:-]*)\\s*>|<([a-zA-Z][\\w:-]*)(${ATTRIBUTI})>`, 'g');
+// Un attributo alla volta: così `class=` scritto dentro il valore di un altro non conta.
+const ATTRIBUTO = /([^\s"'=<>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+)))?/g;
+
+function classi(attributi) {
+  for (const m of attributi.matchAll(ATTRIBUTO)) {
+    if (m[1].toLowerCase() === 'class') return (m[2] ?? m[3] ?? m[4] ?? '').split(/\s+/).filter(Boolean);
+  }
+  return [];
+}
 
 // { tag, classi: [..], figli: [..] } a partire da una radice senza tag.
 function albero(html) {
@@ -22,8 +32,7 @@ function albero(html) {
       }
     } else if (m[3]) {
       const tag = m[3].toLowerCase();
-      const classe = CLASSE.exec(m[4] || '');
-      const nodo = { tag, classi: classe ? (classe[1] ?? classe[2] ?? classe[3]).split(/\s+/).filter(Boolean) : [], figli: [] };
+      const nodo = { tag, classi: classi(m[4] || ''), figli: [] };
       pila[pila.length - 1].figli.push(nodo);
       if (!VUOTI.has(tag) && !/\/\s*$/.test(m[4] || '')) pila.push(nodo);
     }

@@ -32,6 +32,12 @@ describe('html.js: albero degli elementi', () => {
     assert.deepEqual(a.figli.map((n) => n.tag), ['div', 'span']);
   });
 
+  it('un <svg/> chiuso su se stesso non inghiotte ciò che segue; class= dentro un altro attributo non è la classe', () => {
+    const a = albero('<div class="a"><svg class="no" viewBox="0 0 1 1"/><p class="b">x</p><svg><path/></svg></div><a title=\'di class="finta"\' class="c">y</a>');
+    const piatto = (n) => [n.classi.join('.'), ...n.figli.flatMap(piatto)];
+    assert.deepEqual(piatto(a), ['', 'a', 'no', 'b', 'c']);
+  });
+
   it('un tag di chiusura senza apertura, o un elemento mai chiuso, non fa perdere il resto', () => {
     const a = albero('</div><ul class="a"><li class="b">uno<li class="c">due</ul><p class="d">dopo</p>');
     assert.deepEqual(a.figli.map((n) => n.classi[0]), ['a', 'd']);
@@ -76,7 +82,33 @@ describe('parita.js: i contenuti non contano', () => {
   });
 });
 
+describe('parita.js: un campo facoltativo lasciato vuoto in WordPress è contenuto', () => {
+  const senzaBottone = (html) => html.replace('<a class="wp-block-button__link abc-block-hero__button" href="/x">Vai</a>', '');
+
+  it('un elemento foglia del blocco che il sito non stampa (testo o link svuotato): nessuna differenza', () => {
+    assert.deepEqual(diff(pagina(), senzaBottone(pagina())), []);
+  });
+
+  it('una card della serie senza il suo titolo: nessuna differenza', () => {
+    const unaSenzaTitolo = pagina({ card: 3 }).replace('<h3 class="abc-block-card__title">Card</h3>', '');
+    assert.deepEqual(diff(pagina({ card: 3 }), unaSenzaTitolo), []);
+  });
+
+  it('un elemento che il sito stampa e il kit non ha resta una differenza', () => {
+    assert.deepEqual(diff(senzaBottone(pagina()), pagina()), ['solo nel sito: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__button']);
+  });
+
+  it('un contenitore del blocco che manca nel sito resta una differenza', () => {
+    assert.equal(diff(pagina(), pagina().replace(/<div class="abc-block-hero__inner">([\s\S]*?)<\/div><\/section>/, '$1</section>')).length > 0, true);
+  });
+});
+
 describe('parita.js: la struttura conta', () => {
+  it('due sezioni uguali in fila nel kit e una sola nel sito: differenza (le sezioni non sono una serie)', () => {
+    const cta = '<section class="abc-block-cta alignfull"><div class="abc-block-cta__inner"><p class="abc-block-cta__title">x</p></div></section>';
+    assert.deepEqual(diff(pagina({ extra: cta + cta }), pagina({ extra: cta })), ['solo nel kit: abc-main › abc-block-cta alignfull']);
+  });
+
   it('variante diversa: classi diverse, con il percorso', () => {
     assert.deepEqual(diff(pagina(), pagina({ variante: 'image-right' })), [
       'classi diverse: abc-main › abc-block-image-text — kit [abc-block-image-text abc-block-image-text--image-left alignfull] · sito [abc-block-image-text abc-block-image-text--image-right alignfull]',
@@ -92,7 +124,8 @@ describe('parita.js: la struttura conta', () => {
   it('un elemento del blocco in più, una classe del progetto diversa, un colore diverso', () => {
     assert.deepEqual(diff(pagina(), pagina().replace('<h1 class="abc-block-hero__title">', '<p class="abc-block-hero__kicker">k</p><h1 class="abc-block-hero__title">')),
       ['solo nel sito: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__kicker']);
-    assert.equal(diff(pagina(), pagina().replace('abc-footer__bottom', 'abc-footer__fondo')).length, 2);
+    // Una classe rinominata su un elemento senza figli: il sito stampa un elemento che il kit non ha.
+    assert.deepEqual(diff(pagina(), pagina().replace('abc-footer__bottom', 'abc-footer__fondo')), ['solo nel sito: abc-footer › abc-footer__inner › abc-footer__fondo']);
     assert.match(diff(pagina(), pagina({ classiHero: 'alignfull abc-block-hero abc-block-hero--image has-dark-background-color has-background' }))[0], /^classi diverse: abc-main › abc-block-hero — /);
   });
 
@@ -127,8 +160,9 @@ describe('parita.js: DESIGN.md e lato modificato per ultimo', () => {
     assert.match(r.stderr, /uso: node parita\.js/);
     r = spawnSync(process.execPath, [SCRIPT, RADICE, '--html'], { encoding: 'utf8' });
     assert.equal(r.status, 2);
+    // Non è una differenza di struttura: lo script non ha potuto verificare, e lo dice.
     r = spawnSync(process.execPath, [SCRIPT, path.join(RADICE, 'tests')], { encoding: 'utf8' });
-    assert.equal(r.status, 1, r.stdout + r.stderr);
-    assert.match(r.stderr, /non c'è DESIGN\.md/);
+    assert.equal(r.status, 3, r.stdout + r.stderr);
+    assert.match(r.stdout + r.stderr, /Parità non verificata — .*non c'è DESIGN\.md/);
   });
 });

@@ -7,9 +7,11 @@
 // Cosa confronta: lo scheletro, cioè gli elementi che portano una classe del progetto
 // ({prefix}-…), annidati come nel documento, con quelle classi più le classi di colore e di
 // allineamento. Sono i blocchi, il loro ordine, la variante e il markup BEM: ciò che kit e tema
-// devono avere uguale. Cosa non confronta: testi, immagini, icone, link e quanti elementi ha una
-// serie ripetuta (le card di un carosello). Quelli sono contenuti: li decide chi scrive in
-// WordPress, e una differenza lì non è una differenza.
+// devono avere uguale. Cosa non confronta: testi, immagini, icone, link, quanti elementi ha una
+// serie ripetuta (le card di un carosello) e un campo facoltativo lasciato vuoto in WordPress
+// (un elemento senza figli, come `__text` o `__link`, che il kit ha e il sito non stampa).
+// Quelli sono contenuti: li decide chi scrive in WordPress, e una differenza lì non è una
+// differenza. Un elemento che il sito stampa e il kit non ha, invece, si segnala.
 // Dove: header e footer una volta sola (righe `implementato` di ## Telaio), poi il contenuto di
 // ogni pagina `implementata` di ## Pagine.
 // Tolleranze: le classi che WordPress e Swiper aggiungono da soli non contano; un elemento che
@@ -18,8 +20,8 @@
 // bottone del menu è di core).
 //
 // Silenzio ed exit 0: struttura uguale. Exit 1: differenze, una per riga, con il lato che è
-// cambiato per ultimo. Exit 3: non ha potuto verificare (sito fermo, kit non compilato), e dice
-// perché. Exit 2: uso.
+// cambiato per ultimo. Exit 3: non ha potuto verificare (sito fermo, kit non compilato,
+// DESIGN.md assente o incompleto), e dice perché. Exit 2: uso.
 // --html e --url sostituiscono la cartella dei kit compilati e l'indirizzo del sito (prove).
 
 'use strict';
@@ -51,21 +53,30 @@ function scheletro(html, prefisso) {
     const etichetta = classi.join(' ');
     // Stesse classi dell'elemento che lo contiene: è lo stesso elemento, stampato due volte.
     if (etichetta === sopra) return scendi(figlio, sopra);
-    return [{ classi, etichetta, base: classi.find((c) => mio(c) && !c.includes('--')) || classi.find(mio), figli: scendi(figlio, etichetta) }];
+    // Le sezioni di una pagina (i figli di {prefix}-main) non sono una serie: due uguali sono due.
+    return [{ classi, etichetta, base: classi.find((c) => mio(c) && !c.includes('--')) || classi.find(mio), sezioni: classi.includes(`${prefisso}-main`), figli: scendi(figlio, etichetta) }];
   });
-  return compatta(scendi(albero(html), ''));
+  return compatta(scendi(albero(html), ''), false);
 }
 
-function firma(nodo) {
-  return `${nodo.etichetta}(${nodo.figli.map(firma).join(',')})`;
+// Un elemento del blocco senza altri elementi dentro (`__title`, `__text`, `__link`): c'è o non
+// c'è secondo ciò che è stato scritto nel campo, quindi è contenuto.
+function foglia(nodo) {
+  return nodo.figli.length === 0 && nodo.base.includes('__');
+}
+
+// `senzaFoglie`: la firma con cui si riconosce una serie, che non guarda i campi facoltativi.
+function firma(nodo, senzaFoglie = false) {
+  const figli = senzaFoglie ? nodo.figli.filter((f) => !foglia(f)) : nodo.figli;
+  return `${nodo.etichetta}(${figli.map((f) => firma(f, senzaFoglie)).join(',')})`;
 }
 
 // Una serie di elementi uguali in fila vale come uno: quante card ha un carosello è contenuto.
-function compatta(nodi) {
+function compatta(nodi, serie = true) {
   const tenuti = [];
   for (const nodo of nodi) {
-    nodo.figli = compatta(nodo.figli);
-    if (!tenuti.length || firma(tenuti[tenuti.length - 1]) !== firma(nodo)) tenuti.push(nodo);
+    nodo.figli = compatta(nodo.figli, !nodo.sezioni);
+    if (!serie || !tenuti.length || firma(tenuti[tenuti.length - 1], true) !== firma(nodo, true)) tenuti.push(nodo);
   }
   return tenuti;
 }
@@ -105,7 +116,8 @@ function confronta(kit, sito, sopra = []) {
   // Gli stessi elementi da una parte e dall'altra, in un altro ordine.
   const spostati = soloKit.filter((n) => soloSito.some((m) => firma(m) === firma(n)));
   for (const n of spostati) trovate.push(`ordine diverso: ${dove(n)}`);
-  for (const n of soloKit.filter((n) => !spostati.includes(n))) trovate.push(`solo nel kit: ${dove(n)}`);
+  // Un campo facoltativo che il kit riempie e in WordPress è vuoto non è una differenza.
+  for (const n of soloKit.filter((n) => !spostati.includes(n) && !foglia(n))) trovate.push(`solo nel kit: ${dove(n)}`);
   for (const n of soloSito.filter((n) => !spostati.some((m) => firma(m) === firma(n)))) trovate.push(`solo nel sito: ${dove(n)}`);
   for (const [i, j] of coppie) {
     if (kit[i].etichetta !== sito[j].etichetta) {
@@ -155,11 +167,16 @@ function progetto(sito) {
 // ---------- sito ----------
 
 // { status, body } oppure null se il sito non risponde. Il certificato del sito locale non si
-// verifica: su alcuni sistemi è autofirmato.
-function scarica(url) {
+// verifica: su alcuni sistemi è autofirmato. Un reindirizzamento (la barra finale) si segue.
+function scarica(url, salti = 3) {
   return new Promise((resolve) => {
     const client = url.startsWith('https:') ? https : http;
     const richiesta = client.get(url, { rejectUnauthorized: false, timeout: 15000 }, (risposta) => {
+      if ([301, 302, 307, 308].includes(risposta.statusCode) && risposta.headers.location && salti > 0) {
+        risposta.resume();
+        resolve(scarica(new URL(risposta.headers.location, url).href, salti - 1));
+        return;
+      }
       let body = '';
       risposta.setEncoding('utf8');
       risposta.on('data', (pezzo) => { body += pezzo; });
@@ -175,7 +192,8 @@ function scarica(url) {
 // Data dell'ultimo commit che ha toccato i file dati; 'ora' se hanno modifiche non committate;
 // null se non si può sapere (nessun repo, git assente).
 function ultimoCommit(sito, file) {
-  const git = (...args) => spawnSync('git', ['-C', sito, ...args, '--', ...file], { encoding: 'utf8' });
+  // --no-optional-locks: nemmeno l'indice di git viene riscritto. Questo script legge e basta.
+  const git = (...args) => spawnSync('git', ['--no-optional-locks', '-C', sito, ...args, '--', ...file], { encoding: 'utf8' });
   const stato = git('status', '--porcelain');
   if (stato.error || stato.status !== 0) return null;
   if (stato.stdout.trim() !== '') return 'ora';
@@ -272,7 +290,8 @@ if (require.main === module) {
     process.exitCode = differenze.length ? 1 : note.length ? 3 : 0;
   }).catch((errore) => {
     if (!(errore instanceof Errore)) throw errore;
-    console.error(`parita: ${errore.message}`);
-    process.exitCode = 1;
+    // Non è una differenza di struttura: non c'è stato modo di guardare.
+    console.log(`Parità non verificata — ${errore.message}`);
+    process.exitCode = 3;
   });
 }

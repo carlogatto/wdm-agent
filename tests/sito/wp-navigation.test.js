@@ -135,6 +135,24 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
     atteso(0, ['confirm']);
   });
 
+  // Una voce che il cliente ha collegato a mano a una pagina (il rimedio naturale a una voce
+  // orfana) non torna a «#» e non cambia pagina senza conferma.
+  it('(j2) destinazione scelta a mano su una voce del kit: exit 3; da «#» a una pagina resta libero', () => {
+    const pagina = sito.wp(['post', 'create', '--post_type=page', '--post_status=publish', '--post_title=I nostri servizi', '--porcelain']).stdout.trim();
+    scriviVoci('Contatti', 'Uno', 'Tre', 'Servizi');
+    atteso(0, [], 'aggiornato');
+    assert.ok(contenuto().includes('"label":"Servizi","url":"#"'), contenuto());
+    const url = sito.wp(['eval', `echo get_permalink(${pagina});`]).stdout.trim();
+    scriviInWp(contenuto().replace('{"label":"Servizi","url":"#","kind":"custom"}', JSON.stringify({ label: 'Servizi', type: 'page', id: Number(pagina), url, kind: 'post-type' })));
+    assert.ok(contenuto().includes(`"id":${pagina}`), contenuto());
+    scriviVoci('Contatti', 'Uno', 'Tre', 'Servizi', 'Cinque');
+    atteso(3, [], 'WordPress perderebbe: «Servizi»');
+    assert.ok(contenuto().includes(`"id":${pagina}`) && !contenuto().includes('Cinque'));
+    atteso(0, ['confirm']);
+    scriviVoci('Contatti', 'Uno', 'Tre');
+    atteso(0, ['confirm']);
+  });
+
   it('(k) menu aperto nell\'editor da un utente: exit 4, nulla scritto; un blocco vecchio non ferma', () => {
     const blocco = (secondi) => assert.equal(sito.wp(['post', 'meta', 'update', id, '_edit_lock', `${Math.floor(Date.now() / 1000) - secondi}:1`]).status, 0);
     scriviVoci('Contatti', 'Uno', 'Tre', 'Quattro');

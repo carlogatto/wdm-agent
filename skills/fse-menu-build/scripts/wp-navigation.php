@@ -17,8 +17,8 @@
  * apply → per ogni menu del piano: trova il post (ref della prima part → titolo), lo crea se
  *         manca, confronta il contenuto e stampa il diff. Aggiunte, riordini e voci che trovano
  *         la loro pagina si scrivono subito. Se WordPress perderebbe qualcosa (una voce che il
- *         piano non ha, un indirizzo scritto a mano, un blocco che non è una voce) esce 3 senza
- *         scrivere, salvo `confirm`. Se il menu è aperto nell'editor da un utente esce 4 senza
+ *         piano non ha, una pagina o un indirizzo scelti a mano che il piano cambierebbe, un
+ *         blocco che non è una voce) esce 3 senza scrivere, salvo `confirm`. Se il menu è aperto nell'editor da un utente esce 4 senza
  *         scrivere. Poi riscrive `"ref":N` nel blocco navigation di OGNI part elencata (core non
  *         controlla il post type del ref: un id sbagliato stampa una pagina dentro il menu).
  *         Le parts si controllano prima di scrivere: una part assente o senza il blocco giusto
@@ -270,42 +270,59 @@ function fmb_print_diff( $old, $new ) {
 }
 
 // Ciò che WordPress perderebbe se il menu venisse riscritto dal piano: le voci del post che il
-// piano non ha (riconosciute dall'etichetta), le voci con un indirizzo scritto a mano che il
-// piano non conserva, i blocchi che non sono voci. Un riordino o un'aggiunta non perdono nulla.
+// piano non ha (riconosciute dall'etichetta), le voci la cui destinazione il piano cambierebbe
+// (una pagina o un indirizzo scelti a mano), i blocchi che non sono voci. Un riordino,
+// un'aggiunta, o una voce orfana («#») che trova la sua pagina non perdono nulla.
+// Ogni voce è { label, dest, show }: dest è '' per una voce orfana.
 function fmb_existing_ids( $blocks ) {
   $out = array();
   foreach ( $blocks as $b ) {
     if ( empty( $b['blockName'] ) ) continue;
     $a = isset( $b['attrs'] ) && is_array( $b['attrs'] ) ? $b['attrs'] : array();
-    if ( in_array( $b['blockName'], array( 'core/navigation-link', 'core/navigation-submenu', 'core/home-link' ), true ) ) {
+    if ( $b['blockName'] === 'core/home-link' ) {
+      $out[] = array( 'label' => fmb_norm( isset( $a['label'] ) ? $a['label'] : '' ), 'dest' => 'home', 'show' => '«' . ( isset( $a['label'] ) ? $a['label'] : '' ) . '»' );
+    } elseif ( in_array( $b['blockName'], array( 'core/navigation-link', 'core/navigation-submenu' ), true ) ) {
       $label = isset( $a['label'] ) ? (string) $a['label'] : '';
       $url   = isset( $a['url'] ) ? (string) $a['url'] : '';
-      $hand  = $b['blockName'] !== 'core/home-link' && ( ! isset( $a['kind'] ) || $a['kind'] === 'custom' ) && $url !== '' && $url !== '#';
-      $out[] = array( 'id' => fmb_norm( $label ) . ( $hand ? '|' . $url : '' ), 'show' => '«' . $label . '»' . ( $hand ? " ($url)" : '' ) );
+      $page  = isset( $a['kind'], $a['id'] ) && $a['kind'] === 'post-type' && ( ! isset( $a['type'] ) || $a['type'] === 'page' );
+      $dest  = $page ? 'page:' . (int) $a['id'] : ( $url === '' || $url === '#' ? '' : $url );
+      $out[] = array( 'label' => fmb_norm( $label ), 'dest' => $dest, 'show' => '«' . $label . '»' . ( $dest === '' ? '' : ' (' . ( $page ? 'pagina ' . (int) $a['id'] : $url ) . ')' ) );
     } else {
-      $out[] = array( 'id' => '[' . $b['blockName'] . ']', 'show' => 'blocco ' . $b['blockName'] );
+      $out[] = array( 'label' => '[' . $b['blockName'] . ']', 'dest' => 'block', 'show' => 'blocco ' . $b['blockName'] );
     }
     if ( ! empty( $b['innerBlocks'] ) ) $out = array_merge( $out, fmb_existing_ids( $b['innerBlocks'] ) );
   }
   return $out;
 }
 
+// Le voci del piano con la destinazione che fmb_serialize_items scriverà.
 function fmb_plan_ids( $items ) {
   $out = array();
   foreach ( $items as $it ) {
-    $hand  = empty( $it['home'] ) && empty( $it['page'] ) && isset( $it['url'] ) && $it['url'] !== '' && $it['url'] !== '#';
-    $out[] = fmb_norm( isset( $it['label'] ) ? $it['label'] : '' ) . ( $hand ? '|' . $it['url'] : '' );
+    if ( ! empty( $it['home'] ) ) $dest = 'home';
+    elseif ( ! empty( $it['page'] ) && get_post_status( (int) $it['page'] ) === 'publish' ) $dest = 'page:' . (int) $it['page'];
+    else $dest = isset( $it['url'] ) && $it['url'] !== '' && $it['url'] !== '#' ? $it['url'] : '';
+    $out[] = array( 'label' => fmb_norm( isset( $it['label'] ) ? $it['label'] : '' ), 'dest' => $dest );
     if ( ! empty( $it['children'] ) ) $out = array_merge( $out, fmb_plan_ids( $it['children'] ) );
   }
   return $out;
 }
 
 function fmb_lost( $existing_content, $items ) {
-  $left = array_count_values( fmb_plan_ids( $items ) );
+  $plan     = fmb_plan_ids( $items );
+  $existing = fmb_existing_ids( parse_blocks( (string) $existing_content ) );
+  // Prima le voci con una destinazione vera: vogliono la stessa nel piano. Poi le orfane, che
+  // si accontentano di una voce del piano con la stessa etichetta.
+  usort( $existing, function ( $a, $b ) { return ( $a['dest'] === '' ) <=> ( $b['dest'] === '' ); } );
   $lost = array();
-  foreach ( fmb_existing_ids( parse_blocks( (string) $existing_content ) ) as $e ) {
-    if ( ! empty( $left[ $e['id'] ] ) ) { $left[ $e['id'] ]--; continue; }
-    $lost[] = $e['show'];
+  foreach ( $existing as $e ) {
+    $found = null;
+    foreach ( $plan as $k => $p ) {
+      if ( $p['label'] !== $e['label'] ) continue;
+      if ( $e['dest'] === '' || $p['dest'] === $e['dest'] ) { $found = $k; break; }
+    }
+    if ( $found === null ) { $lost[] = $e['show']; continue; }
+    unset( $plan[ $found ] );
   }
   return $lost;
 }

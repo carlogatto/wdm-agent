@@ -96,7 +96,7 @@ describe('parita.js', { skip: sito.nonDisponibile() || false }, () => {
     const r = parita('--html', copia);
     assert.equal(r.status, 1, r.out);
     assert.match(r.out, /struttura diversa in 2 punti/);
-    assert.match(r.out, /footer \(telaio\)\n {2}solo nel kit: .*wdm-footer__fondo/);
+    assert.match(r.out, /footer \(telaio\)\n {2}solo nel sito: .*wdm-footer__bottom/);
     assert.match(r.out, /Prova \(\/\?page_id=\d+\)\n {2}classi diverse: wdm-main › wdm-block-cta — kit \[.*--centered.*\] · sito \[.*--split.*\]/);
     assert.match(r.out, /Per ultimo è cambiato|Non so dire quale lato/);
   });

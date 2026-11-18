@@ -397,7 +397,9 @@ to WordPress. WordPress or the theme changed last → correct the kit (the page 
 kit and its README), `npm run build`, run the check again. Exit 3 → it could not verify and
 says why (servers stopped, kit not compiled): never a pass. Tolerated by design: the classes
 WordPress and Swiper add, a core block that prints the same classes on two nested elements
-(navigation), `{prefix}-header__toggle` (kit only, §7). It runs at the start of every
+(navigation), `{prefix}-header__toggle` (kit only, §7), and an optional field left empty in
+WordPress (an element without children, like `__text` or `__link`, that the kit has and the site
+does not print: that is content). An element the site prints and the kit lacks is reported. It runs at the start of every
 conversation (project `CLAUDE.md`) and at the end of every session inside `npm run check`
 (`tools/check-parita.js` of the theme finds the plugin through the registry; exit 3 there is a
 declared `SKIP`). Menu items are not its matter: `wp-navigation.php` owns them.
@@ -614,9 +616,9 @@ in a string variable. Below `{wp-cli}
 post create` is what `wp post create` would be with a global `wp`.
 
 ```bash
-# page from a file with block markup (the markup of the README "Markup di inserimento" + kit texts)
-ID=$({wp-cli} post create {scratchpad}/page-{slug}.html --post_type=page --post_title="Titolo" --post_name="slug" --post_status=publish --porcelain)
-{wp-cli} post update $ID "{scratchpad}/page-{slug}.html"              # replace the content of an existing page
+# an empty page; its content is written only by wp-page.php (plan → apply, fse-build 2d/2e)
+ID=$({wp-cli} post create --post_type=page --post_title="Titolo" --post_name="slug" --post_status=publish --porcelain)
+{wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" apply "{scratchpad}/page-{slug}.html" page=$ID
 {wp-cli} post get $ID --field=post_content                          # derived state: what is in WP now
 {wp-cli} post meta update $ID {prefix}_show_title 0                  # page opening with a hero image (its own h1); {prefix}_show_form 0 only when the content already has a {prefix}/form block (§7)
 {wp-cli} option update show_on_front page && {wp-cli} option update page_on_front $ID
@@ -641,8 +643,10 @@ their HTML (`<!-- wp:paragraph --><p>…</p><!-- /wp:paragraph -->`). Texts verb
 kit (WordPress applies `wptexturize` on output: compare after normalization). A page created
 this way must open in the editor with **zero invalid blocks** and not dirty.
 
-Direct `post_content` writes are the write path of the FSE family (the markup is
-self-documenting, no opaque ACF keys); the editor JS API is used for the smoke test (§9).
+Block markup written into `post_content` is the write path of the FSE family (the markup is
+self-documenting, no opaque ACF keys), and for a page it passes **only** through `wp-page.php
+apply`: a `wp post update` with a file would overwrite what the client changed in WordPress and
+break the fingerprint the script keeps (§10). The editor JS API is used for the smoke test (§9).
 
 ## 9. Playwright checklist (agent user)
 
@@ -920,8 +924,9 @@ it** (a file's existence says nothing about whether the dev approved it) — wit
   `src/kit/{prefix}-{page}.kit` missing → back to `da progettare`; row `implementata` but the page is absent in WP (`{wp-cli} post list
   --post_type=page --name=<slug>`) → back to `kit`; a page present in WP while the row says
   `da progettare`/`kit` (e.g. the empty Home created by `fse-theme-setup`) → **flag only**
-  ("esiste in WP, contenuto da confrontare col kit"): `implementata` means `fse-build` 2g passed
-  (WP content ≡ kit), not "the page exists".
+  ("esiste in WP, contenuto da confrontare col kit"): `implementata` means the page was built
+  from its kit and `fse-build` 2g passed, not "the page exists". From then on its structure
+  must stay the kit's (§4); its content is whoever's writes in WordPress (§10).
 - Telaio: `parts/` and `templates/` always exist in a theme cloned from the starter — never
   evidence; the row is what the kit/build sessions wrote (`kit` after a redesign in `fse-kit`,
   `implementato` after the telaio session of `fse-build`).
