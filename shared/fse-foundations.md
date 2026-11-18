@@ -317,7 +317,9 @@ write, with `imageId`+`imageUrl`+`imageAlt`) · `## Dipendenze JS / CSS` (`—` 
 `## Componenti condivisi` (`—` when none). No references to plans, phases or decisions: the
 README describes the block as it is. The
 README is what `fse-build` reads to create and populate the block: an attribute not in the
-table does not exist.
+table does not exist. It is also the **only** place where variants, attributes and children are
+written: `DESIGN.md → Blocchi`, the project `CLAUDE.md → Existing Blocks` and the theme README
+list which blocks exist and nothing more, so they cannot drift from the contract.
 
 ## 4. Kit = render.php — the parity rule
 
@@ -883,9 +885,9 @@ Lingua, persona (tu/voi/lei), registro, lessico da usare e da evitare, 3 esempi 
 | Home | / | implementata | src/kit/abc-home.kit | hero (image) |
 
 ## Blocchi
-| Blocco | Stato | Varianti | Figli | Pagina d'origine |
-|---|---|---|---|---|
-| abc/hero | implementato | image, carousel | abc/hero-slide | Home |
+| Blocco | Stato | Pagina d'origine |
+|---|---|---|
+| abc/hero | implementato | Home |
 
 ## Navigazione
 | menu (id) | parts | voci (primo livello + figli) | orfane | data |
@@ -899,7 +901,7 @@ Lingua, persona (tu/voi/lei), registro, lessico da usare e da evitare, 3 esempi 
 
 States: Telaio `da progettare` → `kit` → `implementato`; Pagine `da progettare` → `kit` →
 `implementata`, and `da eliminare` for a page the map dropped (`fse-kit` on the dev's request, or
-the dev by hand; row and kit stay until `fse-build` deletes the page with `confirm`); Blocchi `kit` → `implementato` (variants listed; a block is `kit` as soon as
+the dev by hand; row and kit stay until `fse-build` deletes the page with `confirm`); Blocchi `kit` → `implementato` (the row says which block exists and in which state: variants, attributes and children are written in the block README only, §3; a block is `kit` as soon as
 its first kit + README exist, `implementato` when `blocks/{prefix}-block-{slug}/build/index.asset.php`
 exists — not `build/style-index.css` alone, which a kit-phase block already has).
 

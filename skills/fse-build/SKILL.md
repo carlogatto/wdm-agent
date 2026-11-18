@@ -235,9 +235,12 @@ as missing; the parity script needs no browser.
 - `DESIGN.md → Pagine`: `implementata` only when 2g is green (else stays `kit`, with the reason
   in the report); a page modified by hand (exit 6, or `protetto` rows) keeps the state it has:
   its content is the client's and is not compared with the kit's. `## Blocchi`: `implementato`
-  for the blocks created, variants.
-- Each block created/edited: README completed where the kit revealed a gap; the theme README
-  table of blocks (if the project keeps one) and project `CLAUDE.md → Existing Blocks`.
+  for the blocks created (block, state, origin page: nothing else).
+- Each block created/edited: README completed where the kit revealed a gap. A block **created**
+  gets one line in the theme README list of blocks (if the project keeps one) and in the project
+  `CLAUDE.md → Existing Blocks` (folder and name, with `{prefix}`). Variants, attributes and
+  children are written in the block README only: never copied into those lists or into
+  `DESIGN.md` (fse-foundations §3 "README.md — the contract").
 - `version` of edited blocks bumped.
 
 ### 2i. Pages `da eliminare` and pages outside the flow

@@ -104,9 +104,10 @@ parent's state; README of both.
 ## Step 4 — Documentation (no confirmation asked)
 
 README (attributes, variants, markup, insertion, dependencies, "Istanze reali" if the project
-keeps them) · `block.json → version` bumped · `DESIGN.md → Blocchi` (variants) and `## Log
-decisioni` (one row: block, scenario, attributes/variants added, pages affected) · project
-`CLAUDE.md → Existing Blocks` if it lists variants.
+keeps them) · `block.json → version` bumped · `## Log decisioni` (one row: block, scenario,
+attributes/variants added, pages affected). The README is the only place where variants,
+attributes and children are written: `DESIGN.md → Blocchi`, the project `CLAUDE.md → Existing
+Blocks` and the theme README only list which blocks exist, so an edit never touches them.
 
 Handover message (fse-foundations §10): *Esito*; *Cosa è cambiato* = the block (name, version,
 what the editor now offers) and the pages that use it, saying whether their saved content changed

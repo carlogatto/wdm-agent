@@ -164,9 +164,10 @@ var(--wp--preset--spacing--section-lg) }</style>`.
 tokens applied, carousel initialised; fix and re-check until clean; screenshots
 `.playwright-mcp/shots/kit-{slug}-{w}.png`.
 
-**3g. State** — `DESIGN.md → Blocchi`: row `{prefix}/{slug}` `kit`, variants, children, origin
-page; a new variant of an implemented block stays `implementato` with the new variant marked
-"(kit)" until `fse-block-edit`/`fse-build` implements it.
+**3g. State** — `DESIGN.md → Blocchi`: row `{prefix}/{slug}` `kit`, origin page (variants and
+children are in the README, the only place where they are written). A new variant of an
+implemented block: the row stays `implementato`; the README `## Varianti` row carries "(kit)"
+in its "kit" column until `fse-block-edit`/`fse-build` implements it.
 
 ## Step 4 — Page
 

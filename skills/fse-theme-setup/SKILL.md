@@ -327,7 +327,7 @@ Parti)".
   pages get no row (Step 3a removed their kits); wdm-theme's "fuori dal flusso" note and its
   `## Log decisioni` rows are dropped.
 - `## Blocchi`: one row per `blocks/*/build/index.asset.php` on disk, `implementato`, origin
-  "starter" (variants and children from each README).
+  "starter" (block, state, origin: variants and children stay in each README).
 - `## Navigazione`: the four menus of Step 4b (title, id and part from `dump`), items as in
   the kit, the ones without a page marked "orfana".
 - `## Domande aperte`, `## Log decisioni` (one row: setup date, values).
