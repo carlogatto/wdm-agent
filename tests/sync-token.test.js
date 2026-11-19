@@ -189,6 +189,29 @@ describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
     assert.doesNotMatch(r.out, /impronta theme\.json/);
   });
 
+  // Lotto 7.1: il confronto era riga per riga, per posizione. Una riga inserita in alto (una
+  // famiglia di font in più) faceva risultare diversa ogni riga fino in fondo: 130 righe per dieci
+  // valori cambiati, e sono le differenze che l'agente deve mostrare al dev prima di rigenerare.
+  it('una riga inserita in alto: le differenze sono quella riga, non tutto ciò che la segue', () => {
+    const p = generato();
+    p.theme((t) => { t.settings.color.palette.unshift({ slug: 'nuovissimo', color: '#123456', name: 'Nuovissimo' }); });
+    const r = p.sync('--check');
+    assert.equal(r.status, 1, r.out);
+    const righe = r.out.split('\n').filter((riga) => /^  [-+] /.test(riga));
+    assert.deepEqual(righe.map((riga) => riga.trim()), ['+   nuovissimo: "#123456"  # Nuovissimo']);
+  });
+
+  it('una riga cambiata e una tolta: il vecchio valore con il meno, il nuovo con il più, nell\'ordine del file', () => {
+    const p = generato();
+    p.theme((t) => { const tolto = t.settings.color.palette.pop(); t.settings.layout.contentSize = '1px'; assert.ok(tolto.slug); });
+    const r = p.sync('--check');
+    assert.equal(r.status, 1, r.out);
+    const righe = r.out.split('\n').filter((riga) => /^  [-+] /.test(riga));
+    assert.equal(righe.filter((riga) => riga.startsWith('  - ')).length, 2, r.out);
+    assert.equal(righe.filter((riga) => riga.startsWith('  + ')).length, 1, r.out);
+    assert.match(righe.join('\n'), /\+ layout: \{ contentSize: 1px/);
+  });
+
   it('blocco senza impronta (progetto di prima) e token uguali: allineato, con l\'invito a rigenerare', () => {
     const p = generato(CSS);
     fs.writeFileSync(p.design, p.leggi().replace(/^# impronta theme\.json: .*\n/m, ''));

@@ -10,7 +10,7 @@ const { spawnSync } = require('node:child_process');
 
 const { RADICE } = require('./lib/citati');
 const SCRIPT = path.join(RADICE, 'skills', 'fse-theme-setup', 'scripts', 'setup.js');
-const { valida, sostituisci, senzaImpronta } = require(SCRIPT);
+const { valida, sostituisci, senzaImpronta, designDelProgetto } = require(SCRIPT);
 
 const BUONI = { prefix: 'atl', slug: 'atelier', textdomain: 'atelier-td', title: "L'Atelier & Co", 'local-url': 'https://atelier.local:8890/' };
 // Le sequenze di escape si compongono qui: scritte per esteso in un file non arrivano intatte.
@@ -141,6 +141,76 @@ describe('setup.js: sostituzione nei file di testo', () => {
   });
 });
 
+// Lotto 7.1: il DESIGN.md che arriva con il tema base racconta il tema base (cinque pagine
+// costruite, id del suo database, note con la sua storia, domande aperte e decisioni sue). Le
+// sezioni di stato di un progetto nuovo le scrive lo script, uguali ogni volta.
+describe('setup.js: DESIGN.md di un progetto nuovo', () => {
+  const BASE = [
+    '# Design: atelier', '', 'Block theme FSE. Spec approvata in `docs/superpowers/specs/`. Formato: §11.', '',
+    '## Project Config', '', '### Identity', '| Variable | Value |', '|---|---|', '| `theme_family` | fse |', '| `{prefix}` | atl |', '',
+    '### Paths', '| Variable | Value |', '|---|---|', '| `{site-root}` | /siti/corso-wdm/atelier |', '',
+    '## Local Development', '- **Local URL**: `{local-url}` (MAMP PRO; web su PHP 8.5.2 dal 2026-11-18; DB `atelier-db`)', '- **Test Playwright**: `pw-catalog.js`, entrano ancora con la password', '',
+    '## Design Tokens', '', '<!-- AUTO-GENERATED:design-tokens da theme.json — non editare. -->', '```yaml', 'colors:', '  base: "#f5f7fa"', '```', '<!-- /AUTO-GENERATED:design-tokens -->', '',
+    '## Telaio', '| Item | Stato | Kit | Note |', '|---|---|---|---|', '| header | implementato | src/kit/main/header | `navigation` ref 4, build Panel del 2026-10-26 |', '',
+    '## Pagine', '| Pagina | URL | Stato | Kit | Blocchi (in ordine) | Note |', '|---|---|---|---|---|---|',
+    '| Home | / | implementata | src/kit/atl-home.kit | hero (image), steps | id 37, build del 2026-11-02 |',
+    '| Catalogo blocchi | /catalogo-blocchi/ | implementata | src/kit/atl-blocks.kit | hero (image), columns-wrapper, steps | id 25 |',
+    '| Contatti | /contatti/ | implementata | src/kit/atl-contatti.kit | hero (image) | id 64 |',
+    'Fuori dal flusso kit → build:', '- Pagina di esempio (id 2)', '',
+    '## Blocchi', '| Blocco | Stato | Pagina d\'origine |', '|---|---|---|', '| atl/hero | implementato | starter |', '',
+    '## Navigazione', '| menu (id) | parts | voci (primo livello + figli) | orfane | data |', '|---|---|---|---|---|', '| Menu principale (4) | header | Home · Contatti (64) | 0 | 2026-11-02 |', '',
+    '## Domande aperte', '- ⏳ piano di correzioni dopo il doppio audit: `docs/superpowers/plans/2026-11-17-piano-lotti.md`', '',
+    '## Log decisioni', '| Data | Decisione |', '|---|---|', '| 2026-10-30 | Plugin 1.3.0 |', '',
+  ].join('\n');
+  const nuovo = designDelProgetto(BASE, { ...BUONI, slug: 'atelier' }, ['hero', 'hero-slide', 'cta']);
+  const sezione = (titolo) => nuovo.split(new RegExp(`^## ${titolo}$`, 'm'))[1].split(/^## /m)[0];
+  const righe = (titolo) => sezione(titolo).split('\n').filter((r) => r.startsWith('| ') && !/^\|[\s:|-]+\|$/.test(r)).slice(1);
+
+  it('Project Config e Design Tokens restano com\'erano, parola per parola', () => {
+    assert.ok(nuovo.includes('| `{site-root}` | /siti/corso-wdm/atelier |'));
+    assert.ok(nuovo.includes('<!-- AUTO-GENERATED:design-tokens da theme.json — non editare. -->\n```yaml\ncolors:\n  base: "#f5f7fa"\n```\n<!-- /AUTO-GENERATED:design-tokens -->'));
+    assert.deepEqual(nuovo.match(/^## .*$/gm), ['## Project Config', '## Local Development', '## Design Tokens', '## Telaio', '## Pagine', '## Blocchi', '## Navigazione', '## Domande aperte', '## Log decisioni']);
+  });
+
+  it('nessuna traccia della storia del tema base: documenti di lavoro, date, id, password', () => {
+    assert.doesNotMatch(nuovo, /docs\/superpowers|2026-1[01]-\d\d|\bid \d+|ref \d+|con la password|PHP 8\.5/);
+    assert.match(nuovo.split('## Project Config')[0], /^# Design: atelier\n\n.*fse-foundations\.md §11/s);
+  });
+
+  it('Local Development: il login senza password e nessun valore della macchina del tema base', () => {
+    assert.match(sezione('Local Development'), /sessione temporanea/);
+    assert.match(sezione('Local Development'), /`\{local-url\}`[\s\S]*`npm run dev`[\s\S]*`\{wp-cli\}`[\s\S]*\.playwright-mcp/);
+  });
+
+  it('Telaio: le quattro righe del tema base più i campioni del kit, senza note storiche', () => {
+    assert.deepEqual(righe('Telaio').map((r) => r.split('|').slice(1, 3).map((c) => c.trim()).join(' = ')),
+      ['header = implementato', 'footer = implementato', 'template page / single / archive / search / index / 404 = implementato', 'form di default = implementato', 'campioni del telaio (solo kit) = kit']);
+    assert.ok(sezione('Telaio').includes('src/kit/atl-telaio.kit'));
+  });
+
+  it('Pagine: la Home da progettare e il Catalogo a kit con i suoi blocchi; le pagine dimostrative non ci sono', () => {
+    assert.deepEqual(righe('Pagine').map((r) => r.split('|').slice(1, 5).map((c) => c.trim()).join(' · ')),
+      ['Home · / · da progettare · —', 'Catalogo blocchi · /catalogo-blocchi/ · kit · src/kit/atl-blocks.kit']);
+    assert.ok(righe('Pagine')[1].includes('hero (image), columns-wrapper, steps'), 'l\'ordine dei blocchi del Catalogo viene dalla riga del tema base');
+    assert.doesNotMatch(sezione('Pagine'), /Contatti|Fuori dal flusso|Pagina di esempio/);
+  });
+
+  it('Blocchi: una riga per cartella su disco; Navigazione e Log vuoti; una sola domanda aperta, il form', () => {
+    assert.deepEqual(righe('Blocchi'), ['| atl/hero | implementato | starter |', '| atl/hero-slide | implementato | starter |', '| atl/cta | implementato | starter |']);
+    assert.deepEqual(righe('Navigazione'), []);
+    assert.deepEqual(righe('Log decisioni'), []);
+    assert.deepEqual(sezione('Domande aperte').trim().split('\n').length, 1);
+    assert.match(sezione('Domande aperte'), /^- form di default: .*`formId`/m);
+  });
+
+  it('rifarla sul suo risultato non cambia nulla; senza la riga del Catalogo la scrive lo stesso', () => {
+    assert.equal(designDelProgetto(nuovo, { ...BUONI, slug: 'atelier' }, ['hero', 'hero-slide', 'cta']), nuovo);
+    const senza = designDelProgetto('# Design: x\n\n## Project Config\n\n### Identity\n', { ...BUONI, slug: 'atelier' }, ['hero']);
+    assert.match(senza, /^\| Catalogo blocchi \| \/catalogo-blocchi\/ \| kit \| src\/kit\/atl-blocks\.kit \| — \|/m);
+    assert.doesNotMatch(senza, /## Design Tokens/);
+  });
+});
+
 describe('setup.js da riga di comando', () => {
   const lancia = (...args) => {
     const r = spawnSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8' });
@@ -195,6 +265,28 @@ describe('setup.js da riga di comando', () => {
       r = lancia(...tutti({ target: sito }));
       assert.equal(r.status, 0, r.stdout + r.stderr);
       assert.deepEqual(fs.readdirSync(path.join(sito, 'docs')), ['brief']);
+    } finally {
+      fs.rmSync(sito, { recursive: true, force: true });
+    }
+  });
+
+  // I blocchi della tabella si leggono dal disco dopo la rinomina delle cartelle, nell'ordine di CLAUDE.md.
+  it('DESIGN.md del tema base: esce con lo stato di un progetto nuovo e i blocchi che stanno su disco', () => {
+    const sito = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-setup-design-'));
+    const scrivi = (relativo, testo) => {
+      fs.mkdirSync(path.dirname(path.join(sito, relativo)), { recursive: true });
+      fs.writeFileSync(path.join(sito, relativo), testo);
+    };
+    try {
+      for (const slug of ['cta', 'hero', 'hero-slide']) scrivi(`wp-content/themes/wdm-theme/blocks/wdm-block-${slug}/block.json`, `{ "name": "wdm/${slug}" }\n`);
+      scrivi('CLAUDE.md', '### Existing Blocks\n- `{prefix}-block-hero` — `{prefix}/hero`\n- `{prefix}-block-hero-slide` — `{prefix}/hero-slide`\n');
+      scrivi('DESIGN.md', '# Design: wdm-theme\n\nSpec in `docs/superpowers/specs/`.\n\n## Project Config\n\n### Identity\n| `{prefix}` | atl |\n\n## Pagine\n| Contatti | /contatti/ | implementata | src/kit/wdm-contatti.kit | hero | id 64 |\n\n## Log decisioni\n| 2026-10-30 | storia di wdm-theme |\n');
+      const r = lancia(...tutti({ target: sito }));
+      assert.equal(r.status, 0, r.stdout + r.stderr);
+      const design = fs.readFileSync(path.join(sito, 'DESIGN.md'), 'utf8');
+      assert.deepEqual(design.match(/^\| atl\/.*$/gm), ['| atl/hero | implementato | starter |', '| atl/hero-slide | implementato | starter |', '| atl/cta | implementato | starter |']);
+      assert.ok(design.includes('| `{prefix}` | atl |'));
+      assert.doesNotMatch(design, /Contatti \||docs\/superpowers|storia di/);
     } finally {
       fs.rmSync(sito, { recursive: true, force: true });
     }

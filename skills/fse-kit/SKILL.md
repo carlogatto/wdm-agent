@@ -107,9 +107,13 @@ not in the map stays where it is: never imported, never built, never given a row
    scrolled header live in the kit (theme JS in `main.js`, or kit-only scripts in
    `_js-shared.kit` for what core will do in WP) and `fse-build` reproduces them with the same
    trigger and classes; never leave an interaction "to be seen in WP".
-5. `npm run dev` → check at 1440/768/390 with Playwright (fse-foundations §9): no horizontal
-   overflow, header heights from the tokens, drawer and dropdown working; screenshots
-   `.playwright-mcp/shots/kit-telaio-{w}.png`.
+5. The telaio is looked at on `html/{prefix}-telaio.html`: the kit page that puts header,
+   default form and footer around the samples of the base theme (a sentence of those samples
+   that the redesign makes false is corrected there). `npm run dev` → the model `pw-kit.js`
+   (fse-foundations §9, `nome=kit-telaio`) at 1440/768/390: no horizontal overflow, fonts, no
+   console error; in a copy of the model, what only a telaio has: header heights from the
+   tokens, the header after scrolling, the drawer open and closed, the dropdown when the menu
+   has one. Screenshots `.playwright-mcp/shots/kit-telaio-{w}.png`.
 6. Review (below). Differences expected between kit and WP (core markup) are not a problem: the
    theme README lists them.
 
@@ -159,9 +163,9 @@ only for registered blocks), a kit-only rule in `_css-shared.kit`: `<style>/* ki
 fse-build la rimuove */ .wp-block-{prefix}-{slug} { padding-block:
 var(--wp--preset--spacing--section-lg) }</style>`.
 
-**3f. Check** — `npm run dev`, `/html/{prefix}-blocks.html` at 1440/768/390 (Playwright on
-`https://localhost:8848`: context with `ignoreHTTPSErrors: true`, fse-foundations §9): no overflow,
-tokens applied, carousel initialised; fix and re-check until clean; screenshots
+**3f. Check** — `npm run dev`, `/html/{prefix}-blocks.html` at 1440/768/390 (the model
+`pw-kit.js`, fse-foundations §9): no overflow, tokens applied, carousels started; fix and
+re-check until clean; screenshots
 `.playwright-mcp/shots/kit-{slug}-{w}.png`.
 
 **3g. State** — `DESIGN.md → Blocchi`: row `{prefix}/{slug}` `kit`, origin page (variants and
@@ -203,15 +207,17 @@ in its "kit" column until `fse-block-edit`/`fse-build` implements it.
 3. A page that opens with a hero variant image has its h1 there (the build sets
    `{prefix}_show_title 0`); a page without a hero keeps the template title (meta default 1).
    The default form part (`main/form/_form-contacts.kit`, fse-foundations §7) is shown on every
-   page (meta default 1, as in wdm-starter); the build turns it off only on a page whose content
-   already has a `{prefix}/form` block — so the page kit imports `main/form/_form-contacts.kit`
-   as the last element inside `<main>` unless its content has a `{prefix}/form`.
+   page (meta default 1, as in wdm-starter); the build sets the page option from the kit, and
+   turns it off on a page whose kit does not print it — so the page kit imports
+   `main/form/_form-contacts.kit` as the last element inside `<main>` unless its content has a
+   `{prefix}/form` (no double form; the catalogue of the base theme imports both on purpose).
 4. Each section is designed first (content, tone, rhythm, free layout — §4 "No catalogue
    constraint"), then mapped: an existing variant that renders it as designed → imported; no such
    variant → Step 3 (new variant, or new block) before the page kit imports it. Never the
    reverse: a section is not picked among the existing blocks and then filled.
-5. `npm run dev` → `/html/{prefix}-{page}.html` at 1440/768/390 with Playwright; fix until clean;
-   screenshots `.playwright-mcp/shots/kit-{page}-{w}.png`.
+5. `npm run dev` → `/html/{prefix}-{page}.html` at 1440/768/390 with the model `pw-kit.js`
+   (fse-foundations §9, `nome=kit-{page}`); fix until clean; screenshots
+   `.playwright-mcp/shots/kit-{page}-{w}.png`.
 6. `DESIGN.md → Pagine`: ordered block list (`hero (image), image-text (right), cta`) in the
    row, state still `da progettare`; `## Blocchi`: new rows `kit` with origin = this page.
    Then the Review.
@@ -224,6 +230,12 @@ their README contract, the decisions taken (one `## Log decisioni` row with the 
 and why), the **table of `[da confermare]`** with the default chosen for each ("Niente da
 confermare" when empty). `DESIGN.md → ## Domande aperte` gets `⏳ kit {item} in revisione (dal
 YYYY-MM-DD)`; the row stays `da progettare`. Then the turn ends.
+
+Two things the telaio handover always says, one line each: until the build the site in WordPress
+shows the old header and footer with the new CSS (kit and site share `main.css`); and, when the
+part of the default form has `formId` 0, that the form the kit shows does not exist yet in
+WordPress — the dev creates it in Formidable and sets its id in the part, until then the section
+has title and text without fields.
 
 The message has the shape of fse-foundations §10 "The handover message": *Esito* (`⚠️ chiuso, con
 attese`: a kit always waits for the ok); *Cosa è cambiato* = the item to look at (URL, screenshots,

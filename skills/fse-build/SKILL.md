@@ -77,6 +77,12 @@ after the dev's ok there, and this run builds only rows that passed them.
    when a logo image exists → upload it with `wp media import` and `wp option update site_logo
    <id>`), social URLs, footer texts/contacts copied verbatim from the kit, anchors, `overlayMenu:
    mobile` + overlay colours from the palette. Edit the parts (read first, keep the `ref`).
+   A `navigation` block whose `<nav aria-label>` the kit no longer has leaves the part with its
+   column; its `wp_navigation` post stays in WordPress and goes to the report as a menu no
+   longer used (Step 3). The default form keeps the `formId` the part has: a form that does not
+   exist yet in Formidable is created by the dev (the line is in `## Domande aperte` since the
+   setup), and until then the section prints title and text without fields — say it in the
+   report, it is the first thing a visitor sees missing.
    Templates only if the kit implies a different structure (never a `front-page.html` without a
    reason — §7). Menus are **not** touched here: Step 3.
 2. `_telaio.scss` comes from the kit phase; `npm run build`.
@@ -98,7 +104,9 @@ Parse `html/{prefix}-{page}.html` → `<main>` → top-level `section` elements 
 - `variant` = modifier `{prefix}-block-{slug}--{x}` → the README `## Varianti` row → attributes;
 - `values` = from the README `## Markup`: `.__title` → `title` (inner HTML, `<br>`/`<strong>`
   kept), `.__text` → `text`, `a.__button` → `buttonText` (text) / `buttonUrl` (href; `#` →
-  `""`, reported) / `buttonNewTab` (`target="_blank"`), `img.__img` → image (basename of `src`
+  `""`, reported) / `buttonNewTab` (`target="_blank"`), a text link (`a.__link` → `linkText` /
+  `linkUrl`) keeps its href as it is, `#` included (without it the block drops the element that
+  holds the link, and the page would differ from the kit in structure), `img.__img` → image (basename of `src`
   → attachment: `{wp-cli} post list --post_type=attachment --name=<basename-without-ext>
   --field=ID`; absent → `{wp-cli} media import {theme-root}/assets/img/<file> --porcelain`; then
   `imageId` + `imageUrl` (`wp_get_attachment_url`) + `imageAlt` (alt)), `style="--{prefix}-x:N"`
@@ -106,15 +114,26 @@ Parse `html/{prefix}-{page}.html` → `<main>` → top-level `section` elements 
   `has-{slug}-background-color` → `backgroundColor`, `has-{slug}-color` → `textColor`; children (`.swiper-slide`, cards) → one
   child block each with the same mapping; a core-block container → `core/heading` (`level` from
   the tag) / `core/paragraph` per `<p>` (`content` verbatim), `textAlign` from
-  `has-text-align-*`.
+  `has-text-align-*`. An icon of the set arrives inlined in the compiled page: its slug is the
+  name of the file in `assets/img/icons/` with the same markup (compare the files, never guess
+  from the drawing). A `{prefix}/form`: `formId` is the Formidable form whose key is the
+  `form_key` field of the kit's form (`{wp-cli} eval 'echo (int) FrmForm::get_id_by_key(
+  "{key}" );'`); no such form → `formId` 0, reported ("form «{key}» da creare in Formidable").
 - Post-derived content (a `card` child with only `postType`/`postId`; a `cards-carousel` query
   variant): the kit card shows a title → resolve it to a **published** post with that title
   (case/entity-insensitive, then slug), `postType` from the post found; no match → `postId: 0`
-  and report ("card senza contenuto: titolo X non trovato"). Query variant: `postType`/`count`
+  and report ("card senza contenuto: titolo X non trovato"). A card whose title is the
+  placeholder of the base theme's catalogue («Titolo del contenuto») is not looked up by title:
+  it keeps the post the WordPress page already has in that position and, on a page not built
+  yet, takes the most recent published post; a site with no published post → `postId: 0`,
+  reported. Query variant: `postType`/`count`
   from `data-post-type`/`data-count` on the section when the kit has them, else the README
   defaults. A `data-*`/`style` attribute the README does not map → the page is skipped (below).
 - The README `## Attributi` "Note" column may name the kit selector explicitly (e.g. `kit:
   .__eyebrow`): it wins over the BEM naming convention above.
+- The default form at the end of `<main>` (`.wp-block-template-part.{prefix}-form-contacts`)
+  is telaio, printed by the template: it is never mapped to a block and never a reason to skip
+  the page. It only decides the page option `{prefix}_show_form` (2e).
 - A top-level element of `<main>` that is not a `{prefix}-block-*` section but carries the root
   class of a theme pattern (`{prefix}-{x}` ↔ `patterns/{prefix}-{x}.php`) → the pattern's block
   markup (core blocks) with the kit's texts and extra `className`s; any other unmapped top-level
@@ -189,7 +208,7 @@ it is the page's section of the log row.
 ID=$({wp-cli} post create --post_type=page --post_title="{Titolo}" --post_name={slug} --post_parent={parent-id} --post_status=publish --porcelain)   # only when plan said "pagina assente"
 {wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" apply "{scratchpad}/page-{slug}.html" page=$ID   # the ID after a create; else the slug or the URL path
 {wp-cli} post meta update $ID {prefix}_show_title 0   # only if K[0] is a hero variant image and the meta differs (the h1 is in the content); else leave the default 1
-{wp-cli} post meta update $ID {prefix}_show_form 0    # only if the page content has a {prefix}/form block and the meta differs (no double form); else leave the default 1
+{wp-cli} post meta update $ID {prefix}_show_form 0    # only if the kit of the page does not print the default form at the end of <main> (2a) and the meta differs; else leave the default 1
 ```
 `apply` writes only when there is a difference (exit **5** `scritto`, exit **0** `0 differenze,
 nessuna scrittura`, exit **6** nothing to write on a page modified by hand). On a page not
@@ -204,7 +223,9 @@ reported ("chiudi la scheda dell'editor: la riallineo al prossimo giro"), the ru
 not touched by hand: only when the dev asks for it, for that page, in a turn after the one that
 showed them what `protetto` means there. Title from `DESIGN.md →
 Pagine`, slug = last URL segment, parent = page of the URL prefix. Page options (fse-foundations
-§7) are the kit's say: derived, written only when different, listed in the report.
+§7) are the kit's say: derived, written only when different, listed in the report. The default
+form follows the kit and nothing else: a page kit with its own `{prefix}/form` normally does not
+import it (`fse-kit` Step 4.3), the catalogue of the base theme does, on purpose.
 
 ### 2f. Per-block frontend check
 `curl -sk {permalink}`: no `Fatal|Warning:|Notice:`; one `.{prefix}-block-{slug}` per K[i] in
@@ -214,7 +235,7 @@ order, modifier classes as derived, first text of each block = kit (normalized: 
 ### 2g. Page parity + QA (Playwright, §9 "Per page": the model `pw-pagina.js`)
 Editor: the page opens with 0 invalid / 0 `core/missing` blocks, `isEditedPostDirty() === false`,
 block count = N. Frontend at 1440/768/390: `scrollWidth === innerWidth`, exactly one h1,
-`swiper-initialized` where expected, every in-page anchor target exists. Screenshots editor +
+as many carousels started as the page has (`caroselliAvviati` = `caroselli`), every in-page anchor target exists. Screenshots editor +
 frontend ×3 in `.playwright-mcp/shots/`. On a page written from the kit in this run also the
 texts must be the kit's (2f): a wrong text there is a mapping error of this run, fixed in the
 generated file and applied again.
@@ -264,6 +285,13 @@ would lose an item of the menu) → the diff enters the final report as a questi
 confirm` runs only in a later turn, after the dev's answer — the run does not stop for it. Exit
 4 (the menu is open in the editor) → reported like a page open in the editor. `DESIGN.md → ##
 Navigazione` is written by its Step 5.
+
+**Menus no longer used.** A `wp_navigation` post no navigation block refers to any more (the kit
+dropped its column, or two blocks now share one menu because their lists are the same) is never
+deleted by the run: `dump` shows it (`navigations` has an id that no `navigation_blocks` entry
+carries), the report lists it in *Cosa aspetta te* ("menu «{titolo}» (id N) non più usato: lo
+cancello?") and its `## Navigazione` row says "non usato". With the dev's ok in a later turn:
+`{wp-cli} post delete {id} --force`, then the row is removed.
 
 ## Step 4 — Close the run, report, go on
 

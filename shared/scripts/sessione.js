@@ -2,8 +2,9 @@
 // Login dell'agente nel backend senza password: una sessione temporanea di WordPress, creata con
 // WP-CLI per l'utente agente e sempre revocata.
 //
-//   node sessione.js apri   <site-root> <modello.js> [nome=valore …]
-//   node sessione.js chiudi <site-root>
+//   node sessione.js apri    <site-root> <modello.js> [nome=valore …]
+//   node sessione.js prepara <site-root> <modello.js> [nome=valore …]
+//   node sessione.js chiudi  <site-root>
 //
 // apri   → chiude le sessioni rimaste, ne apre una di 15 minuti e scrive
 //          <site-root>/.playwright-mcp/_run.js: il modello con i cookie di accesso al posto di
@@ -12,6 +13,8 @@
 //          {{local-url}} (senza barra finale), {{prefix}}, {{shots}} (cartella degli screenshot).
 //          Gli altri si passano come nome=valore. Quel file si esegue con Playwright MCP
 //          (browser_run_code_unsafe, filename), poi si lancia `chiudi`.
+// prepara → scrive lo stesso file per un modello che non entra nel backend (pw-kit.js: una pagina
+//          di kit servita dall'anteprima). Nessuna sessione, e non serve che WordPress risponda.
 // chiudi → revoca ogni sessione dell'utente agente, toglie i blocchi di modifica che il suo
 //          browser ha lasciato sulle pagine e cancella _run.js. Va lanciato dopo ogni
 //          esecuzione, anche fallita. Ciò che resta aperto lo chiude l'hook del plugin a fine
@@ -31,7 +34,7 @@ const path = require('node:path');
 const { valore, eFse, argomenti } = require('./lib/design-md.js');
 
 const PHP = path.join(__dirname, 'sessione.php');
-const USO = 'uso: node sessione.js apri <site-root> <modello.js> [nome=valore …] | chiudi <site-root>';
+const USO = 'uso: node sessione.js apri <site-root> <modello.js> [nome=valore …] | prepara <site-root> <modello.js> [nome=valore …] | chiudi <site-root>';
 
 class Errore extends Error {}
 
@@ -81,8 +84,10 @@ function inStringa(valore) {
 }
 
 // Il modello con i valori al posto dei segnaposto. Un segnaposto senza valore è un errore.
+// `cookie` null: il modello non entra nel backend (prepara) e non deve chiedere i cookie.
 function componi(modello, valori, cookie) {
-  if (!modello.includes('/*COOKIES*/')) throw new Errore('il modello non ha il segnaposto /*COOKIES*/: senza, il browser non entra nel backend.');
+  if (cookie === null && modello.includes('/*COOKIES*/')) throw new Errore('questo modello entra nel backend: usa `apri`, che gli dà una sessione.');
+  if (cookie !== null && !modello.includes('/*COOKIES*/')) throw new Errore('il modello non ha il segnaposto /*COOKIES*/: senza, il browser non entra nel backend.');
   const mancanti = new Set();
   // Prima i cookie, poi i valori: un valore che cita il segnaposto dei cookie resta testo.
   const testo = modello.replace('/*COOKIES*/', () => JSON.stringify(cookie)).replace(/\{\{([a-z][a-z0-9-]*)\}\}/g, (tutto, nome) => {
@@ -94,8 +99,8 @@ function componi(modello, valori, cookie) {
   return testo;
 }
 
-function apri(sito, modelloFile, coppie) {
-  const p = progetto(sito);
+// Il testo del modello e i valori per i suoi segnaposto: quelli del progetto più le coppie nome=valore.
+function leggi(sito, p, modelloFile, coppie) {
   if (!fs.existsSync(modelloFile)) throw new Errore(`modello non trovato: ${modelloFile}`);
   const valori = { 'local-url': p.url, prefix: p.prefisso, shots: path.join(cartella(sito), 'shots').split(path.sep).join('/') };
   for (const coppia of coppie) {
@@ -103,7 +108,21 @@ function apri(sito, modelloFile, coppie) {
     if (!m) throw new Errore(`argomento non valido: ${coppia} (atteso nome=valore)`);
     valori[m[1]] = m[2];
   }
-  const modello = fs.readFileSync(modelloFile, 'utf8');
+  return { modello: fs.readFileSync(modelloFile, 'utf8'), valori };
+}
+
+// Il file da eseguire per un modello che non entra nel backend: nessuna sessione da aprire.
+function prepara(sito, modelloFile, coppie) {
+  const { modello, valori } = leggi(sito, progetto(sito), modelloFile, coppie);
+  const testo = componi(modello, valori, null);
+  fs.mkdirSync(path.join(cartella(sito), 'shots'), { recursive: true });
+  fs.writeFileSync(file(sito).run, testo);
+  return { run: file(sito).run };
+}
+
+function apri(sito, modelloFile, coppie) {
+  const p = progetto(sito);
+  const { modello, valori } = leggi(sito, p, modelloFile, coppie);
   componi(modello, valori, []);   // tutto ciò che può fallire, prima di creare la sessione
   const f = file(sito);
   let sessione;
@@ -161,11 +180,11 @@ function pulisci(sito) {
   togli(file(sito).segno);
 }
 
-module.exports = { apri, chiudi, pulisci, componi, file, Errore };
+module.exports = { apri, prepara, chiudi, pulisci, componi, file, Errore };
 
 if (require.main === module) {
   const [comando, sito, ...resto] = process.argv.slice(2);
-  if (!['apri', 'chiudi'].includes(comando) || !sito || (comando === 'apri' && !resto.length) || (comando === 'chiudi' && resto.length)) {
+  if (!['apri', 'prepara', 'chiudi'].includes(comando) || !sito || (comando !== 'chiudi' && !resto.length) || (comando === 'chiudi' && resto.length)) {
     console.error(USO);
     process.exit(2);
   }
@@ -174,6 +193,10 @@ if (require.main === module) {
       const r = apri(path.resolve(sito), path.resolve(resto[0]), resto.slice(1));
       console.log(`pronto: ${r.run}`);
       console.log(`Sessione di 15 minuti per «${r.utente}». Esegui il file con Playwright (browser_run_code_unsafe, filename), poi lancia: node sessione.js chiudi "${path.resolve(sito)}"`);
+    } else if (comando === 'prepara') {
+      const r = prepara(path.resolve(sito), path.resolve(resto[0]), resto.slice(1));
+      console.log(`pronto: ${r.run}`);
+      console.log(`Nessuna sessione aperta. Esegui il file con Playwright (browser_run_code_unsafe, filename), poi lancia: node sessione.js chiudi "${path.resolve(sito)}"`);
     } else {
       console.log(`sessioni attive: ${chiudi(path.resolve(sito))}`);
     }

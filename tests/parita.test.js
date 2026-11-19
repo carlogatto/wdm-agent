@@ -154,6 +154,17 @@ describe('parita.js: DESIGN.md e lato modificato per ultimo', () => {
     assert.match(ultimoLato(null, '2026-11-02T13:59:00Z', 'la pagina in WordPress'), /^Non so dire/);
   });
 
+  // Lotto 7.1: il commit arriva con l'ora locale, la pagina di WordPress in UTC. Stampate così
+  // com'erano, «13:08» e «13:48» facevano sembrare più recente il lato sbagliato.
+  it('le due ore si leggono nello stesso fuso: quella del lato cambiato per ultimo è la più grande', () => {
+    const messaggio = ultimoLato('2026-11-19T13:48:00+01:00', '2026-11-19T13:08:00Z', 'la pagina in WordPress');
+    assert.match(messaggio, /^Per ultimo è cambiato la pagina in WordPress/);
+    const [wp, kit] = messaggio.match(/\d{4}-\d\d-\d\d \d\d:\d\d/g);
+    assert.ok(wp > kit, `la pagina (${wp}) deve risultare dopo il kit (${kit}): ${messaggio}`);
+    const inverso = ultimoLato('2026-11-19T15:30:00+01:00', '2026-11-19T13:08:00Z', 'la pagina in WordPress').match(/\d{4}-\d\d-\d\d \d\d:\d\d/g);
+    assert.ok(inverso[0] > inverso[1], 'kit dopo la pagina: la prima ora stampata è quella del kit');
+  });
+
   it('da riga di comando: senza argomenti uso ed exit 2; cartella senza DESIGN.md exit 1 con il motivo', () => {
     let r = spawnSync(process.execPath, [SCRIPT], { encoding: 'utf8' });
     assert.equal(r.status, 2, r.stdout + r.stderr);

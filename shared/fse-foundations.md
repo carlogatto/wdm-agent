@@ -700,9 +700,10 @@ node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" chiudi "{site-root}"
   layers make sure nothing stays open: `chiudi`; the plugin hook `chiudi-sessione.js` (Stop and
   SessionEnd, §12), which closes whatever a turn left open; the 15-minute expiry.
 - Models live in the plugin, `shared/playwright/`: `pw-pagina.js` ("Per page" below: the page
-  opens in the editor with no invalid block, frontend at three widths; `id=`) and `pw-blocco.js`
+  opens in the editor with no invalid block, frontend at three widths; `id=`), `pw-blocco.js`
   ("Per block", points 1–5; `blocco={prefix}/{slug}` and `attributi='{…}'`, then delete the test
-  page it returns). A check they do not cover: copy the model to
+  page it returns) and `pw-kit.js` ("Kit" below: a compiled kit page on the preview, no login;
+  `url=` and `nome=`). A check they do not cover: copy the model to
   `{site-root}/.playwright-mcp/pw-{name}.js` and adapt it (the folder is gitignored;
   `browser_run_code_unsafe` with `filename` accepts only files there; screenshots in
   `.playwright-mcp/shots/`). Rules of a model: one `async (page) => { … }`; `/*COOKIES*/` as the
@@ -712,10 +713,20 @@ node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" chiudi "{site-root}"
   the browser: frontend checks via `curl`, editor checks reported as missing, and the handover
   says how to install it (plugin README, "Prerequisiti").
 
-The kit on browser-sync (`https://localhost:8848`, self-signed certificate) needs no login but a
-context with `ignoreHTTPSErrors: true`
-(`page.context().browser().newContext({ ignoreHTTPSErrors: true })`). If the browser is "already
-in use": `pkill -f mcp-chrome-`.
+Kit (the catalogue after the brief, the telaio kit, a page kit): the compiled page on
+browser-sync needs no login, so no session is opened — `prepara` writes the same `_run.js`
+without one, and works with WordPress stopped:
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" prepara "{site-root}" "${CLAUDE_PLUGIN_ROOT}/shared/playwright/pw-kit.js" url=https://localhost:8848/html/{prefix}-home.html nome=kit-home
+# → browser_run_code_unsafe filename=.playwright-mcp/_run.js, then `chiudi` as always
+```
+`url` is the address the preview printed (the port is not always 8848, §10). The model opens its
+own context with `ignoreHTTPSErrors: true` (the preview has a self-signed certificate) and
+answers, per width: no horizontal overflow, one h1, carousels found and started, anchors without
+a target, broken images, the fonts of text and headings and the ones loaded, console errors;
+screenshots `{nome}-{w}.png`. What a kit needs beyond that (the drawer open, the header after
+scrolling) goes in a copy of the model. If the browser is "already in use": `pkill -f
+mcp-chrome-`.
 
 Per block (editor → frontend):
 1. `post-new.php?post_type=page`, wait for `wp.blocks.getBlockType('{prefix}/{slug}')` and the
@@ -738,7 +749,9 @@ Per block (editor → frontend):
    --force`), close the tab, `debug.log` empty.
 
 Per page: created via WP-CLI → opens in the editor with 0 invalid / 0 `core/missing` blocks,
-not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h1.
+not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h1, as many
+carousels started as the page has (`caroselli` = `caroselliAvviati`: the model scrolls the page
+first, because a carousel starts only when it enters the screen).
 
 ## 10. Session hygiene and the decision charter
 
@@ -768,8 +781,11 @@ not dirty → frontend screenshot at 1440/768/390, no horizontal overflow, one h
   aligned before closing, not handed over.
 - Browser-sync: if `https://localhost:8848/html/` already answers **and lists this theme's kits**
   (`{prefix}-*.html`), the dev's `npm run dev` is running — use it, never start a second watcher (it
-  would take another port and compile everything twice). Start `npm run dev` only when 8848 is
-  silent, and stop it at the end of the session. The watch writes sourcemaps (`*.map`, gitignored);
+  would take another port and compile everything twice). 8848 silent → start `npm run dev` and
+  stop it at the end of the session. 8848 answers with the kits of **another** project (the dev
+  has two projects open) → never stop that process: start `npm run dev` here, browser-sync takes
+  the next free port and prints it, and that address is the one for the checks and for the
+  handover message; stop your own process at the end of the session. The watch writes sourcemaps (`*.map`, gitignored);
   `npm run build` removes them, so `npm run build` → `npm run check` passes with the watch on.
 - **Git: the agent commits, the dev pushes.** A commit is local and can be undone; a push starts
   the dev's pipeline, so that decision stays human.

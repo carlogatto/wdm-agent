@@ -74,12 +74,42 @@ logged; what it lacks about the client is `[da confermare]`.
 2. **Tone** — language, person (tu/voi/lei), register, lexicon to use and to avoid, three example
    sentences in that voice. Derived from the texts and the references when the brief does not
    state it; logged as a proposal.
-3. **Tokens** — `theme.json` of the theme: palette on the fixed roles of the family (`base`,
-   `surface`, `main`, `accent`, `muted`, `border`, `dark`: the brief gives the values, the roles
-   never change; a brand with fewer colours fills the roles with its tints, logged), typography
-   (font files in the brief → `assets/fonts/` + `@font-face` as the theme does; a font named
-   without files → Google Fonts woff2 latin subset if it exists, else `[da confermare]` and the
-   theme's font stays), spacing/radius only when the brand asks for it. Then:
+3. **Tokens** — `theme.json` of the theme, edited with Edit/Write (the hook of §12 checks it):
+   palette, fonts, and spacing/radius only when the brand asks for it.
+
+   **Palette** on the eight fixed roles of the family: `base` (page background), `surface`
+   (panels), `main` (text), `muted` (secondary text), `border`, `accent` (buttons and links),
+   `dark` (dark sections and the veil on photos) and `accent-dark` (the accent on `dark`). The
+   brief gives the values, the roles never change; a brand with fewer colours fills the roles
+   with its tints, logged. Measure the contrast with the WCAG formula, never by eye, on the pairs
+   the theme prints: `main` and `muted` on `base` and on `surface`, `base` on `dark`, the button
+   text on `accent`, `accent` as a link on `base`, `accent-dark` on `dark`. A pair of the brief
+   under 4.5:1 keeps the brief's value and goes into the `[da confermare]` table with the
+   measured ratio and the nearest tint that passes. A brand colour no role can carry at its
+   exact value (a "main colour" too light for text and for a dark background) gives its nearest
+   passing tint to the role, and the table asks where the exact value should appear.
+
+   **Fonts**, in `settings.typography.fontFamilies` (files in the theme, never a CDN):
+   - the text font replaces the family that `styles.typography.fontFamily` points to (its slug
+     may change: only that style refers to it); a heading font different from the text font is
+     one more family, set in `styles.elements.heading.typography.fontFamily`;
+   - the mono family (labels, numbers, `code`) keeps its slug, which the SCSS of the theme and
+     of two blocks use by name; it keeps its font too unless the brief names a mono font — say
+     at the gate that a third font stays;
+   - files: woff2, latin subset, in `assets/fonts/` with their licence (`OFL-{Font}.txt`). Font
+     files in the brief → those. A font named without files → Google Fonts: request
+     `https://fonts.googleapis.com/css2?family={Name}:wght@400..700&display=swap` with a
+     browser User-Agent, take the `/* latin */` block and download its woff2 (a variable font is
+     one file per family: `fontWeight` "400 700"); the licence from the font's folder in the
+     `google/fonts` repository. Not there, or no network → `[da confermare]` and the theme's
+     font stays;
+   - delete from `assets/fonts/` the files no `fontFace` declares and write one `@font-face`
+     (with `font-display: swap`) per `fontFace` in `src/scss/fonts.scss`, which the kit needs.
+     `npm run check` verifies all of it, with a ceiling of 100 KB in total: over it, fewer
+     weights, logged. The preload of the text font follows `theme.json` by itself;
+   - update the "Font" line of the theme `README.md`.
+
+   Then:
    ```bash
    node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sync-theme-json-tokens.js" "{theme-root}"   # DESIGN.md → Design Tokens + assets/css/wp-global-styles.css
    cd "{theme-root}" && npm run build
@@ -88,8 +118,10 @@ logged; what it lacks about the client is `[da confermare]`.
    skill the regeneration is **pre-authorised** (fse-foundations §12: the whole deliverable is
    under review) — run the sync, do not ask. The catalogue `https://localhost:8848/html/
    {prefix}-blocks.html` (browser-sync of `npm run dev`, §10) now shows the existing blocks in the
-   brand: it is the object of the review. Check it at 1440/768/390 (contrast of `main` on `base`,
-   headings in the new font); screenshots `.playwright-mcp/shots/brief-{w}.png`.
+   brand: it is the object of the review. Check it with the model `pw-kit.js` (fse-foundations
+   §9: `sessione.js prepara … url=<the catalogue> nome=brief`): no horizontal overflow at
+   1440/768/390, the text and the headings in the new fonts, the fonts loaded, no console
+   error; screenshots `.playwright-mcp/shots/brief-{w}.png`.
 4. **Plugins** — one row per need: need, plugin, decision. `form di contatto | Formidable Forms |
    fisso (famiglia FSE)` always (installed by the setup). Any other plugin only when the brief
    names a need the theme cannot cover (multilingual, e-commerce, booking, SEO on request):
@@ -99,7 +131,8 @@ logged; what it lacks about the client is `[da confermare]`.
    ~80, PNG kept as PNG when it has transparency; a name already taken in `assets/img/` or
    `assets/fonts/` → suffix `-brief`, never overwrite), one row each: file, use (page/section),
    origin (brief file), note. Pages of the map without an image → row `[da confermare]` ("immagine per {pagina}: da fornire; il kit userà un
-   placeholder"). `docs/brief/` itself is never modified.
+   placeholder"); a brief with no images at all → one row for the whole site, not one per page.
+   `docs/brief/` itself is never modified.
 
 ## Step 3 — Write `DESIGN.md`
 
@@ -112,6 +145,7 @@ logged; what it lacks about the client is `[da confermare]`.
   starter is redesigned in the project's kit); templates row untouched.
 - `## Log decisioni`: one row — the proposals made (map derived, tone, palette mapping, fonts)
   and why.
+- `## Domande aperte`: `⏳ brief in revisione (dal YYYY-MM-DD)`, removed at the ok.
 
 ## Step 4 — Review (gate 1) and approval
 
@@ -125,7 +159,10 @@ the ok, *Prossimo passo* = "ok o osservazioni in questa conversazione: all'ok pa
 telaio" (no prompt to paste, fse-foundations §1 "The ok continues").
 
 Later turns: the dev's remarks are their decisions — apply them (Step 2–3 again on what changed),
-log them as "richiesta del dev", hand over again. The dev's explicit ok →
+log them as "richiesta del dev", hand over again. An ok with nothing else closes the gate as it
+was shown: the choices the table offered with a default (a tint, a font, a page of the map) are
+accepted and logged as such; the facts about the client that are still missing stay `[da
+confermare]`. The dev's explicit ok →
 - `## Brief` → `Stato: approvato YYYY-MM-DD`;
 - plugins approved: `{wp-cli} plugin install {slug} --activate` (and `{wp-cli} language plugin
   install {slug} it_IT`) for each, listed in the log row;

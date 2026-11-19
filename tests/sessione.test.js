@@ -73,17 +73,54 @@ describe('sessione.js senza WordPress', () => {
 
   it('i modelli del plugin: JavaScript valido prima e dopo la composizione, con i soli segnaposto dichiarati', () => {
     const modelli = fs.readdirSync(MODELLI).filter((f) => f.endsWith('.js'));
-    assert.deepEqual(modelli.sort(), ['pw-blocco.js', 'pw-pagina.js']);
-    const valori = { 'local-url': 'https://abc.local:8890', prefix: 'abc', shots: '/tmp/Mario Rossi/shots', id: '7', blocco: 'abc/cta', attributi: '{"title":"L\'Atelier"}' };
+    assert.deepEqual(modelli.sort(), ['pw-blocco.js', 'pw-kit.js', 'pw-pagina.js']);
+    const valori = { 'local-url': 'https://abc.local:8890', prefix: 'abc', shots: '/tmp/Mario Rossi/shots', id: '7', blocco: 'abc/cta', attributi: '{"title":"L\'Atelier"}',
+      url: 'https://localhost:8848/html/abc-home.html', nome: 'kit-home' };
     for (const nome of modelli) {
       const modello = fs.readFileSync(path.join(MODELLI, nome), 'utf8');
       assert.equal(sintassi(modello, tmp).status, 0, `${nome}: non è JavaScript valido così com'è`);
-      const fatto = componi(modello, valori, [{ name: 'a', value: 'b', domain: 'abc.local', path: '/' }]);
+      // Il modello dei kit non entra nel backend: si compone senza cookie.
+      const fatto = componi(modello, valori, nome === 'pw-kit.js' ? null : [{ name: 'a', value: 'b', domain: 'abc.local', path: '/' }]);
       assert.doesNotMatch(fatto.replace(/^\s*\/\/.*$/gm, ''), /\{\{|\/\*COOKIES\*\//, nome);
       const esito = sintassi(fatto, tmp);
       assert.equal(esito.status, 0, `${nome}: ${esito.stderr}`);
       assert.doesNotMatch(modello, /\brequire\(|\{password\}|user_pass/, `${nome}: niente require né login con password`);
     }
+  });
+
+  // Lotto 7.1: i caroselli partono quando entrano nello schermo. Contati appena caricata la
+  // pagina davano 0 a 1440 e a 390 su una pagina con tre caroselli che funzionano.
+  it('i modelli scorrono la pagina prima di contare i caroselli, e dicono quanti dovrebbero essercene', () => {
+    for (const nome of ['pw-pagina.js', 'pw-kit.js']) {
+      const modello = fs.readFileSync(path.join(MODELLI, nome), 'utf8');
+      assert.match(modello, /scrollTo\([\s\S]*caroselliAvviati/, `${nome}: conta i caroselli senza aver scorso la pagina`);
+      assert.match(modello, /caroselli: /, `${nome}: non dice quanti caroselli ha la pagina`);
+    }
+  });
+
+  // Lotto 7.1: per guardare un kit (html compilato, servito dall'anteprima) non serve entrare in
+  // WordPress. `prepara` compone il file da eseguire senza aprire sessioni.
+  it('prepara: scrive _run.js da un modello che non entra nel backend, anche se WordPress non risponde', () => {
+    const sito = progetto(COMPLETO);
+    const r = lancia('prepara', sito, path.join(MODELLI, 'pw-kit.js'), 'url=https://localhost:8848/html/abc-home.html', 'nome=kit-home');
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /pronto: .*_run\.js/);
+    const scritto = fs.readFileSync(file(sito).run, 'utf8');
+    assert.ok(scritto.includes("'https://localhost:8848/html/abc-home.html'") && scritto.includes('/shots'), scritto.slice(0, 400));
+    assert.ok(!fs.existsSync(file(sito).segno), 'prepara non apre sessioni: nessun segno per l\'hook');
+    assert.equal(sintassi(scritto, tmp).status, 0);
+  });
+
+  it('prepara con un modello che entra nel backend, o senza un valore: exit 1 con cosa fare, nessun file', () => {
+    const sito = progetto(COMPLETO);
+    let r = lancia('prepara', sito, path.join(MODELLI, 'pw-pagina.js'), 'id=1');
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, /entra nel backend: usa `apri`/);
+    r = lancia('prepara', sito, path.join(MODELLI, 'pw-kit.js'), 'nome=kit-home');
+    assert.equal(r.status, 1, r.out);
+    assert.match(r.out, /aggiungi url=valore/);
+    assert.ok(!fs.existsSync(file(sito).run));
+    assert.equal(lancia('prepara', sito).status, 2);
   });
 
   it('DESIGN.md assente, di un\'altra famiglia o senza una riga: exit 1 con cosa manca', () => {

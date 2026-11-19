@@ -29,9 +29,9 @@ provato su macOS.
 | **Node.js 22** o successivo | la build del tema, gli hook e gli script del plugin | [nodejs.org](https://nodejs.org/), installer per macOS |
 | **git** | lo usa l'agente per salvare il lavoro (i commit) | su macOS arriva con gli strumenti di sviluppo di Apple. Se durante il lavoro compare la finestra che propone di installare gli «strumenti da riga di comando per sviluppatori», scegli **Installa**, attendi la fine e chiedi all'agente di riprovare |
 | **Sourcetree** con un **account GitHub** | è dove guardi cosa l'agente ha salvato, colleghi il progetto a GitHub e pubblichi (push). Aprilo una volta **prima** del primo progetto: all'avvio chiede nome ed email, che diventano la firma dei commit, anche di quelli dell'agente | [sourcetreeapp.com](https://www.sourcetreeapp.com/) e [github.com](https://github.com/), entrambi gratuiti |
-| **Playwright** per Claude Code | il browser con cui l'agente controlla l'editor e le pagine | nella chat di Claude Code scrivi `/plugin install playwright@claude-plugins-official`, poi chiudi e riapri Claude Code |
-| Il plugin **wdm-agent** | le skill che fanno il lavoro: questo plugin | sezione «Installazione», qui sotto |
 | Il tema base **wdm-theme** | il punto di partenza di ogni progetto | [github.com/carlogatto/wdm-theme](https://github.com/carlogatto/wdm-theme): Code → Download ZIP |
+| **Playwright** per Claude Code | il browser con cui l'agente controlla l'editor e le pagine | nella chat di Claude Code scrivi `/plugin install playwright@claude-plugins-official` (una riga sola: quel catalogo è già in Claude Code), poi chiudi e riapri Claude Code. Per controllare: `/plugin`, scheda **Installed**, deve elencare `playwright` |
+| Il plugin **wdm-agent** | le skill che fanno il lavoro: questo plugin | sezione «Installazione», qui sotto |
 
 Non vanno installati: WordPress, WP-CLI e il database del progetto. Li scarica e li crea
 `fse-theme-setup`.
@@ -42,7 +42,8 @@ dell'agente da scegliere, salvare o cambiare.
 
 ## Installazione
 
-In Claude Code, nella chat, una riga alla volta:
+Apri Claude Code su una cartella qualunque (anche quella del progetto, se c'è già: vedi il passo 1
+di «Il primo progetto») e scrivi nella chat, una riga alla volta:
 
 ```
 /plugin marketplace add carlogatto/wdm-agent
@@ -50,7 +51,10 @@ In Claude Code, nella chat, una riga alla volta:
 /reload-plugins
 ```
 
-Lo stesso da terminale:
+Se è andata bene lo dice la sezione successiva, «Verifica dell'installazione». Anche Playwright,
+nei prerequisiti, si installa così: una riga nella chat.
+
+In alternativa, da terminale:
 
 ```bash
 claude plugin marketplace add carlogatto/wdm-agent
@@ -58,8 +62,8 @@ claude plugin install wdm-agent@wdm-agent
 claude plugin list
 ```
 
-Da terminale l'ultima riga deve elencare `wdm-agent`. Le finestre di Claude Code già aperte non
-vedono il plugin: chiudile e riaprile, oppure scrivi `/reload-plugins`.
+Il terzo comando deve elencare `wdm-agent`. Le finestre di Claude Code già aperte non vedono il
+plugin: chiudile e riaprile, oppure scrivi `/reload-plugins`.
 
 ## Verifica dell'installazione
 
@@ -68,6 +72,8 @@ progetto» (il tema base appena scompattato va bene). Apri Claude Code scegliend
 come cartella di lavoro e scrivi «che stato ha il progetto?».
 
 **Esito atteso:** l'agente risponde con lo stato letto da `DESIGN.md` (telaio, pagine, blocchi).
+Sul tema base appena scompattato è lo stato del tema base, e l'agente può aggiungere che il sito
+non risponde ancora: è normale, WordPress arriva con il setup.
 Scrivendo `/wdm-agent:` nella chat compare l'elenco delle sei skill:
 `wdm-agent:fse-theme-setup`, `wdm-agent:fse-brief`, `wdm-agent:fse-kit`, `wdm-agent:fse-build`,
 `wdm-agent:fse-block-edit`, `wdm-agent:fse-menu-build`. Se l'agente risponde che `DESIGN.md` non
@@ -78,7 +84,8 @@ comuni».
 
 1. **La cartella.** Scarica lo ZIP di wdm-theme, scompattalo dentro la cartella dei tuoi siti
    (di solito `Sites`, nella tua cartella personale: se non c'è, creala) e rinomina la cartella
-   ottenuta con il nome del progetto, in minuscolo e senza spazi: per esempio `pincopallino`.
+   ottenuta con il nome del progetto, in minuscolo, senza spazi e senza accenti (il trattino è
+   ammesso): per esempio `pincopallino`.
 2. **Il sito in MAMP PRO**, dopo la cartella e non prima (su una cartella vuota MAMP PRO mette
    una sua pagina di benvenuto):
    - apri MAMP PRO, sezione **Sites**, aggiungi un sito (pulsante **+**) di tipo **Empty**;
@@ -92,13 +99,19 @@ comuni».
    MAMP PRO; se MAMP PRO mostra un indirizzo diverso, dillo all'agente al passo 3). Finché
    WordPress non è installato mostra un errore o un elenco di file: va bene.
 3. **Il setup.** Apri Claude Code scegliendo la cartella del progetto come cartella di lavoro e
-   scrivi «nuovo progetto da wdm-theme». L'agente chiede in un solo messaggio i quattro dati che
-   non può conoscere, spiegandoli (nome del progetto, un prefisso di poche lettere, titolo, la
-   tua email), poi fa tutto da solo: database, WordPress, rinomina del tema, menu, primo commit.
-   Alla fine ti scrive l'indirizzo del sito, il nome del tuo utente di WordPress e, una volta
-   sola, la sua password: annotala e cambiala dal tuo profilo in WordPress.
+   scrivi «nuovo progetto da wdm-theme» (o «nuovo progetto dal tema base»: è la stessa cosa).
+   L'agente chiede in un solo messaggio i quattro dati che non può conoscere, spiegandoli (nome
+   del progetto: lo stesso nome della cartella del passo 1; un prefisso di poche lettere; titolo;
+   la tua email), poi fa tutto da solo: database, WordPress, rinomina del tema, menu, primo
+   commit. Mentre lavora, Claude Code ti chiede il permesso prima di eseguire un comando o di
+   modificare un file: leggi cosa sta per fare e approva; se la finestra offre di non chiederlo
+   più per quel tipo di azione, puoi accettare. Alla fine l'agente ti scrive l'indirizzo del
+   sito, il nome del tuo utente di WordPress e, una volta sola, la sua password. Aprendo
+   l'indirizzo vedi la home del tema con header, footer e menu; il backend di WordPress è allo
+   stesso indirizzo seguito da `/wp-admin/`: entra, e cambia la password dal tuo profilo.
 4. **Il brief.** Nella cartella del progetto il setup ha creato `docs/brief/`: mettici quello
-   che hai (brand, logo, font, elenco delle pagine, testi, immagini, riferimenti), in qualunque
+   che hai (brand, logo, font, mappa o elenco delle pagine, testi, immagini, riferimenti, plugin,
+   dati societari), in qualunque
    formato, e scrivi «leggi il brief». Per provare il flusso senza un cliente vero scrivi
    «usa il brief di esempio»: l'agente usa il brief di uno studio inventato
    (`skills/fse-brief/esempio/brief.md` in questo plugin) e parte da lì.
@@ -173,7 +186,7 @@ Tre regole proteggono ciò che c'è già in WordPress:
 | **`DESIGN.md`** | il file dove sta lo stato del progetto: pagine, blocchi, menu, decisioni prese. Si apre con qualunque editor di testo, ma di solito basta chiedere all'agente |
 | **`CLAUDE.md`** | le regole che l'agente legge all'inizio di ogni conversazione |
 | **cartella del progetto** (site root) | la cartella che apri in Claude Code: contiene WordPress, `DESIGN.md` e il tema |
-| **`localhost:8848`** | l'indirizzo, sul tuo computer, dove guardi i kit mentre l'agente lavora: `https://localhost:8848`, te lo scrive l'agente a ogni consegna |
+| **`localhost:8848`** | l'indirizzo, sul tuo computer, dove guardi i kit mentre l'agente lavora: `https://localhost:8848`. L'anteprima la accende l'agente quando serve e l'indirizzo te lo scrive a ogni consegna (se hai due progetti aperti il secondo usa un'altra porta, per esempio 8849) |
 | **MAMP PRO**, sito locale | il programma che fa funzionare WordPress sul tuo computer, e il sito che ci crei per il progetto |
 | **WP-CLI** | lo strumento con cui l'agente scrive in WordPress. Lo scarica e lo usa lui |
 | **skill** | un insieme di istruzioni che l'agente segue per un compito (leggere il brief, costruire il sito) |
@@ -207,7 +220,7 @@ Per chi vuole sapere cosa c'è dentro il plugin: per usarlo non serve.
 - `shared/fse-foundations.md`: le convenzioni («fondamenta»), citate per paragrafo (§) da ogni skill e dal `CLAUDE.md` dei progetti. Quando un testo dice «fondamenta §9» parla di questo file.
 - `shared/scripts/sync-theme-json-tokens.js`: genera la sezione Design Tokens di `DESIGN.md` e `assets/css/wp-global-styles.css` da `theme.json`.
 - `shared/scripts/parita.js`: confronta la struttura dei kit con quella del sito, senza scrivere nulla.
-- `shared/scripts/sessione.js` e `shared/playwright/`: il login dell'agente nel backend senza password (una sessione temporanea, sempre revocata) e i modelli degli script che esegue nel browser.
+- `shared/scripts/sessione.js` e `shared/playwright/`: il login dell'agente nel backend senza password (una sessione temporanea, sempre revocata) e i modelli degli script che esegue nel browser: una pagina e un blocco in WordPress, e una pagina di kit, che si guarda senza entrare in WordPress.
 - `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff, cancellano solo dopo una conferma in un turno successivo, non scrivono su una pagina aperta nell'editor e non toccano i contenuti modificati a mano in WordPress.
 - `skills/fse-theme-setup/scripts/`: `mamp.js` (trova MAMP PRO, scarica WP-CLI, sceglie il PHP, crea il database del progetto e scrive `{wp-cli}` in `DESIGN.md`) e `setup.js` (rinomina il tema base nel tema del progetto; si può rilanciare dopo un'interruzione).
 - `hooks/`: tre script Node. `check-block-contract.js` (a ogni scrittura di un `block.json` del tema: nome, prefisso, cartella, `render`, sorgenti, README, versione), `check-design-tokens.js` (a ogni scrittura di `theme.json`: token di `DESIGN.md` allineati, altrimenti chiede conferma prima di rigenerare) e `chiudi-sessione.js` (a fine turno: chiude la sessione dell'utente agente se è rimasta aperta).

@@ -37,6 +37,36 @@ describe('testi del tema base', { skip: sito.nonDisponibile() || false }, () => 
     for (const slug of blocchi()) assert.match(leggi(sito.TEMA_BASE, 'blocks', `wdm-block-${slug}`, 'README.md'), /^## Varianti$/m, slug);
   });
 
+  // Lotto 7.3, lettura cieca dei README. Il README della site root e quello del tema viaggiano
+  // in ogni progetto: non possono dire cose vere solo nell'installazione del tema base.
+  it('README della site root: gli stessi gate e gli stessi controlli degli altri due README', () => {
+    const readme = leggi('README.md');
+    assert.match(readme, /Decidi tre cose: l'ok a un gate/, 'il gate del brief non è un kit');
+    assert.match(readme.split('\n').find((r) => r.includes('**gate 1**')), /:8848/, "il gate 1 non cita l'anteprima dei blocchi nel brand nuovo");
+    assert.match(readme.split('\n').find((r) => r.startsWith('| `npm run check`')), /SVG/, 'la riga di npm run check non nomina il controllo degli SVG');
+    assert.match(readme.split('### Un progetto nuovo')[1].split('###')[0], /clon/, 'non dice in quale caso è chi ha clonato il tema base');
+    assert.doesNotMatch(readme, /A fine sessione `debug\.log` vuoto/, 'la regola di fine sessione non dice chi la applica');
+    assert.match(readme, /Node\.js 22 o successivo/, 'la versione di Node non è scritta come negli altri due README');
+    assert.match(readme.split('### Un progetto nuovo')[1].split('###')[0], /senza accenti/, 'la regola del nome della cartella non è quella del README del plugin');
+  });
+
+  it('README del tema: ogni controllo di npm run check è nominato', () => {
+    const controlli = [...JSON.parse(leggi(sito.TEMA_BASE, 'package.json')).scripts.check.matchAll(/tools\/(check-[a-z-]+\.js)/g)].map((m) => m[1]);
+    assert.ok(controlli.length >= 7, `controlli trovati: ${controlli.length}`);
+    const readme = leggi(sito.TEMA_BASE, 'README.md');
+    for (const controllo of controlli) assert.ok(readme.includes(controllo), `nel README del tema manca ${controllo}`);
+  });
+
+  it('README del tema: nessun id del database del tema base, nessuno script che il repo non contiene', () => {
+    const readme = leggi(sito.TEMA_BASE, 'README.md');
+    assert.deepEqual(trovate([path.join(sito.TEMA_BASE, 'README.md')], /\b69\b|\b70\b|\b71\b/), [], 'id dei menu del tema base');
+    assert.deepEqual(trovate([path.join(sito.TEMA_BASE, 'README.md')], /pw-(?!pagina|blocco|kit)[a-z0-9-]+\.js/), [], 'script di .playwright-mcp/, ignorata da git');
+    assert.doesNotMatch(readme, /nello starter: "Home"/, '«starter» qui è il tema base');
+    assert.match(readme, /wdm-starter \(/, 'wdm-starter va spiegato alla prima occorrenza');
+    assert.doesNotMatch(readme, /blocks\/\{slug\}\//, 'la cartella di un blocco è blocks/wdm-block-{slug}/');
+    assert.match(readme, /(agente|setup)[^\n]*`npm install`/, 'non dice chi lancia npm install');
+  });
+
   it('i tre elenchi nominano gli stessi blocchi che stanno su disco', () => {
     const nomi = (testo, modello) => [...testo.matchAll(modello)].map((m) => m[1]).sort();
     assert.deepEqual(nomi(leggi('CLAUDE.md').split('### Existing Blocks')[1].split(/^## /m)[0], /^- `\{prefix\}-block-([a-z-]+)` — `\{prefix\}\/\1`$/gm), blocchi(), 'CLAUDE.md → Existing Blocks');

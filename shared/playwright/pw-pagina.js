@@ -46,9 +46,19 @@ async (page) => {
     await page.setViewportSize({ width: larghezza, height: 900 });
     await page.goto(editor.permalink);
     await page.waitForLoadState('networkidle');
+    // I caroselli partono quando entrano nello schermo: prima si scorre tutta la pagina.
+    await page.evaluate(async () => {
+      for (let y = 0; y < document.documentElement.scrollHeight; y += window.innerHeight) {
+        window.scrollTo(0, y);
+        await new Promise((fatto) => setTimeout(fatto, 150));
+      }
+      window.scrollTo(0, 0);
+    });
+    await page.waitForFunction(() => document.querySelectorAll('.swiper').length === document.querySelectorAll('.swiper-initialized').length, null, { timeout: 5000 }).catch(() => {});
     frontend[larghezza] = await page.evaluate(() => ({
       senzaScorrimentoOrizzontale: document.documentElement.scrollWidth === window.innerWidth,
       h1: document.querySelectorAll('h1').length,
+      caroselli: document.querySelectorAll('.swiper').length,
       caroselliAvviati: document.querySelectorAll('.swiper-initialized').length,
       ancoreSenzaBersaglio: [...document.querySelectorAll('a[href^="#"]')].map((a) => a.getAttribute('href')).filter((h) => h.length > 1 && !document.getElementById(h.slice(1))),
     }));

@@ -106,6 +106,28 @@ test('il brief di esempio esiste ed è citato', () => {
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'skills', 'fse-brief', 'SKILL.md'), 'utf8'), /esempio\/brief\.md/);
 });
 
+// Lotto 7.3, lettura cieca: i punti in cui un lettore nuovo doveva tirare a indovinare.
+test('installazione: in chat o da terminale, con il rimando a dove si vede l\'esito', () => {
+  const testo = sezione('Installazione');
+  assert.doesNotMatch(testo, /Lo stesso da terminale/, 'le due serie di comandi non sono le stesse');
+  assert.match(testo, /cartella qualunque/, 'non dice su quale cartella aprire Claude Code per installare');
+  assert.match(testo, /Verifica dell'installazione/, "non dice dove si controlla l'esito dei comandi dati in chat");
+});
+
+test('il primo progetto: nome uguale alla cartella, permessi, cosa si vede alla fine', () => {
+  const testo = sezione('Il primo progetto');
+  for (const voce of ['nuovo progetto dal tema base', 'il trattino', 'lo stesso nome della cartella', 'chiede il permesso', '/wp-admin/']) {
+    assert.ok(testo.includes(voce), `nel primo progetto manca: ${voce}`);
+  }
+});
+
+test('prerequisiti: la tabella è nell\'ordine delle azioni, e Playwright ha un esito atteso', () => {
+  const righe = righeDiTabella(sezione('Prerequisiti'));
+  const posto = (parola) => righe.findIndex((r) => r.split('|')[1].includes(parola));
+  assert.ok(posto('wdm-theme') !== -1 && posto('wdm-theme') < posto('Playwright'), 'il tema base serve prima dei plugin: la sua riga viene prima');
+  assert.match(righe[posto('Playwright')], /Installed/, "la riga di Playwright non dice come si vede che è installato");
+});
+
 // Il materiale di chi sviluppa il plugin sta solo in «Sviluppo».
 test('prima della sezione Sviluppo non si parla del checkout né delle prove', () => {
   const prima = readme.slice(0, readme.indexOf('## Sviluppo'));

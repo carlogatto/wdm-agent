@@ -274,15 +274,21 @@ function fingerprintOf(block) {
   return line ? line.slice(IMPRONTA.length).trim() : null;
 }
 
+// Le righe tolte (-) e aggiunte (+), nell'ordine del file. Il confronto segue la sottosequenza
+// comune più lunga: una riga inserita in alto non fa risultare diverse tutte quelle che la seguono.
 function printDiff(oldBlock, newBlock) {
-  const oldLines = withoutFingerprint(oldBlock || '').split('\n');
-  const newLines = withoutFingerprint(newBlock).split('\n');
-  const max = Math.max(oldLines.length, newLines.length);
-  for (let i = 0; i < max; i++) {
-    if (oldLines[i] !== newLines[i]) {
-      if (oldLines[i] !== undefined) console.log(`  - ${oldLines[i]}`);
-      if (newLines[i] !== undefined) console.log(`  + ${newLines[i]}`);
-    }
+  const a = withoutFingerprint(oldBlock || '').split('\n');
+  const b = withoutFingerprint(newBlock).split('\n');
+  const comuni = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) comuni[i][j] = a[i] === b[j] ? comuni[i + 1][j + 1] + 1 : Math.max(comuni[i + 1][j], comuni[i][j + 1]);
+  }
+  let i = 0;
+  let j = 0;
+  while (i < a.length || j < b.length) {
+    if (i < a.length && j < b.length && a[i] === b[j]) { i++; j++; }
+    else if (i < a.length && (j === b.length || comuni[i + 1][j] >= comuni[i][j + 1])) console.log(`  - ${a[i++]}`);
+    else console.log(`  + ${b[j++]}`);
   }
 }
 

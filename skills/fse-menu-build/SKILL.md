@@ -137,8 +137,9 @@ runs, never for the real theme.
 - `navigations[].items` of the applied menus = plan (labels, order, children, page ids);
 - `parts.header` and `parts.footer` (and every part listed) = the menu id — **both**, always;
   `grep -n '"ref":' parts/*.html` shows the same number;
-- frontend `curl -sk {local-url}`: `nav.wp-block-navigation` with the kit labels, no
-  `wp-block-page-list`, `current-menu-item` on the current page, no `Fatal|Warning`; the footer
+- frontend `curl -sk {local-url}`: `nav.wp-block-navigation` with the kit labels, no element
+  with the class `wp-block-page-list` (look for `class="wp-block-page-list`: the bare string is
+  also in the CSS core prints inline), `current-menu-item` on the current page, no `Fatal|Warning`; the footer
   navigation prints the same items; orphans render as links to `#`;
 - Site Editor (optional, Playwright): header and footer parts open without invalid blocks and
   show the menu by name.
@@ -173,7 +174,9 @@ Guard fails · every label orphan (pages not built yet, outside setup) · kit pa
 `<nav>` and a `<ul>` inside it, or part without the navigation block the kit names (`apply`
 exit 1) · `dump`/`plan` failing ({wp-cli} broken) · **a menu that would lose something and that
 the dev has not confirmed in a later turn** (exit 3) · a menu open in the editor (exit 4) · a
-request to delete a `wp_navigation` post.
+request to delete a `wp_navigation` post that a navigation block still uses (one that no block
+uses is deleted with `{wp-cli} post delete {id} --force` once the dev has said so in a turn after
+the one that listed it: `fse-build` Step 3, "Menus no longer used").
 
 ## Never
 

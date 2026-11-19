@@ -14,7 +14,9 @@
 // generati (li ricrea npm run build) e i kit di pagina dimostrativi del tema base; sostituisce
 // prefisso, text domain e titolo in ogni file di testo del tema; mette formId a 0 nelle parts;
 // rinomina cartelle e file che portano il prefisso; imposta il proxy di build.js; aggiorna
-// .gitignore, README.md e DESIGN.md della site root; per ultima rinomina la cartella del tema;
+// .gitignore e README.md della site root e riscrive in DESIGN.md le sezioni di stato (quelle del
+// tema base diventano lo stato di partenza di un progetto nuovo; Project Config e Design Tokens
+// restano); per ultima rinomina la cartella del tema;
 // toglie docs/superpowers (i documenti di lavoro del tema base) e crea docs/brief; infine
 // controlla che non restino riferimenti a «wdm».
 //
@@ -217,6 +219,80 @@ function senzaImpronta(testo) {
   return testo.replace(/^# impronta theme\.json: .*\r?\n/m, '');
 }
 
+// Una sezione di DESIGN.md, dal suo titolo al titolo successivo (senza righe vuote in coda), o ''.
+function sezioneDi(testo, titolo) {
+  const inizio = testo.search(new RegExp(`^## ${titolo}[ \\t]*$`, 'm'));
+  if (inizio === -1) return '';
+  const dopo = testo.indexOf('\n', inizio) + 1;
+  const prossima = dopo === 0 ? -1 : testo.slice(dopo).search(/^## /m);
+  return testo.slice(inizio, prossima === -1 ? testo.length : dopo + prossima).trimEnd();
+}
+
+// Il DESIGN.md di un progetto appena nato. Quello che arriva con il tema base ne racconta la
+// storia: pagine già costruite, id del suo database, domande aperte e decisioni sue. Restano
+// Project Config (lo scrivono la skill e mamp.js) e Design Tokens (li rigenera il sync); il
+// resto è lo stato di partenza di ogni progetto, uguale ogni volta. I menu (Navigazione) e la
+// riga del setup nel Log li scrive la skill, quando esistono. `blocchi`: gli slug su disco.
+function designDelProgetto(testo, v, blocchi) {
+  const p = v.prefix;
+  const catalogo = /^\| Catalogo blocchi \|(?:[^|\n]*\|){3}([^|\n]*)\|/m.exec(sezioneDi(testo, 'Pagine'));
+  const parti = [
+    `# Design: ${v.slug}`,
+    'Block theme FSE con blocchi Gutenberg nativi dinamici e CSS moderno senza framework.\nFormato di questo file: `shared/fse-foundations.md §11` del plugin `wdm-agent`.',
+    sezioneDi(testo, 'Project Config'),
+    [
+      '## Local Development',
+      "- **Local URL**: `{local-url}` (MAMP PRO; database via `{db-socket}`); admin `{local-url}wp-admin/` con `{agent-admin-user}`: l'agente entra senza password, con una sessione temporanea creata da WP-CLI e sempre revocata (`sessione.js` del plugin, fondamenta §9).",
+      '- **Build watch**: `npm run dev` da `{theme-root}` (browser-sync `https://localhost:8848/`, proxy del sito; catalogo kit `https://localhost:8848/html/`, mai `file://`).',
+      '- **Build single**: `npm run build` (tema + blocchi + kit → `html/`).',
+      '- **WP-CLI**: `{wp-cli}` (comando completo, phar assoluto; in zsh in uno script, non in una variabile stringa).',
+      "- **wp-config**: `WP_DEBUG` + `WP_DEBUG_LOG` (`wp-content/debug.log` vuoto a fine sessione), `WP_DEVELOPMENT_MODE = 'theme'`; permalink `/%postname%/` (+ `.htaccess`, fuori repo); `show_on_front = page` (la pagina Home della tabella Pagine).",
+      '- **Test Playwright**: i modelli stanno nel plugin (`shared/playwright/pw-pagina.js`, `pw-blocco.js`, `pw-kit.js`); gli script adattati al progetto in `{site-root}/.playwright-mcp/` (ignorata da git).',
+    ].join('\n'),
+    sezioneDi(testo, 'Design Tokens'),
+    [
+      '## Telaio',
+      '| Item | Stato | Kit | Note |',
+      '|---|---|---|---|',
+      '| header | implementato | src/kit/main/header | `parts/header.html`, dal tema base: il progetto lo ridisegna con `fse-kit` |',
+      '| footer | implementato | src/kit/main/footer | `parts/footer.html`, dal tema base: il progetto lo ridisegna con `fse-kit` |',
+      '| template page / single / archive / search / index / 404 | implementato | — | `templates/*.html`, dal tema base; nessun `front-page.html` |',
+      '| form di default | implementato | src/kit/main/form/_form-contacts.kit | `parts/form-contacts.html`, dal tema base, `formId` 0 (vedi Domande aperte) |',
+      `| campioni del telaio (solo kit) | kit | src/kit/${p}-telaio.kit | \`html/${p}-telaio.html\`, nessuna pagina in WordPress |`,
+    ].join('\n'),
+    [
+      '## Pagine',
+      '| Pagina | URL | Stato | Kit | Blocchi (in ordine) | Note |',
+      '|---|---|---|---|---|---|',
+      '| Home | / | da progettare | — | — | pagina in front, vuota, creata dal setup; il kit è del progetto |',
+      `| Catalogo blocchi | /catalogo-blocchi/ | kit | src/kit/${p}-blocks.kit | ${catalogo ? catalogo[1].trim() : '—'} | ogni variante dei blocchi del tema base: la costruisce la prima \`fse-build\` |`,
+    ].join('\n'),
+    [
+      '## Blocchi',
+      `Varianti, attributi e figli di un blocco stanno nel suo README (\`blocks/${p}-block-{slug}/README.md\`), e solo lì.`,
+      '',
+      "| Blocco | Stato | Pagina d'origine |",
+      '|---|---|---|',
+      ...blocchi.map((slug) => `| ${p}/${slug} | implementato | starter |`),
+    ].join('\n'),
+    '## Navigazione\n| menu (id) | parts | voci (primo livello + figli) | orfane | data |\n|---|---|---|---|---|',
+    '## Domande aperte\n- form di default: creare il form Contatti in Formidable e impostare `formId` nella part (Aspetto → Editor → Parti); finché è 0 la part mostra titolo e testo, senza modulo.',
+    '## Log decisioni\n| Data | Decisione |\n|---|---|',
+  ];
+  return `${parti.filter(Boolean).join('\n\n')}\n`;
+}
+
+// Gli slug dei blocchi del tema, nell'ordine in cui CLAUDE.md li elenca (quello in cui sono
+// nati); in coda, in ordine alfabetico, quelli che l'elenco non nomina.
+function blocchiDi(tema, sito) {
+  const dir = path.join(tema, 'blocks');
+  const cartelle = !fs.existsSync(dir) ? [] : fs.readdirSync(dir, { withFileTypes: true })
+    .filter((voce) => voce.isDirectory()).map((voce) => voce.name.replace(/^[a-z0-9]+-block-/, '')).sort();
+  const claude = path.join(sito, 'CLAUDE.md');
+  const elenco = fs.existsSync(claude) ? [...fs.readFileSync(claude, 'utf8').matchAll(/^- `\{prefix\}-block-([a-z0-9-]+)`/gm)].map((m) => m[1]) : [];
+  return [...elenco.filter((slug) => cartelle.includes(slug)), ...cartelle.filter((slug) => !elenco.includes(slug))];
+}
+
 // Le righe che citano ancora «wdm», tolti i nomi protetti: «file:riga: testo».
 function residui(elenco, radice) {
   const pulita = (riga) => PROTETTI.reduce((t, nome) => t.split(nome).join(''), riga);
@@ -259,9 +335,10 @@ function rinomina(v) {
     console.log('  ✓ cartelle dei blocchi, kit e pattern rinominati');
     const build = path.join(base, 'build.js');
     if (fs.existsSync(build)) riscrivi(build, (testo) => testo.replace(/proxy: '[^']*'/, () => `proxy: '${v['local-url']}'`));
+    const blocchi = blocchiDi(base, sito);
     for (const percorso of delSito) {
       const cambia = (testo) => sostituisci(testo, percorso, v, 'sito');
-      riscrivi(percorso, path.basename(percorso) === 'DESIGN.md' ? (testo) => senzaImpronta(fuoriDaProjectConfig(testo, cambia)) : cambia);
+      riscrivi(percorso, path.basename(percorso) === 'DESIGN.md' ? (testo) => designDelProgetto(senzaImpronta(fuoriDaProjectConfig(testo, cambia)), v, blocchi) : cambia);
     }
     console.log('  ✓ build.js (proxy), .gitignore, README.md e DESIGN.md della site root');
     // Per ultima: finché la cartella si chiama wdm-theme, un rilancio riprende da qui sopra.
@@ -326,6 +403,6 @@ function main(argv) {
   }
 }
 
-module.exports = { valida, sostituisci, senzaImpronta };
+module.exports = { valida, sostituisci, senzaImpronta, designDelProgetto };
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));

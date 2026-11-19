@@ -339,6 +339,23 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       controllaRinomina(cfg.site, url, cfg.php);
     });
 
+    // Lotto 7.1: il DESIGN.md del tema base racconta il tema base. Dopo setup.js porta lo stato
+    // di partenza di un progetto nuovo, senza che l'agente debba riscriverlo a mano.
+    it('Step 3a: DESIGN.md esce con lo stato di un progetto nuovo, non con la storia del tema base', () => {
+      const design = fs.readFileSync(path.join(cfg.site, 'DESIGN.md'), 'utf8');
+      const sezione = (titolo) => design.split(new RegExp(`^## ${titolo}$`, 'm'))[1].split(/^## /m)[0];
+      const righe = (titolo) => sezione(titolo).split('\n').filter((r) => r.startsWith('| ') && !/^\|[\s:|-]+\|$/.test(r)).slice(1);
+      assert.deepEqual(design.match(/^## .*$/gm), ['## Project Config', '## Local Development', '## Design Tokens', '## Telaio', '## Pagine', '## Blocchi', '## Navigazione', '## Domande aperte', '## Log decisioni']);
+      assert.deepEqual(righe('Pagine').map((r) => r.split('|').slice(1, 4).map((c) => c.trim()).join(' · ')), ['Home · / · da progettare', 'Catalogo blocchi · /catalogo-blocchi/ · kit']);
+      assert.match(righe('Pagine')[1], /hero \(image\), columns-wrapper/, 'la riga del Catalogo tiene i blocchi del tema base, in ordine');
+      const blocchi = fs.readdirSync(path.join(tema, 'blocks'), { withFileTypes: true }).filter((v) => v.isDirectory()).map((v) => v.name.replace(`${VALORI.prefix}-block-`, `${VALORI.prefix}/`));
+      assert.deepEqual(righe('Blocchi').map((r) => r.split('|')[1].trim()).sort(), blocchi.sort());
+      assert.deepEqual([righe('Navigazione'), righe('Log decisioni')], [[], []]);
+      assert.equal(sezione('Domande aperte').trim().split('\n').length, 1);
+      assert.doesNotMatch(design.split('## Design Tokens')[0] + design.split(/^## Telaio$/m)[1], /docs\/superpowers|⏳|2026-1[01]-\d\d|\bid \d+|con la password/);
+      assert.ok(design.includes(`| \`{site-root}\` | ${cfg.site} |`), 'Project Config resta quello scritto dalla skill');
+    });
+
     it('Step 3b: npm install e npm run build a 0', () => {
       const ci = lancia('npm', ['install', '--no-audit', '--no-fund', '--prefer-offline'], { cwd: tema });
       assert.equal(ci.status, 0, ci.out.slice(-3000));
@@ -382,10 +399,26 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       const home = wp('post', 'create', '--post_type=page', '--post_title=Home', '--post_name=home', '--post_status=publish', '--porcelain');
       assert.equal(home.status, 0, home.out);
       for (const args of [['option', 'update', 'show_on_front', 'page'], ['option', 'update', 'page_on_front', home.stdout.trim()],
-        ['option', 'update', 'permalink_structure', '/%postname%/'], ['rewrite', 'flush', '--hard']]) {
+        ['option', 'update', 'permalink_structure', '/%postname%/']]) {
         const r = wp(args);
         assert.equal(r.status, 0, `${args.join(' ')}: ${r.out}`);
       }
+    });
+
+    // Lotto 7.1: `wp rewrite flush --hard` qui non scrive .htaccess (WP-CLI non vede i moduli di
+    // Apache) e l'agente lo scriveva a mano. Il comando della skill lo fa scrivere a WordPress.
+    it('Step 4c: il comando della skill scrive .htaccess, e gli indirizzi «belli» rispondono', async () => {
+      const skill = fs.readFileSync(path.join(RADICE, 'skills', 'fse-theme-setup', 'SKILL.md'), 'utf8');
+      const comando = /^\{wp-cli\} eval '(add_filter\( "got_rewrite".*)'$/m.exec(skill);
+      assert.ok(comando, 'nella skill non trovo il comando che scrive .htaccess');
+      const htaccess = path.join(cfg.site, '.htaccess');
+      assert.ok(!fs.existsSync(htaccess), '.htaccess c\'è già prima del comando: la prova non direbbe nulla');
+      assert.equal((await scarica(`${url}wp-json/`)).status, 404, 'senza .htaccess wp-json/ non dovrebbe rispondere');
+      const r = wp('eval', comando[1]);
+      assert.equal(r.status, 0, r.out);
+      assert.match(r.stdout, /htaccess: ok/);
+      assert.match(fs.readFileSync(htaccess, 'utf8'), /RewriteRule \. \/index\.php \[L\]/);
+      assert.equal((await scarica(`${url}wp-json/`)).status, 200);
     });
 
     it('Step 4d: sync dei token (CSS globale via {wp-cli}, impronta in DESIGN.md), poi build e --check a 0', () => {
@@ -415,6 +448,29 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
       assert.match(home.body, /wp-block-navigation/);
       const log = path.join(cfg.site, 'wp-content', 'debug.log');
       assert.equal(fs.existsSync(log) ? fs.readFileSync(log, 'utf8') : '', '');
+    });
+
+    // Lotto 7.1: il preload aveva il nome del file scritto a mano. Cambiato il font in
+    // theme.json, il preload deve seguirlo da solo.
+    it('il preload del font segue theme.json: cambiato il file del testo, cambia il preload', async () => {
+      const file = path.join(tema, 'theme.json');
+      const prima = fs.readFileSync(file, 'utf8');
+      const json = JSON.parse(prima);
+      const stile = /font-family--([a-z0-9-]+)/.exec(json.styles.typography.fontFamily)[1];
+      const famiglia = json.settings.typography.fontFamilies.find((f) => f.slug === stile);
+      const regolare = famiglia.fontFace.find((f) => String(f.fontWeight).startsWith('400') && f.fontStyle !== 'italic');
+      const vecchio = path.basename([].concat(regolare.src)[0]);
+      assert.match((await scarica(url)).body, new RegExp(`rel="preload" as="font"[^>]*/assets/fonts/${vecchio}"`));
+      try {
+        fs.copyFileSync(path.join(tema, 'assets', 'fonts', vecchio), path.join(tema, 'assets', 'fonts', 'Nuovo-Regular.woff2'));
+        regolare.src = ['file:./assets/fonts/Nuovo-Regular.woff2'];
+        fs.writeFileSync(file, JSON.stringify(json, null, 2));
+        const home = (await scarica(url)).body;
+        assert.deepEqual(home.match(/<link[^>]*rel="preload" as="font"[^>]*>/g).map((riga) => /fonts\/([^"]+)"/.exec(riga)[1]), ['Nuovo-Regular.woff2']);
+      } finally {
+        fs.writeFileSync(file, prima);
+        fs.rmSync(path.join(tema, 'assets', 'fonts', 'Nuovo-Regular.woff2'), { force: true });
+      }
     });
 
     it('login dell\'agente senza password: sessione.js entra con l\'utente di DESIGN.md e non lascia sessioni', () => {

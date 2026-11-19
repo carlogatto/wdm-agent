@@ -201,13 +201,21 @@ function ultimoCommit(sito, file) {
   return data === '' ? null : data;
 }
 
+// Giorno e ora nel fuso di questo computer. Il commit arriva con l'ora locale e WordPress in
+// UTC: scritte com'erano, le due ore non si potevano confrontare a occhio.
+function locale(data) {
+  const d = new Date(data);
+  const due = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${due(d.getMonth() + 1)}-${due(d.getDate())} ${due(d.getHours())}:${due(d.getMinutes())}`;
+}
+
 function ultimoLato(kit, wp, nomeWp) {
-  const giorno = (d) => (d === 'ora' ? 'modifiche non ancora committate' : `ultimo commit ${d.slice(0, 16).replace('T', ' ')}`);
+  const giorno = (d) => (d === 'ora' ? 'modifiche non ancora committate' : `ultimo commit ${locale(d)}`);
   if (!kit || !wp) return 'Non so dire quale lato è cambiato per ultimo: guarda la storia di git del kit e la data di modifica in WordPress.';
   const kitDopo = kit === 'ora' || (wp !== 'ora' && new Date(kit) > new Date(wp));
   return kitDopo
-    ? `Per ultimo è cambiato il kit (${giorno(kit)}; ${nomeWp}: ${wp === 'ora' ? 'ora' : wp.slice(0, 16).replace('T', ' ')}): porta la differenza in WordPress.`
-    : `Per ultimo è cambiato ${nomeWp} (${wp === 'ora' ? 'modifiche non ancora committate' : wp.slice(0, 16).replace('T', ' ')}; kit: ${giorno(kit)}): allinea il kit.`;
+    ? `Per ultimo è cambiato il kit (${giorno(kit)}; ${nomeWp}: ${wp === 'ora' ? 'ora' : locale(wp)}): porta la differenza in WordPress.`
+    : `Per ultimo è cambiato ${nomeWp} (${wp === 'ora' ? 'modifiche non ancora committate' : locale(wp)}; kit: ${giorno(kit)}): allinea il kit.`;
 }
 
 // ---------- main ----------

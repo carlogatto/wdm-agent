@@ -51,8 +51,10 @@ wdm-theme repo). Missing → stop: the skill renames the starter, it does not cr
 
 **One opening message, then no more questions.** Four values only the dev knows; everything
 else has a default the message declares. Values already given in the dev's request are not asked
-again; on a resume they all come from `DESIGN.md`. Send this, adapted to what is already known,
-and wait for the answer — it is the only wait of the whole setup:
+again; on a resume they all come from `DESIGN.md`. A request that already gives the four values
+and says that the MAMP PRO site is ready leaves nothing to ask: send nothing, start from Phase 1.
+Otherwise send this, adapted to what is already known, and wait for the answer: it is
+the only wait of the whole setup.
 
 > Per creare il progetto mi servono quattro cose:
 > 1. **Nome del progetto**, in minuscolo e senza spazi (es. `pincopallino`): diventa il nome
@@ -106,9 +108,12 @@ Create `{site-root}/SETUP.md` (checklist below) and write `{site-root}/DESIGN.md
 Config` with the FSE template of fse-foundations §11 (`theme_family: fse`, Identity, Paths with
 `{site-root}` and `{theme-root}`, `## Local Development`; the rows `{db-socket}` and `{wp-cli}`
 are written by `mamp.js` in Step 1b). If the repo shipped a `DESIGN.md`
-(wdm-theme's own, with Telaio/Pagine/Blocchi tables of the starter), **integrate**: rewrite the
-Project Config values, keep the tables (`setup.js` renames `wdm` → `{prefix}` in them), leave
-`## Design Tokens` to the sync script.
+(wdm-theme's own, with the base theme's state and history), **integrate**: rewrite only the
+Project Config values — Identity, `{site-root}`, `{theme-root}` — and touch nothing else.
+`{db-socket}` and `{wp-cli}` still point to the base theme's own site until `mamp.js` rewrites
+them (Step 1b): never run that `{wp-cli}` before. Title, `## Local Development` and the state
+sections are rewritten by `setup.js` (Step 3a) with the starting state of a new project;
+`## Design Tokens` belongs to the sync script (Step 4d).
 
 ```markdown
 # Setup: {slug}
@@ -232,7 +237,11 @@ HTML and block attributes: a title like `L'Atelier` is fine) and `wdm` → prefi
 parent/context, theme.json `styles.blocks`, pattern slugs and `Categories`, BEM classes of
 parts and kit, handles like `{prefix}-swiper`); the names `wdm-agent`, `wdm-starter` and
 `carlogatto/wdm-theme` stay. It renames `blocks/{prefix}-block-*`, kit and pattern files; sets
-the `build.js` proxy; fixes the site-root `.gitignore`, `README.md` and `DESIGN.md`; removes
+the `build.js` proxy; fixes the site-root `.gitignore` and `README.md`; in `DESIGN.md` it keeps
+`## Project Config` and `## Design Tokens` and writes everything else as the starting state of
+a new project (title, `## Local Development`, Telaio `implementato` plus the row of the kit
+samples, Pagine with Home `da progettare` and Catalogo blocchi `kit`, one Blocchi row per block,
+`## Navigazione` and `## Log decisioni` empty, the default form in `## Domande aperte`); removes
 the generated files (`build/`, `html/`, compiled css/js — rebuilt in 3b) and the demo page kits
 of the base theme (only `{prefix}-blocks.kit` and `{prefix}-telaio.kit` stay in `src/kit/`);
 in the parts it sets `formId` to 0 and drops the `ref` of the navigation blocks (ids of the
@@ -272,14 +281,20 @@ same `ariaLabel`:
 ```
 On a new site the pages of the kit menus do not exist yet: `plan` warns on stderr and those
 items become `#` links. It is expected: `fse-menu-build` realigns the menus once the project's
-telaio kit and pages exist.
+telaio kit and pages exist. Two items meet the content WordPress creates at install, and both
+outcomes are intended: «Pagina di esempio» resolves to WordPress's own sample page (the base
+theme uses it to show the page options), «Privacy Policy» exists only as a draft and stays `#`.
 
 ### Step 4c — Home, front page, permalinks
 ```bash
 HOME_ID=$({wp-cli} post create --post_type=page --post_title="Home" --post_name=home --post_status=publish --porcelain)
 {wp-cli} option update show_on_front page && {wp-cli} option update page_on_front $HOME_ID
-{wp-cli} option update permalink_structure '/%postname%/' && {wp-cli} rewrite flush --hard   # writes .htaccess (outside the repo); if it cannot, write the standard WP .htaccess
+{wp-cli} option update permalink_structure '/%postname%/'
+{wp-cli} eval 'add_filter( "got_rewrite", "__return_true" ); require_once ABSPATH . "wp-admin/includes/file.php"; require_once ABSPATH . "wp-admin/includes/misc.php"; flush_rewrite_rules( true ); echo file_exists( ABSPATH . ".htaccess" ) ? "htaccess: ok\n" : "htaccess: manca\n";'
 ```
+The second command writes WordPress's own `.htaccess` (outside the repo) and must print
+`htaccess: ok`; `wp rewrite flush --hard` cannot do it here (WP-CLI does not see Apache's
+modules). Then `curl -sk -o /dev/null -w '%{http_code}' "{local-url}wp-json/"` → `200`.
 No `front-page.html` (fse-foundations §7): the static Home uses `page.html`.
 
 ### Step 4d — Tokens
@@ -290,12 +305,12 @@ cd "{theme-root}" && npm run build   # html/ with the regenerated global styles
 ```
 
 ### Step 4e — DESIGN.md tables, then checks
-First write the `## Telaio`, `## Pagine`, `## Blocchi` and `## Navigazione` rows as Step 5a says:
-the parity check below reads them, and with the base theme's rows still there (five pages
-`implementata` whose kits Step 3a removed) it could only answer `SKIP`.
+`## Telaio`, `## Pagine` and `## Blocchi` already carry the new project's rows (`setup.js`,
+Step 3a). Write here the `## Navigazione` rows as Step 5a says, then run the checks.
 
 - `cd "{theme-root}" && npm run check` → exit 0, with the frontend checks executed (no `SKIP`
-  line for the Home: a `SKIP … non raggiungibile` here means the host stopped answering) and
+  line for the Home: a `SKIP … non raggiungibile` here means the host stopped answering; one
+  `SKIP` that names the Catalogo is expected, the page is born with the first `fse-build`) and
   `PASS check-parita`: header and footer of the new project have the same structure in the kit
   and in WordPress.
 - Login as `{agent-admin-user}` (fse-foundations §9: `sessione.js apri` with the model
@@ -314,29 +329,36 @@ the parity check below reads them, and with the base theme's rows still there (f
 {wp-cli} eval 'FrmAppController::install();'   # WP-CLI does not create the tables otherwise
 {wp-cli} eval '$s = FrmAppHelper::get_settings(); $s->load_style = "none"; $s->store();'   # the theme styles the form
 ```
-`parts/form-contacts.html` has `formId` 0 since Step 3a (title and text only, no broken form):
-add to `## Domande aperte`: "form di default:
-creare il form Contatti in Formidable e impostare `formId` nella part (Aspetto → Editor →
-Parti)".
+`parts/form-contacts.html` has `formId` 0 since Step 3a (title and text only, no broken form);
+the line that says so is already in `## Domande aperte`, written by `setup.js`.
+
+Formidable can write PHP `Deprecated` lines of its own in `debug.log` the first time it loads
+(seen with 7.1 on PHP 8.4), after the check of Step 4e. Read the log now: if every line names a
+file under `plugins/formidable/`, empty it
+(`{wp-cli} eval 'file_put_contents( WP_CONTENT_DIR . "/debug.log", "" );'`), request `{local-url}`
+once and verify that it stays empty. A line that names anything else is a defect: fix it before
+going on.
 
 ## Phase 5 — Handover
 
 ### Step 5a — DESIGN.md, CLAUDE.md and README.md `[AGENT]`
-The four state tables are written at Step 4e, before the checks; here they are verified
-together with the rest.
-- `## Telaio`: header, footer, templates, form di default `implementato` (inherited from the starter; the project
-  kit will redesign them with `fse-kit`).
-- `## Pagine`: Home `/` `da progettare` (the WP page exists, empty; its kit is the project's;
-  `fse-brief` rewrites these rows from the map);
-  Catalogo blocchi `/catalogo-blocchi/` `kit` (`src/kit/{prefix}-blocks.kit`, every variant of the
-  shipped blocks: the regression page, built by the first `fse-build`). The base theme's demo
-  pages get no row (Step 3a removed their kits); wdm-theme's "fuori dal flusso" note and its
-  `## Log decisioni` rows are dropped.
-- `## Blocchi`: one row per `blocks/*/build/index.asset.php` on disk, `implementato`, origin
-  "starter" (block, state, origin: variants and children stay in each README).
-- `## Navigazione`: the four menus of Step 4b (title, id and part from `dump`), items as in
-  the kit, the ones without a page marked "orfana".
-- `## Domande aperte`, `## Log decisioni` (one row: setup date, values).
+`setup.js` wrote the starting state (Step 3a) and Step 4e the menus: here the file is verified
+and completed. Never rewrite by hand a section the script wrote.
+- `## Telaio`, `## Pagine`, `## Blocchi` (written by `setup.js`, verify only): header, footer,
+  templates and form di default `implementato`, plus the row of the kit samples
+  (`src/kit/{prefix}-telaio.kit`, `kit`: it has no part and no WordPress page, `fse-build` names it in its report and leaves it
+  as it is);
+  Home `/` `da progettare` (the WP page exists, empty; `fse-brief` rewrites these rows from the
+  map) and Catalogo blocchi `/catalogo-blocchi/` `kit` (the regression page, built by the first
+  `fse-build`); one `implementato` row per `blocks/*/build/index.asset.php` on disk. Nothing of
+  the base theme's own history is left (its demo pages, its notes, its decisions).
+- `## Navigazione` (written here, at Step 4e): the four menus of Step 4b (title, id and part
+  from `dump`), items as in the kit, the ones without a page marked "orfana".
+- `## Domande aperte`: the default form (already there) and **one** line for the orphan items as
+  a whole ("le voci orfane dei menu sono quelle del telaio del tema base: le riallinea
+  `fse-menu-build` quando esistono il kit del telaio e le pagine del progetto"), never one line
+  per item.
+- `## Log decisioni`: one row, the setup date and its values.
 - `CLAUDE.md` ships with the repo and resolves `{prefix}`/paths from DESIGN.md: verify its
   "First: read DESIGN.md" protocol and routing table mention only `fse-*` skills.
 - `README.md` (site root) ships with the repo as the project's quick-start note for humans
@@ -380,9 +402,12 @@ not a question and nothing waits for an answer:
   `carlogatto/wdm-theme`, add "il repository punta ancora al tema base wdm-theme: cambia il
   remoto prima del push". One line for the things the project will replace along the way:
   `screenshot.png` and the placeholder images in `assets/img/`.
-- *Prossimo passo*: the brief. `{site-root}/docs/brief/` already has files → no question: read
+- *Prossimo passo*: the brief. `{site-root}/docs/brief/` already has files, or the dev has
+  already asked for the example brief → no question: read
   `${CLAUDE_PLUGIN_ROOT}/skills/fse-brief/SKILL.md` and start `fse-brief` **in the same
-  conversation**, right after the handover (fse-foundations §1 "The ok continues"). Empty → "metti
+  conversation**, right after the handover (fse-foundations §1 "The ok continues"); the turn
+  then closes at gate 1, and the handover of the setup — the dev's password included — opens
+  that closing message. Empty → "metti
   in `docs/brief/` il materiale del progetto (brand, logo, font, elenco delle pagine, testi,
   immagini) e scrivi «leggi il brief»; per provare senza un cliente scrivi «usa il brief di
   esempio»". Never a prompt to paste.
