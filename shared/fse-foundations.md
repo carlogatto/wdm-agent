@@ -563,7 +563,7 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
   → `assets/js/page-options.js`, plain JS entry in `build.js`, enqueued on
   `enqueue_block_editor_assets`) and set by `fse-build` from the kit: title `0` when the page
   opens with a hero variant image (its h1), form stays `1` (shown everywhere, as
-  in wdm-starter) and goes to `0` only on a page whose content already has a `{prefix}/form` block. `render_block_core/post-title`,
+  in wdm-starter) and goes to `0` only on a page whose kit does not print the default form at the end of `<main>` (a page kit with its own `{prefix}/form` does not import it; the catalogue of the base theme imports both, on purpose). `render_block_core/post-title`,
   `render_block_core/group` (className `{prefix}-page-header`) and
   `render_block_core/template-part` (slug `form-contacts`) return `''` when the meta is off, on
   singular views only. The editor canvas still shows the template title and part (no editor
@@ -646,7 +646,7 @@ post create` is what `wp post create` would be with a global `wp`.
 ID=$({wp-cli} post create --post_type=page --post_title="Titolo" --post_name="slug" --post_status=publish --porcelain)
 {wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" apply "{scratchpad}/page-{slug}.html" page=$ID
 {wp-cli} post get $ID --field=post_content                          # derived state: what is in WP now
-{wp-cli} post meta update $ID {prefix}_show_title 0                  # page opening with a hero image (its own h1); {prefix}_show_form 0 only when the content already has a {prefix}/form block (§7)
+{wp-cli} post meta update $ID {prefix}_show_title 0                  # page opening with a hero image (its own h1); {prefix}_show_form 0 only when the kit of the page does not print the default form (§7)
 {wp-cli} option update show_on_front page && {wp-cli} option update page_on_front $ID
 {wp-cli} plugin install formidable --activate && {wp-cli} eval 'FrmAppController::install();'   # Formidable via WP-CLI: only install() creates its tables
 {wp-cli} eval '$s = FrmAppHelper::get_settings(); $s->load_style = "none"; $s->store();'     # plugin CSS off: the theme styles the form
@@ -706,8 +706,9 @@ node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" chiudi "{site-root}"
   `url=` and `nome=`). A check they do not cover: copy the model to
   `{site-root}/.playwright-mcp/pw-{name}.js` and adapt it (the folder is gitignored;
   `browser_run_code_unsafe` with `filename` accepts only files there; screenshots in
-  `.playwright-mcp/shots/`). Rules of a model: one `async (page) => { … }`; `/*COOKIES*/` as the
-  argument of `addCookies`; placeholders only inside single-quoted strings; no `require` (the
+  `.playwright-mcp/shots/`). Rules of a model: one `async (page) => { … }`; in a model that
+  enters the backend `/*COOKIES*/` as the argument of `addCookies` (a kit model has none: `apri`
+  refuses a model without it, `prepara` one with it); placeholders only inside single-quoted strings; no `require` (the
   sandbox has none); leave the editor by navigating away, never a login form.
 - No `browser_*` tool in the session (Playwright MCP not installed) → the skill goes on without
   the browser: frontend checks via `curl`, editor checks reported as missing, and the handover
@@ -720,7 +721,8 @@ without one, and works with WordPress stopped:
 node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/sessione.js" prepara "{site-root}" "${CLAUDE_PLUGIN_ROOT}/shared/playwright/pw-kit.js" url=https://localhost:8848/html/{prefix}-home.html nome=kit-home
 # → browser_run_code_unsafe filename=.playwright-mcp/_run.js, then `chiudi` as always
 ```
-`url` is the address the preview printed (the port is not always 8848, §10). The model opens its
+`url` is the address the preview printed (the port is not always 8848, §10). After `prepara`
+`chiudi` only removes the file, and answers `sessioni attive: 0` also with WordPress stopped. The model opens its
 own context with `ignoreHTTPSErrors: true` (the preview has a self-signed certificate) and
 answers, per width: no horizontal overflow, one h1, carousels found and started, anchors without
 a target, broken images, the fonts of text and headings and the ones loaded, console errors;

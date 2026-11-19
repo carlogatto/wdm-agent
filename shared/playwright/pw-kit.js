@@ -24,8 +24,9 @@ async (page) => {
   try {
     for (const larghezza of [1440, 768, 390]) {
       await kit.setViewportSize({ width: larghezza, height: 900 });
-      const risposta = await kit.goto(URL);
-      if (!risposta || !risposta.ok()) return { errore: `${URL} risponde ${risposta ? risposta.status() : 'nulla'}: l'anteprima è accesa (npm run dev) e la pagina è stata compilata?` };
+      // Con l'anteprima spenta goto lancia (connessione rifiutata): deve uscire un messaggio, non l'errore grezzo.
+      const risposta = await kit.goto(URL).catch(() => null);
+      if (!risposta || !risposta.ok()) return { errore: `${URL} ${risposta ? `risponde ${risposta.status()}` : 'non risponde'}: l'anteprima è accesa (npm run dev) e la pagina è stata compilata?` };
       await kit.waitForLoadState('networkidle');
       // I caroselli partono quando entrano nello schermo: prima si scorre tutta la pagina.
       await kit.evaluate(async () => {

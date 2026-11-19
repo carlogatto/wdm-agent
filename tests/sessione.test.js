@@ -93,9 +93,30 @@ describe('sessione.js senza WordPress', () => {
   it('i modelli scorrono la pagina prima di contare i caroselli, e dicono quanti dovrebbero essercene', () => {
     for (const nome of ['pw-pagina.js', 'pw-kit.js']) {
       const modello = fs.readFileSync(path.join(MODELLI, nome), 'utf8');
-      assert.match(modello, /scrollTo\([\s\S]*caroselliAvviati/, `${nome}: conta i caroselli senza aver scorso la pagina`);
+      // Uno scorrimento vero: un ciclo che scende di uno schermo alla volta fino in fondo, non il solo ritorno in cima.
+      assert.match(modello, /for \(let y = 0; y < document\.documentElement\.scrollHeight; y \+= window\.innerHeight\) \{\s*window\.scrollTo\(0, y\);[\s\S]*caroselliAvviati/, `${nome}: conta i caroselli senza aver scorso la pagina`);
       assert.match(modello, /caroselli: /, `${nome}: non dice quanti caroselli ha la pagina`);
     }
+  });
+
+  // Le prove qui sotto leggono il testo del modello: nessuna apre un browser (Playwright gira solo
+  // dentro Claude Code). L'esecuzione dal vivo è agli atti nel repo del tema, lotto-7/prova-7-1.
+  it('pw-kit.js: accetta il certificato dell\'anteprima, dà uno screenshot per larghezza e un messaggio se l\'anteprima è spenta', () => {
+    const modello = fs.readFileSync(path.join(MODELLI, 'pw-kit.js'), 'utf8');
+    assert.match(modello, /newContext\(\{ ignoreHTTPSErrors: true \}\)/);
+    assert.match(modello, /screenshot\(\{ path: '\{\{shots\}\}\/' \+ NOME \+ '-' \+ larghezza \+ '\.png'/);
+    // goto lancia se nessuno risponde: l'errore grezzo non deve arrivare all'agente.
+    assert.match(modello, /await kit\.goto\(URL\)\.catch\(/, 'una connessione rifiutata esce come eccezione, non come messaggio');
+    assert.match(modello, /l'anteprima è accesa \(npm run dev\)/);
+  });
+
+  it('chiudi dopo prepara, con WordPress fermo: toglie il file ed esce con 0 (nessuna sessione era stata aperta)', () => {
+    const sito = progetto(COMPLETO);
+    assert.equal(lancia('prepara', sito, path.join(MODELLI, 'pw-kit.js'), 'url=https://localhost:8848/html/abc-home.html', 'nome=kit-home').status, 0);
+    const r = lancia('chiudi', sito);
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /sessioni attive: 0/);
+    assert.ok(!fs.existsSync(file(sito).run));
   });
 
   // Lotto 7.1: per guardare un kit (html compilato, servito dall'anteprima) non serve entrare in

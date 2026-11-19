@@ -158,6 +158,8 @@ function togli(percorso) {
 function chiudi(sito) {
   const f = file(sito);
   togli(f.run);   // i cookie non restano su disco, comunque vada
+  // Senza il segno nessuna sessione è stata aperta da qui (dopo `prepara`, per un kit).
+  const segnata = fs.existsSync(f.segno);
   let scaduta = false;
   try {
     scaduta = JSON.parse(fs.readFileSync(f.segno, 'utf8')).scade < Date.now() / 1000;
@@ -166,8 +168,9 @@ function chiudi(sito) {
   try {
     sessioni = wp(progetto(sito), 'revoca').sessioni;
   } catch (errore) {
-    // WordPress non risponde ma la sessione è già scaduta da sola: non resta nulla da chiudere.
-    if (!scaduta) throw errore;
+    // WordPress non risponde, ma la sessione è già scaduta da sola o non è mai stata aperta: non
+    // resta nulla da chiudere.
+    if (segnata && !scaduta) throw errore;
     sessioni = 0;
   }
   togli(f.segno);

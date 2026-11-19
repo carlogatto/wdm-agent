@@ -452,24 +452,34 @@ describe('setup di un progetto nuovo dal tema base', { skip: sito.nonDisponibile
 
     // Lotto 7.1: il preload aveva il nome del file scritto a mano. Cambiato il font in
     // theme.json, il preload deve seguirlo da solo.
-    it('il preload del font segue theme.json: cambiato il file del testo, cambia il preload', async () => {
+    it('il preload del font segue theme.json: la famiglia del testo, il suo peso 400 dritto', async () => {
       const file = path.join(tema, 'theme.json');
       const prima = fs.readFileSync(file, 'utf8');
-      const json = JSON.parse(prima);
-      const stile = /font-family--([a-z0-9-]+)/.exec(json.styles.typography.fontFamily)[1];
-      const famiglia = json.settings.typography.fontFamilies.find((f) => f.slug === stile);
-      const regolare = famiglia.fontFace.find((f) => String(f.fontWeight).startsWith('400') && f.fontStyle !== 'italic');
-      const vecchio = path.basename([].concat(regolare.src)[0]);
-      assert.match((await scarica(url)).body, new RegExp(`rel="preload" as="font"[^>]*/assets/fonts/${vecchio}"`));
-      try {
-        fs.copyFileSync(path.join(tema, 'assets', 'fonts', vecchio), path.join(tema, 'assets', 'fonts', 'Nuovo-Regular.woff2'));
-        regolare.src = ['file:./assets/fonts/Nuovo-Regular.woff2'];
+      const preload = async () => ((await scarica(url)).body.match(/<link[^>]*rel="preload" as="font"[^>]*>/g) || []).map((riga) => /fonts\/([^"]+)"/.exec(riga)[1]);
+      const scrivi = (cambia) => {
+        const json = JSON.parse(prima);
+        const stile = /font-family--([a-z0-9-]+)/.exec(json.styles.typography.fontFamily)[1];
+        const famiglia = json.settings.typography.fontFamilies.find((f) => f.slug === stile);
+        const regolare = famiglia.fontFace.find((f) => String(f.fontWeight).startsWith('400') && f.fontStyle !== 'italic');
+        // La famiglia del testo non è la prima del tema, e la sua prima faccia è un corsivo.
+        json.settings.typography.fontFamilies.unshift({ slug: 'altra', name: 'Altra', fontFamily: 'Altra', fontFace: [{ fontFamily: 'Altra', fontWeight: '400', fontStyle: 'normal', src: ['file:./assets/fonts/Altra.woff2'] }] });
+        famiglia.fontFace.unshift({ ...regolare, fontStyle: 'italic', src: ['file:./assets/fonts/Corsivo.woff2'] });
+        regolare.src = 'file:./assets/fonts/Nuovo-Regular.woff2';   // una stringa, non un elenco: theme.json ammette entrambi
+        cambia(json, regolare);
         fs.writeFileSync(file, JSON.stringify(json, null, 2));
-        const home = (await scarica(url)).body;
-        assert.deepEqual(home.match(/<link[^>]*rel="preload" as="font"[^>]*>/g).map((riga) => /fonts\/([^"]+)"/.exec(riga)[1]), ['Nuovo-Regular.woff2']);
+      };
+      assert.equal((await preload()).length, 1);
+      try {
+        scrivi(() => {});
+        assert.deepEqual(await preload(), ['Nuovo-Regular.woff2'], 'famiglia del testo in seconda posizione, corsivo dichiarato per primo');
+        // Un font variabile dichiara un intervallo di pesi che può non cominciare per 400.
+        scrivi((json, regolare) => { regolare.fontWeight = '300 700'; });
+        assert.deepEqual(await preload(), ['Nuovo-Regular.woff2'], 'nessuna faccia «400»: la prima dritta, non il corsivo');
+        // Il testo usa una famiglia che non è del tema (un font aggiunto dall'editor): niente da precaricare.
+        scrivi((json) => { json.styles.typography.fontFamily = 'var(--wp--preset--font-family--non-del-tema)'; });
+        assert.deepEqual(await preload(), [], 'un preload di un font che la pagina non usa');
       } finally {
         fs.writeFileSync(file, prima);
-        fs.rmSync(path.join(tema, 'assets', 'fonts', 'Nuovo-Regular.woff2'), { force: true });
       }
     });
 

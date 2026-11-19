@@ -221,7 +221,7 @@ function senzaImpronta(testo) {
 
 // Una sezione di DESIGN.md, dal suo titolo al titolo successivo (senza righe vuote in coda), o ''.
 function sezioneDi(testo, titolo) {
-  const inizio = testo.search(new RegExp(`^## ${titolo}[ \\t]*$`, 'm'));
+  const inizio = testo.search(new RegExp(`^## ${titolo}\\b.*$`, 'm'));
   if (inizio === -1) return '';
   const dopo = testo.indexOf('\n', inizio) + 1;
   const prossima = dopo === 0 ? -1 : testo.slice(dopo).search(/^## /m);
@@ -323,6 +323,13 @@ function rinomina(v) {
   }
 
   if (fs.existsSync(base)) {
+    // DESIGN.md viene riscritto tenendo Project Config: se la sezione non si trova, il file
+    // perderebbe i valori del progetto e la guardia theme_family. Meglio fermarsi prima di tutto.
+    const designMd = path.join(sito, 'DESIGN.md');
+    if (fs.existsSync(designMd) && sezioneDi(fs.readFileSync(designMd, 'utf8'), 'Project Config') === '') {
+      console.error(`In ${designMd} non trovo la sezione "## Project Config" (il titolo va scritto così, con le tabelle Identity e Paths sotto). Senza, il file perderebbe i valori del progetto. Correggi il titolo o scrivi la sezione, poi rilancia lo stesso comando: nessun file è stato toccato.`);
+      return 1;
+    }
     console.log(`▶ Rinomino wdm-theme → ${v.slug} (prefisso: wdm → ${v.prefix}, text domain: ${v.textdomain}, titolo: ${v.title})`);
     togliGenerati(base);
     togliKitDemo(base);

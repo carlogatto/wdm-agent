@@ -203,13 +203,14 @@ describe('sync-theme-json-tokens.js: impronta, marker, scritture', () => {
 
   it('una riga cambiata e una tolta: il vecchio valore con il meno, il nuovo con il più, nell\'ordine del file', () => {
     const p = generato();
-    p.theme((t) => { const tolto = t.settings.color.palette.pop(); t.settings.layout.contentSize = '1px'; assert.ok(tolto.slug); });
+    let tolto;
+    p.theme((t) => { tolto = t.settings.color.palette.pop(); t.settings.layout.contentSize = '1px'; });
     const r = p.sync('--check');
     assert.equal(r.status, 1, r.out);
     const righe = r.out.split('\n').filter((riga) => /^  [-+] /.test(riga));
-    assert.equal(righe.filter((riga) => riga.startsWith('  - ')).length, 2, r.out);
-    assert.equal(righe.filter((riga) => riga.startsWith('  + ')).length, 1, r.out);
-    assert.match(righe.join('\n'), /\+ layout: \{ contentSize: 1px/);
+    // La palette viene prima del layout: prima la riga tolta, poi il vecchio valore e subito dopo il nuovo.
+    assert.deepEqual(righe.map((riga) => riga.slice(0, 4).trim() + ' ' + riga.slice(4).trim().split(/[ :]/)[0]), [`- ${tolto.slug}`, '- layout', '+ layout'], r.out);
+    assert.match(righe[2], /\+ layout: \{ contentSize: 1px/);
   });
 
   it('blocco senza impronta (progetto di prima) e token uguali: allineato, con l\'invito a rigenerare', () => {

@@ -279,7 +279,8 @@ describe('setup.js da riga di comando', () => {
     };
     try {
       for (const slug of ['cta', 'hero', 'hero-slide']) scrivi(`wp-content/themes/wdm-theme/blocks/wdm-block-${slug}/block.json`, `{ "name": "wdm/${slug}" }\n`);
-      scrivi('CLAUDE.md', '### Existing Blocks\n- `{prefix}-block-hero` — `{prefix}/hero`\n- `{prefix}-block-hero-slide` — `{prefix}/hero-slide`\n');
+      // «fantasma» è nell'elenco di CLAUDE.md ma non ha una cartella: non è un blocco del tema.
+      scrivi('CLAUDE.md', '### Existing Blocks\n- `{prefix}-block-fantasma` — `{prefix}/fantasma`\n- `{prefix}-block-hero` — `{prefix}/hero`\n- `{prefix}-block-hero-slide` — `{prefix}/hero-slide`\n');
       scrivi('DESIGN.md', '# Design: wdm-theme\n\nSpec in `docs/superpowers/specs/`.\n\n## Project Config\n\n### Identity\n| `{prefix}` | atl |\n\n## Pagine\n| Contatti | /contatti/ | implementata | src/kit/wdm-contatti.kit | hero | id 64 |\n\n## Log decisioni\n| 2026-10-30 | storia di wdm-theme |\n');
       const r = lancia(...tutti({ target: sito }));
       assert.equal(r.status, 0, r.stdout + r.stderr);
@@ -287,6 +288,43 @@ describe('setup.js da riga di comando', () => {
       assert.deepEqual(design.match(/^\| atl\/.*$/gm), ['| atl/hero | implementato | starter |', '| atl/hero-slide | implementato | starter |', '| atl/cta | implementato | starter |']);
       assert.ok(design.includes('| `{prefix}` | atl |'));
       assert.doesNotMatch(design, /Contatti \||docs\/superpowers|storia di/);
+    } finally {
+      fs.rmSync(sito, { recursive: true, force: true });
+    }
+  });
+
+  // Revisione del lotto 7: con un titolo scritto in un altro modo la sezione non veniva trovata
+  // e DESIGN.md usciva senza Project Config, cioè senza la guardia theme_family, con exit 0.
+  it('DESIGN.md senza una sezione «## Project Config» riconoscibile: exit 1 prima di toccare il disco', () => {
+    for (const titolo of ['## Project config', '## Configurazione']) {
+      const sito = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-setup-pc-'));
+      try {
+        fs.mkdirSync(path.join(sito, 'wp-content', 'themes', 'wdm-theme'), { recursive: true });
+        fs.writeFileSync(path.join(sito, 'wp-content', 'themes', 'wdm-theme', 'style.css'), '/* Theme Name: WDM Theme */\n');
+        const design = `# Design: x\n\n${titolo}\n\n### Identity\n| \`theme_family\` | fse |\n`;
+        fs.writeFileSync(path.join(sito, 'DESIGN.md'), design);
+        const r = lancia(...tutti({ target: sito }));
+        assert.equal(r.status, 1, `${titolo}: ${r.stdout}${r.stderr}`);
+        assert.match(r.stderr, /## Project Config/);
+        assert.equal(fs.readFileSync(path.join(sito, 'DESIGN.md'), 'utf8'), design, 'DESIGN.md non va toccato');
+        assert.ok(fs.existsSync(path.join(sito, 'wp-content', 'themes', 'wdm-theme', 'style.css')), 'il tema non va rinominato');
+      } finally {
+        fs.rmSync(sito, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it('un titolo «## Project Config» con qualcosa dopo vale lo stesso: la sezione resta', () => {
+    const sito = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-setup-pc2-'));
+    try {
+      fs.mkdirSync(path.join(sito, 'wp-content', 'themes', 'wdm-theme'), { recursive: true });
+      fs.writeFileSync(path.join(sito, 'wp-content', 'themes', 'wdm-theme', 'style.css'), '/* Theme Name: WDM Theme */\n');
+      fs.writeFileSync(path.join(sito, 'DESIGN.md'), '# Design: x\n\n## Project Config (FSE)\n\n### Identity\n| `theme_family` | fse |\n\n## Log decisioni\n| 2026-10-30 | storia |\n');
+      const r = lancia(...tutti({ target: sito }));
+      assert.equal(r.status, 0, r.stdout + r.stderr);
+      const design = fs.readFileSync(path.join(sito, 'DESIGN.md'), 'utf8');
+      assert.match(design, /^## Project Config \(FSE\)\n\n### Identity\n\| `theme_family` \| fse \|$/m);
+      assert.doesNotMatch(design, /storia/);
     } finally {
       fs.rmSync(sito, { recursive: true, force: true });
     }
