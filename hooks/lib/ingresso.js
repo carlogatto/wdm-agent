@@ -1,5 +1,6 @@
-// Ciò che i due hook hanno in comune: il file appena scritto da Write o Edit, se sta dentro un
-// tema di un progetto FSE (DESIGN.md → theme_family: fse). Altrimenti null: l'hook non giudica.
+// Ciò che gli hook hanno in comune. Per i due di Write e Edit: il file appena scritto, se sta
+// dentro un tema di un progetto FSE (DESIGN.md → theme_family: fse); altrimenti null, e l'hook
+// non giudica. Per quelli di fine turno e di avvio: la site root del progetto in cui si lavora.
 
 'use strict';
 
@@ -32,4 +33,14 @@ function fileDelTema() {
   return { file, ...posto, design };
 }
 
-module.exports = { fileDelTema };
+// La site root del progetto FSE che contiene `cartella` (le skill lavorano anche dentro il tema),
+// o null.
+function sitoDi(cartella) {
+  for (let c = path.resolve(cartella); ; c = path.dirname(c)) {
+    const design = path.join(c, 'DESIGN.md');
+    if (fs.existsSync(design) && eFse(fs.readFileSync(design, 'utf8'))) return c;
+    if (c === path.dirname(c)) return null;
+  }
+}
+
+module.exports = { fileDelTema, sitoDi };

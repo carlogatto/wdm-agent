@@ -45,12 +45,76 @@ describe('hooks.json', () => {
         ['command', 'node', ['${CLAUDE_PLUGIN_ROOT}/hooks/chiudi-sessione.js']],
       ], evento);
     }
-    assert.deepEqual(Object.keys(hooks).sort(), ['PostToolUse', 'SessionEnd', 'Stop']);
+    assert.deepEqual(Object.keys(hooks).sort(), ['PostToolUse', 'SessionEnd', 'SessionStart', 'Stop']);
+  });
+
+  // Dopo una compattazione del contesto (automatica o chiesta con /compact) Claude Code riavvia
+  // la sessione con source "compact": lì il plugin rimette il promemoria dello stato.
+  it('registra il promemoria dello stato su SessionStart, solo dopo una compattazione', () => {
+    const avvio = JSON.parse(fs.readFileSync(path.join(RADICE, 'hooks', 'hooks.json'), 'utf8')).hooks.SessionStart;
+    assert.deepEqual(avvio.map((g) => [g.matcher, g.hooks.map((h) => [h.type, h.command, h.args])]), [
+      ['compact', [['command', 'node', ['${CLAUDE_PLUGIN_ROOT}/hooks/ricorda-stato.js']]]],
+    ]);
+    assert.ok(avvio[0].hooks[0].timeout <= 30, 'timeout in secondi, breve: l\'hook legge due file');
   });
 
   it('nella cartella degli hook non restano script di shell', () => {
     const altri = fs.readdirSync(path.join(RADICE, 'hooks'), { recursive: true }).filter((f) => path.extname(f) !== '' && !/\.(js|json)$/.test(f));
     assert.deepEqual(altri, []);
+  });
+});
+
+describe('ricorda-stato.js: lo stato rimesso dopo la compattazione', () => {
+  let tmp, sito;
+  // Lanciato come lo lancia hooks.json: l'ingresso di SessionStart su stdin.
+  const avvia = (cwd, ingresso = { hook_event_name: 'SessionStart', source: 'compact' }) => {
+    const env = { ...process.env };
+    delete env.CLAUDE_PLUGIN_ROOT;
+    const r = spawnSync(process.execPath, [path.join(RADICE, 'hooks', 'ricorda-stato.js')], {
+      encoding: 'utf8', env, cwd: tmp, input: typeof ingresso === 'string' ? ingresso : JSON.stringify({ session_id: 'x', cwd, ...ingresso }),
+    });
+    assert.ifError(r.error);
+    return { status: r.status, stdout: r.stdout, stderr: r.stderr };
+  };
+
+  before(() => {
+    tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent ricorda-'));
+    sito = path.join(tmp, 'Mario Rossi', 'sito');
+    fs.mkdirSync(path.join(sito, 'wp-content', 'themes', 'abc-tema', 'blocks'), { recursive: true });
+    fs.copyFileSync(path.join(FIXTURE, 'fse-site', 'DESIGN.md'), path.join(sito, 'DESIGN.md'));
+  });
+  after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+
+  it('in un progetto FSE: dice di rileggere DESIGN.md e la skill in corso, con i percorsi; exit 0', () => {
+    const r = avvia(sito);
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stderr, '');
+    assert.ok(r.stdout.includes(path.join(sito, 'DESIGN.md')), r.stdout);
+    assert.ok(r.stdout.includes(path.join(RADICE, 'skills')), r.stdout);
+    assert.ok(r.stdout.includes(path.join(RADICE, 'shared', 'fse-foundations.md')), r.stdout);
+    assert.match(r.stdout, /compatta/i);
+    assert.match(r.stdout, /Domande aperte/);
+    assert.match(r.stdout, /⏳/);
+    assert.match(r.stdout, /SKILL\.md/);
+    assert.ok(r.stdout.length < 10000, 'oltre i 10.000 caratteri Claude Code lo taglia');
+  });
+
+  it('da dentro il tema trova la site root del progetto', () => {
+    const r = avvia(path.join(sito, 'wp-content', 'themes', 'abc-tema', 'blocks'));
+    assert.equal(r.status, 0, r.stderr);
+    assert.ok(r.stdout.includes(path.join(sito, 'DESIGN.md')), r.stdout);
+  });
+
+  it('fuori da un progetto FSE (cartella qualunque, progetto wdm-starter): tace', () => {
+    for (const cwd of [tmp, path.join(FIXTURE, 'starter-site')]) assert.deepEqual(avvia(cwd), ZITTO, cwd);
+  });
+
+  it('non dopo una compattazione (avvio, ripresa): tace', () => {
+    for (const source of ['startup', 'resume', 'clear']) assert.deepEqual(avvia(sito, { hook_event_name: 'SessionStart', source }), ZITTO, source);
+  });
+
+  it('ingresso non leggibile: exit 0, nessuna uscita', () => {
+    assert.deepEqual(avvia(sito, 'non è json'), ZITTO);
   });
 });
 

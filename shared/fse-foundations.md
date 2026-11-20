@@ -1010,12 +1010,19 @@ the sync script; `## Project Config` by `fse-theme-setup` (created once, then on
 The hooks are Node scripts, run without a shell (`"command": "node"` with the script path in
 `args`). The two on PostToolUse (Write|Edit) judge only files inside
 `{site-root}/wp-content/themes/{theme}/` of an FSE project (`theme_family: fse`); the third
-runs when a turn or a session ends.
+runs when a turn or a session ends, the fourth when a session restarts after a compaction.
 
 - `chiudi-sessione.js` — on Stop and SessionEnd: if the project has a session of the agent user
   still open (`{site-root}/.playwright-mcp/_sessione.json`, written by `sessione.js apri`), it
   revokes it (§9). Without that file it exits at once. It never blocks the end of a turn: a
   session it cannot revoke (servers stopped) expires by itself.
+- `ricorda-stato.js` — on SessionStart with matcher `compact` (after an automatic compaction
+  or `/compact`): inside an FSE project it puts back into the context a reminder to read again,
+  from disk, `DESIGN.md` (state tables, `## Domande aperte`, the `⏳` lines) and the `SKILL.md`
+  of the `fse-*` skill that was running, with the paragraphs of this file it cites: after a
+  compaction the history is a summary, and the state is on disk, not in the summary. An ok or
+  a `confirm` the summary reports is verified in `DESIGN.md` before acting on it. Outside an
+  FSE project it is silent; it never exits with a code other than 0.
 - `check-block-contract.js` — on `blocks/{folder}/block.json` of the theme (without `acf` key):
   `name` carries the project `{prefix}` and matches the folder, `render` present and its file
   exists, every `file:` has its source (`build/index.js` ← `src/index.js`,

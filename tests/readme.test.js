@@ -17,6 +17,7 @@ const COMANDI = [
   'claude plugin list',
   'wdm-agent:fse-brief',
   'wp-page.php',
+  'kit-pagina.js',
   'claude plugin uninstall wdm-agent@wdm-agent && claude plugin install wdm-agent@wdm-agent',
 ];
 
@@ -97,6 +98,18 @@ test('problemi comuni: almeno cinque, ognuno con cosa fare', () => {
   for (const voce of ['avvia i server di MAMP PRO', '/reload-plugins', 'localhost:8848', 'Playwright', 'Sourcetree → Impostazioni → Generali']) {
     assert.ok(sezione('Problemi comuni').includes(voce), `nei problemi comuni manca: ${voce}`);
   }
+});
+
+// Lotto 8.1-bis: l'anteprima avviata dall'agente si chiude con la sua sessione, e l'indirizzo dei
+// kit smette di rispondere. Chi legge deve trovare il sintomo e le due strade per riaccenderla.
+test('problemi comuni: l\'anteprima dei kit che non si apre', () => {
+  const riga = righeDiTabella(sezione('Problemi comuni')).find((r) => /anteprima dei kit non si apre/.test(r.split('|')[1]));
+  assert.ok(riga, 'manca la riga «l\'indirizzo dell\'anteprima dei kit non si apre»');
+  const rimedio = riga.split('|')[2];
+  assert.match(rimedio, /«riaccendi l'anteprima»/);
+  assert.match(rimedio, /npm run dev/);
+  assert.match(rimedio, /cartella del tema/);
+  assert.match(rimedio, /si chiude/, 'il rimedio dice perché succede');
 });
 
 test('il brief di esempio esiste ed è citato', () => {

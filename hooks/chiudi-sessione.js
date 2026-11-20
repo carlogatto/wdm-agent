@@ -7,19 +7,9 @@
 'use strict';
 
 const fs = require('node:fs');
-const path = require('node:path');
 
-const { eFse } = require('../shared/scripts/lib/design-md.js');
 const { chiudi, pulisci, file } = require('../shared/scripts/sessione.js');
-
-// La site root del progetto FSE che contiene `cartella` (le skill lavorano anche dentro il tema).
-function sitoDi(cartella) {
-  for (let c = path.resolve(cartella); ; c = path.dirname(c)) {
-    const design = path.join(c, 'DESIGN.md');
-    if (fs.existsSync(design) && eFse(fs.readFileSync(design, 'utf8'))) return c;
-    if (c === path.dirname(c)) return null;
-  }
-}
+const { sitoDi } = require('./lib/ingresso.js');
 
 function cwd() {
   try {
