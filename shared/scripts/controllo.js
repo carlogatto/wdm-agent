@@ -49,7 +49,10 @@ class Errore extends Error {
 
 // ---------- che cosa aspettarsi, e il verdetto ----------
 
-// { pagine: [{ titolo, percorso, stato, kit }], revisione: [item], build: [riga] }
+// { pagine: [{ titolo, percorso, stato, kit }], revisione: [item], build: [riga], conferme: [riga] }
+// `build` sono le righe di una build in corso (`⏳ build sito: pagina … M/N`): a unità finita
+// vuol dire che si è fermata a metà. `conferme` sono le righe ⏳ che aspettano un `confirm` del
+// dev, comunque siano scritte: un'attesa, non un difetto.
 // `kit` è il nome del kit senza prefisso (home → html/{prefix}-home.html), o null.
 function attese(design, prefisso) {
   const pagine = tabella(design, 'Pagine').map((r) => {
@@ -68,7 +71,8 @@ function attese(design, prefisso) {
   return {
     pagine,
     revisione: aperte.flatMap((r) => { const m = /⏳ kit (.+?) in revisione/.exec(r); return m ? [m[1].trim()] : []; }),
-    build: aperte.filter((r) => r.includes('⏳ build sito')).map((r) => r.trim()),
+    build: aperte.filter((r) => r.includes('⏳ build sito') && !/confirm/i.test(r)).map((r) => r.trim()),
+    conferme: aperte.filter((r) => r.includes('⏳') && /confirm/i.test(r)).map((r) => r.trim()),
   };
 }
 
@@ -314,7 +318,7 @@ async function controlla(sitoDato) {
     {
       const approvate = a.pagine.filter((p) => p.stato === 'kit').map((p) => p.titolo);
       esito('Stato', a.build.map((r) => `una build è rimasta a metà: «${r.replace(/^[-*]\s*/, '')}»`),
-        approvate.length ? [`approvate e non ancora costruite: ${approvate.join(', ')}`] : [],
+        [...a.conferme.map((r) => `aspetta il confirm del dev: ${r.replace(/^[-*]\s*/, '').replace(/^⏳\s*(confirm:|build sito:)?\s*/, '').slice(0, 110)}`), ...(approvate.length ? [`approvate e non ancora costruite: ${approvate.join(', ')}`] : [])],
         `${implementate.length} pagine implementate, ${a.pagine.filter((p) => p.stato === 'da progettare').length} da progettare; ${a.revisione.length ? `gate aperto: kit ${a.revisione.join(', ')}` : 'nessun gate aperto'}`);
     }
 

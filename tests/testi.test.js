@@ -125,3 +125,18 @@ test('fse-brief e fse-block-edit invocano fse-kit e fse-build, non ne leggono il
     assert.match(skill, /Skill tool/, nome);
   }
 });
+
+// Una cancellazione che aspetta il dev ha la sua riga, diversa da quella di una build in corso:
+// il controllo distingue «aspetta te» da «si è fermata a metà».
+test('la riga di un confirm in attesa ha una forma sua', () => {
+  const fondamenta = fs.readFileSync(path.join(RADICE, 'shared', 'fse-foundations.md'), 'utf8');
+  const build = fs.readFileSync(path.join(RADICE, 'skills', 'fse-build', 'SKILL.md'), 'utf8');
+  for (const [nome, testo] of [['fondamenta', fondamenta], ['fse-build', build]]) assert.match(testo, /`⏳ confirm: /, nome);
+});
+
+// Un blocco nuovo entra nel catalogo: la riga del Catalogo torna a `kit` nello stesso passo,
+// prima di ogni controllo, altrimenti la parità confronta un catalogo che WordPress non ha ancora.
+test('fse-kit 3e: la riga del Catalogo torna a kit prima dei controlli', () => {
+  const kit = fs.readFileSync(path.join(RADICE, 'skills', 'fse-kit', 'SKILL.md'), 'utf8');
+  assert.match(kit, /in this same step, before any check/);
+});

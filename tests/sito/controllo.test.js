@@ -120,12 +120,15 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
     assert.notEqual(senzaSteps, sorgente);
     fs.writeFileSync(kit, senzaSteps);
     // Una voce aggiunta a mano nel menu: riallinearlo al kit la toglierebbe, quindi aspetta il confirm.
+    // La riga con cui la build dichiara l'attesa, anche scritta con il prefisso della build.
+    cambia(designMd(), '- Nessuna.', '- ⏳ build sito: pagina Catalogo blocchi aspetta `confirm`: il kit non ha più la sezione steps (dal 2026-11-20)');
     const intero = contenutoMenu();
     wp('post', 'update', menu, `--post_content=${intero}\n<!-- wp:navigation-link {"label":"Blog","url":"https://example.com/blog","kind":"custom"} /-->`);
     try {
       const r = controllo();
       assert.match(rigaDi(r, 'Pagine'), /^NOTA.*Catalogo blocchi: una cancellazione aspetta il confirm del dev/);
       assert.match(rigaDi(r, 'Menu'), /^NOTA.*aspetta il confirm del dev: .*Blog/);
+      assert.match(rigaDi(r, 'Stato'), /^NOTA.*aspetta il confirm del dev: .*Catalogo blocchi/);
     } finally {
       wp('post', 'update', menu, `--post_content=${intero}`);
       git('checkout', '--', '.');

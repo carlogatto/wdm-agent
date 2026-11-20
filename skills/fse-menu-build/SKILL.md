@@ -157,8 +157,8 @@ No `npm run build` is needed (parts are not compiled); the `html/` kit is unaffe
 - `DESIGN.md → ## Navigazione`: table `menu (id) | parts | voci (primo livello + figli) | orfane
   | data`.
 - `DESIGN.md → ## Domande aperte`: one line per orphan (menu, label, draft candidate if any)
-  and, on a standalone run, one `⏳` line per menu whose loss waits for `confirm` or that was
-  open in the editor (exit 4).
+  and, on a standalone run, one line `⏳ confirm: …` per menu whose loss waits for `confirm`,
+  and one `⏳` line per menu that was open in the editor (exit 4).
 - `DESIGN.md → ## Log decisioni`: one row (created/updated/0 differenze per menu, refs written).
 - Theme README "Telaio → Menu" if the project documents the menu id.
 

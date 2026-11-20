@@ -366,9 +366,10 @@ cancello?") and its `## Navigazione` row says "non usato". With the dev's ok in 
    imported, page options set, parity differences, `#` and `[da confermare]` kept; per menu
    created / updated / 0 differenze / diff waiting, orphans; pages skipped (`da progettare`),
    `da eliminare` waiting, outside the flow; decisions taken under the charter; checks run and
-   the screenshot folder. `⏳ build sito` removed; `## Domande aperte` with one `⏳` line per
-   pending `confirm` (what gets deleted or rewritten, and what follows) and one line per gap with
-   its consequence. `sessione.js chiudi` answered `sessioni attive: 0`; close the browser tab.
+   the screenshot folder. `⏳ build sito` removed; `## Domande aperte` with one line `⏳ confirm: …
+   (dal YYYY-MM-DD)` per pending `confirm` (what gets deleted or rewritten, with its id, and what
+   follows: never the `⏳ build sito` form, which means a run still in progress) and one line per
+   gap with its consequence. `sessione.js chiudi` answered `sessioni attive: 0`; close the browser tab.
    Then commit the run
    (fse-foundations §10): the handover says how many commits wait for the push.
 2. **Handover message** in the shape of fse-foundations §10 "The handover message":

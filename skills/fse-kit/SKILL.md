@@ -191,7 +191,9 @@ for the build.
 `_js-shared.kit`: `<script type="module" src="../blocks/{prefix}-block-{slug}/build/view.js">`
 if 3d; `src/kit/{prefix}-blocks.kit`: one `@import` per variant (the catalogue page is the
 screenshot reference of the build) — and the `Catalogo blocchi` row of `DESIGN.md → Pagine`
-goes back to `kit` with the new list (the build appends the new variants). A section block
+goes back to `kit` with the new list **in this same step, before any check** (the build appends
+the new variants; until then the catalogue kit has a section WordPress lacks, and parity
+compares only `implementata` rows). A section block
 also gets, until `fse-build` writes its `theme.json → styles.blocks` entry (WP emits that CSS
 only for registered blocks), a kit-only rule in `_css-shared.kit`: `<style>/* kit-only:
 fse-build la rimuove */ .wp-block-{prefix}-{slug} { padding-block:

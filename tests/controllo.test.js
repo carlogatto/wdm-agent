@@ -40,6 +40,8 @@ const DESIGN = `# Design: prova
 - Orfana «Policy» › Cookie Policy: nessuna pagina.
 - ⏳ kit Servizi in revisione (dal 2026-11-20)
 - ⏳ build sito: pagina Home 1/2 (dal 2026-11-20)
+- ⏳ confirm: pagina Vecchia (id 9) da cancellare, con il suo kit (dal 2026-11-20)
+- ⏳ build sito: pagina Privacy Policy (id 3) aspetta \`confirm\`: la bozza ha 24 blocchi (dal 2026-11-20)
 
 ## Log decisioni
 | Data | Decisione |
@@ -81,14 +83,19 @@ test('attese: pagine con stato, percorso e nome del kit; kit in revisione; build
   ]);
   // Solo le righe di ## Domande aperte: il log che cita una riga ⏳ non è un'attesa.
   assert.deepEqual(a.revisione, ['Servizi']);
+  // Una build rimasta a metà è la riga di avanzamento; una riga che aspetta un confirm no,
+  // comunque sia scritta.
   assert.equal(a.build.length, 1);
   assert.match(a.build[0], /pagina Home 1\/2/);
+  assert.equal(a.conferme.length, 2);
+  assert.match(a.conferme[0], /pagina Vecchia/);
+  assert.match(a.conferme[1], /Privacy Policy/);
 });
 
 test('attese: senza la sezione ## Pagine non c\'è nulla da aspettarsi', () => {
   const { attese } = require(SCRIPT);
   const a = attese('| `theme_family` | fse |\n', 'abc');
-  assert.deepEqual(a, { pagine: [], revisione: [], build: [] });
+  assert.deepEqual(a, { pagine: [], revisione: [], build: [], conferme: [] });
 });
 
 test('riga: una riga sola per criterio, corta, con l\'esito davanti', () => {

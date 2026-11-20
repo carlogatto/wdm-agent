@@ -795,7 +795,10 @@ first, because a carousel starts only when it enters the screen).
 - One ⏳ line in `DESIGN.md → ## Domande aperte` while something waits: a kit at its gate
   (`⏳ kit {item} in revisione (dal YYYY-MM-DD)`), a site build in progress
   (`⏳ build sito: pagina {Titolo} {M}/{N} (dal YYYY-MM-DD)`); removed when the gate closes or
-  the run ends.
+  the run ends. A deletion or a rewrite that waits for the dev has a line of its own,
+  `⏳ confirm: {what, with its id, and what follows} (dal YYYY-MM-DD)`, removed when the dev
+  answers: never the `⏳ build sito` form, which says a run is still in progress (the control script
+  reads the first as "waiting for the dev", the second, after a unit, as "stopped half-way").
   Statuses alone cannot express "waiting".
 - Credentials: **the agent has none**. Its user is `DESIGN.md → {agent-admin-user}` (an
   administrator created by `fse-theme-setup`, with a random password nobody ever sees) and it
