@@ -348,7 +348,8 @@ parsed by a script, so these forms are notation, not prose:
 - `## Varianti`: the first cell of a row is the value of the modifier (`split (default)`); a
   row that sets an attribute other than `variant` says it as `` `source: "query"` ``.
 - `## Attributi`: the name in backticks, the type starting with `string`, `integer` or
-  `boolean`, the default in backticks. The shared vocabulary above places most values by name
+  `boolean` (any other first word stops the page: the script does not guess a type), the default
+  in backticks. The shared vocabulary above places most values by name
   (`.__title` ↔ `title`, `a.__button` ↔ `button*`, the second one ↔ `secondaryButton*`,
   `a.__link` ↔ `link*`, `img.__img` ↔ `image*`, `.__icon` ↔ `icon`, any other string
   attribute `{name}` ↔ `.__{name}`); the Note says where a value is in the kit when the name
@@ -447,8 +448,8 @@ says why (servers stopped, kit not compiled): never a pass. Tolerated by design:
 WordPress and Swiper add, a core block that prints the same classes on two nested elements
 (navigation), `{prefix}-header__toggle` (kit only, §7), and an optional field left empty in
 WordPress (an element without children, like `__text` or `__link`, that the kit has and the site
-does not print, or a wrapper made only of such fields, like `__buttons` around two buttons: that
-is content). An element the site prints and the kit lacks is reported. It runs at the start of every
+does not print, or a wrapper made only of links, like `__buttons` around two buttons: a link
+with an empty address is not printed, and its wrapper goes with it; that is content). An element the site prints and the kit lacks is reported. It runs at the start of every
 conversation (project `CLAUDE.md`) and at the end of every session inside `npm run check`
 (`tools/check-parita.js` of the theme finds the plugin through the registry; exit 3 there is a
 declared `SKIP`). Menu items are not its matter: `wp-navigation.php` owns them.

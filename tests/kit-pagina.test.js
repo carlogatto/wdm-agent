@@ -170,7 +170,7 @@ describe('mappa + serializza: la pagina di prova', () => {
   });
 
   it('InnerBlocks liberi: paragrafo, titoli e codice core', () => {
-    const atteso = ['<!-- wp:abc/libero -->', '<!-- wp:heading -->', '<h2 class="wp-block-heading">Titolo core</h2>', '<!-- /wp:heading -->',
+    const atteso = ['<!-- wp:abc/libero -->', '<!-- wp:heading {"level":1} -->', '<h1 class="wp-block-heading">Titolo core</h1>', '<!-- /wp:heading -->',
       '<!-- wp:paragraph -->', '<p>Paragrafo <a href="/x/">con link</a>.</p>', '<!-- /wp:paragraph -->',
       '<!-- wp:heading {"level":3} -->', '<h3 class="wp-block-heading">Sotto</h3>', '<!-- /wp:heading -->',
       '<!-- wp:code -->', '<pre class="wp-block-code"><code>riga uno\nriga due</code></pre>', '<!-- /wp:code -->', '<!-- /wp:abc/libero -->'].join('\n');
@@ -213,7 +213,7 @@ describe('mappa + serializza: la pagina di prova', () => {
 
   it('opzioni di pagina: il kit ha il suo h1 e stampa il form di default', () => {
     assert.deepEqual(m.opzioni, { titolo: 0, form: 1 });
-    assert.deepEqual(mappa(ambiente(con('<h1 class="abc-block-sezione__title">', '<h2 class="abc-block-sezione__title">').replace('due -- trattini</h1>', 'due -- trattini</h2>').replace(/<div class="wp-block-template-part[\s\S]*?<\/section><\/div>/, ''))).opzioni, { titolo: 1, form: 0 });
+    assert.deepEqual(mappa(ambiente(con('<h1 class="wp-block-heading">Titolo core</h1>', '<h2 class="wp-block-heading">Titolo core</h2>').replace(/<div class="wp-block-template-part[\s\S]*?<\/section><\/div>/, ''))).opzioni, { titolo: 1, form: 0 });
   });
 
   it('note: bottone con # (URL vuoto), link # tenuto, [da confermare], scheda senza post', () => {
@@ -221,9 +221,15 @@ describe('mappa + serializza: la pagina di prova', () => {
     assert.match(tutte, /«Dopo».*#/);
     assert.match(tutte, /«Leggi».*#/);
     assert.match(tutte, /\[da confermare\].*pagina da creare/);
+    // Una scheda senza testo il cui titolo non è di nessun contenuto pubblicato è una scheda a mano
+    // (il testo è facoltativo): tiene titolo, immagine e link, e lo dice. Il segnaposto senza
+    // contenuti pubblicati resta vuoto, e lo dice.
     const senzaPost = serializza(m.blocchi, { ...RISPOSTE, post: {}, ultimo: null });
-    assert.ok(senzaPost.note.some((n) => n.includes('Ciao mondo!')), senzaPost.note.join('\n'));
-    assert.ok(senzaPost.testo.includes('<!-- wp:abc/scheda /-->'), senzaPost.testo);
+    assert.ok(senzaPost.note.some((n) => n.includes('Ciao mondo!') && /a mano/.test(n)), senzaPost.note.join('\n'));
+    const schede = commenti(senzaPost.testo).filter(([nome]) => nome === 'abc/scheda');
+    assert.deepEqual(schede[0][1], { title: 'Ciao mondo!', imageId: 7, imageUrl: URL_FOTO, linkUrl: '#' });
+    assert.equal(schede[1][1], null);
+    assert.ok(senzaPost.note.some((n) => /segnaposto/.test(n)), senzaPost.note.join('\n'));
   });
 
   it('stesso kit, stesse risposte: stesso file', () => {
@@ -260,6 +266,28 @@ describe('mappa: ciò che non sa leggere lo dichiara, non lo perde', () => {
     ['un form senza form_key', con('<input type="hidden" name="form_key" value="contatti" />', ''), /form_key/],
     ['una classe sulla radice che il README non nomina', con('<section class="wp-block-abc-libero alignfull abc-block-libero">', '<section class="wp-block-abc-libero alignfull is-style-strano abc-block-libero">'), /is-style-strano/],
     ['una classe su un elemento che il README non nomina', con('<p class="abc-block-sezione__sopra">', '<p class="abc-block-sezione__sopra is-grande">'), /is-grande/],
+    // Revisione del lotto 8: ciò che non porta una classe del blocco non si attraversa alla cieca.
+    ['un\'immagine senza la classe del blocco', con('<img class="abc-block-sezione__img" src="../assets/img/foto.jpg"', '<img src="../assets/img/foto.jpg"'), /<img/],
+    ['un video senza classe e senza indirizzo', con('<p class="abc-block-sezione__sopra">', '<video controls></video><p class="abc-block-sezione__sopra">'), /<video/],
+    ['un iframe dentro il blocco', con('<p class="abc-block-sezione__sopra">', '<iframe src="https://example.com/"></iframe><p class="abc-block-sezione__sopra">'), /<iframe/],
+    ['un link senza classe intorno a un\'immagine', con('<p class="abc-block-sezione__sopra">', '<a href="/x/"><span></span></a><p class="abc-block-sezione__sopra">'), /<a>.*href/],
+    ['un data-* su un elemento senza classe', con('<p class="abc-block-sezione__sopra">', '<div data-qualcosa="7"></div><p class="abc-block-sezione__sopra">'), /data-qualcosa/],
+    ['una proprietà di stile su un elemento senza classe', con('<p class="abc-block-sezione__sopra">', '<div style="--abc-colonne:5"></div><p class="abc-block-sezione__sopra">'), /--abc-colonne/],
+    ['una classe che il README non nomina su un elemento senza classe del blocco', con('<p class="abc-block-sezione__sopra">', '<div class="griglia-strana"></div><p class="abc-block-sezione__sopra">'), /griglia-strana/],
+    ['una classe di un altro elemento del progetto dentro il blocco', con('<p class="abc-block-sezione__sopra">', '<div class="abc-altro"></div><p class="abc-block-sezione__sopra">'), /abc-altro/],
+    ['due elementi del blocco sullo stesso nodo', con('<p class="abc-block-sezione__sopra">', '<p class="abc-block-sezione__sopra abc-block-sezione__media">'), /due elementi/],
+    ['un numero che non è un numero', con('style="--abc-columns:4"', 'style="--abc-columns:tre"'), /non è un numero/],
+    ['un data-* numerico vuoto', con('data-per-view="2"', 'data-per-view=""'), /perView/],
+    ['un blocco core con un attributo in più', con('<p class="wp-block-paragraph">Paragrafo', '<p class="wp-block-paragraph" id="x">Paragrafo'), /blocco core/],
+    ['un titolo h1 in un blocco che stampa h2 o h3', con('<h2 class="abc-block-sezione__title">Titolo con', '<h1 class="abc-block-sezione__title">Titolo con').replace('due -- trattini</h2>', 'due -- trattini</h1>'), /h1/],
+    ['un\'icona che non è un svg', con('<span class="abc-block-voce__icon" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M1 2l3 4"/></svg></span>', '<span class="abc-block-voce__icon" aria-hidden="true">★</span>'), /icon/],
+    ['due varianti sulla stessa radice', con('abc-block-sezione abc-block-sezione--divisa', 'abc-block-sezione abc-block-sezione--divisa abc-block-sezione--piena'), /due valori|piena/],
+    ['allineamento su un blocco che non ha l\'attributo', con('<div class="wp-block-abc-voce abc-block-voce">\n          <h3', '<div class="wp-block-abc-voce alignwide abc-block-voce">\n          <h3'), /alignwide/],
+    ['un blocco di primo livello che non è una section', con('<section class="wp-block-abc-modulo alignfull abc-block-modulo">', '<div class="abc-block-sezione"></div><section class="wp-block-abc-modulo alignfull abc-block-modulo">'), /primo livello/],
+    ['un testo sciolto in main', con('<section class="wp-block-abc-modulo alignfull abc-block-modulo">', 'Parole sciolte<section class="wp-block-abc-modulo alignfull abc-block-modulo">'), /fuori da una sezione/],
+    ['un pattern con un elenco in più', con('<p class="wp-block-paragraph">Via Roma 1<br>Tivoli</p>', '<p class="wp-block-paragraph">Via Roma 1<br>Tivoli</p><ul><li>In più</li></ul>'), /pattern recapiti/],
+    ['un pattern con un\'immagine in più', con('<p class="wp-block-paragraph">Via Roma 1<br>Tivoli</p>', '<p class="wp-block-paragraph">Via Roma 1<br>Tivoli</p><img src="../assets/img/foto.jpg" alt="">'), /pattern recapiti/],
+    ['un pattern con testo fuori da titoli e paragrafi', con('<p class="wp-block-paragraph">Via Roma 1<br>Tivoli</p>', '<p class="wp-block-paragraph">Via Roma 1<br>Tivoli</p>Testo in più'), /pattern recapiti/],
     ['un bottone che non è un link', con('<a class="wp-element-button is-style-outline abc-block-sezione__button" href="#">Dopo</a>', '<button class="wp-element-button is-style-outline abc-block-sezione__button">Dopo</button>'), /abc-block-sezione__button/],
   ];
   for (const [nome, html, atteso] of casi) {
@@ -270,6 +298,81 @@ describe('mappa: ciò che non sa leggere lo dichiara, non lo perde', () => {
 
   it('ogni errore nomina il blocco in cui sta', () => {
     assert.match(errori(casi[0][1]), /sezione \(divisa\)/);
+  });
+});
+
+describe('revisione del lotto 8: valori', () => {
+  const blocchiDi = (html, risposte = RISPOSTE) => commenti(serializza(mappa(ambiente(html)).blocchi, risposte).testo);
+  const NBSP = String.fromCharCode(160);
+
+  it('i testi restano com\'erano: uno spazio non separabile non diventa uno spazio', () => {
+    const m = mappa(ambiente(con('Testo della voce.', `Costa 100${NBSP}€.`)));
+    assert.deepEqual(m.errori, []);
+    assert.equal(m.blocchi[0].figli[0].attrs.text, `Costa 100${NBSP}€.`);
+  });
+
+  it('allineamento: una classe align diversa dal default diventa l\'attributo', () => {
+    assert.equal(blocchiDi(con('<section class="wp-block-abc-sezione alignfull abc-block-sezione abc-block-sezione--piena">', '<section class="wp-block-abc-sezione alignwide abc-block-sezione abc-block-sezione--piena">')).find(([n, a]) => n === 'abc/sezione' && a.title === 'Seconda')[1].align, 'wide');
+  });
+
+  it('un titolo tutto dentro un link resta com\'è in un blocco senza attributo di link; in una scheda il link è del render', () => {
+    const b = blocchiDi(con('<h3 class="abc-block-sezione__title">Seconda</h3>', '<h3 class="abc-block-sezione__title"><a href="/x/">Seconda</a></h3>'));
+    assert.ok(b.some(([n, a]) => n === 'abc/sezione' && a.title === '<a href="/x/">Seconda</a>'), JSON.stringify(b));
+    assert.ok(b.some(([n, a]) => n === 'abc/scheda' && a.title === 'Scheda a mano'));
+  });
+
+  it('entità: decodificate nei valori che non sono HTML (alt, URL), numeriche comprese', () => {
+    const b = blocchiDi(con('alt="Una &quot;foto&quot;"', 'alt="L&#8217;ora &#x2014; qui"').replace('href="/contatti/" target', 'href="/a?x=1&amp;y=2" target'));
+    assert.equal(b[0][1].imageAlt, `L${String.fromCharCode(8217)}ora ${String.fromCharCode(0x2014)} qui`);
+    assert.equal(b[0][1].buttonUrl, '/a?x=1&y=2');
+  });
+
+  it('has-link-color non è il colore del testo', () => {
+    const b = blocchiDi(con('has-text-color has-base-color has-background', 'has-text-color has-base-color has-link-color has-background'));
+    assert.equal(b[0][1].textColor, 'base');
+  });
+
+  it('una nota [da confermare] scritta in main, fuori dalle sezioni, si riporta', () => {
+    const m = mappa(ambiente(con('<!-- Pagina di prova -->', '<!-- telefono [da confermare]: lo dà lo studio -->')));
+    assert.ok(m.note.some((n) => n.includes('lo dà lo studio')), m.note.join('\n'));
+  });
+
+  it('un pattern con PHP dentro il markup non si scrive', () => {
+    const a = ambiente();
+    const m = mappa({ ...a, pattern: (nome) => (nome === 'recapiti' ? a.pattern(nome).replace('<p>Via Esempio 1</p>', '<p><?php echo esc_html( $x ); ?></p>') : null) });
+    assert.match(m.errori.join('\n'), /pattern recapiti.*PHP/);
+  });
+
+  it('README in una forma un po\' diversa: tipo con la maiuscola, nota senza apici, Supports su due righe, booleano da un data-* senza valore', () => {
+    const testo = ['# abc/uno — Uno', '', '## Varianti', '—', '', '## Attributi', '| Nome | Tipo | Controllo | Default | Note |', '|---|---|---|---|---|',
+      '| `quanti` | Integer | RangeControl | `4` | → data-per-view letto da view.js |',
+      '| `giro` | Boolean | ToggleControl | `false` | → `data-loop` |',
+      '| `largo` | boolean | ToggleControl | `false` | true → __inner--largo |',
+      '| `colonne` | integer | RangeControl | `3` | → style="--abc-colonne:N" sulla griglia |', '',
+      'Supports: `color.background/text`,', '`anchor`, `spacing.padding`.', '', '## Figli', '—', '', '## Markup (render.php = kit)', '```html',
+      '<section class="wp-block-abc-uno abc-block-uno"><div class="abc-block-uno__inner" data-per-view="4" data-loop style="--abc-colonne:3"></div></section>', '```', ''].join('\n');
+    const c = contratto(testo, 'abc', 'uno');
+    assert.deepEqual(c.attributi.map((a) => [a.nome, a.tipo]), [['quanti', 'integer'], ['giro', 'boolean'], ['largo', 'boolean'], ['colonne', 'integer']]);
+    assert.deepEqual([c.attributo.quanti.data, c.attributo.giro.data, c.attributo.largo.modificatore.classe, c.attributo.colonne.stile], ['data-per-view', 'data-loop', '__inner--largo', '--abc-colonne']);
+    assert.deepEqual(c.supports, { anchor: true, colore: true });
+    const html = '<main><section class="wp-block-abc-uno abc-block-uno" id="qui"><div class="abc-block-uno__inner abc-block-uno__inner--largo" data-per-view="2" data-loop style="--abc-colonne:5"></div></section></main>';
+    const m = mappa({ html, prefisso: 'abc', leggiReadme: (slug) => (slug === 'uno' ? testo : null), icone: {}, pattern: () => null });
+    assert.deepEqual(m.errori, []);
+    assert.deepEqual(m.blocchi[0].attrs, { quanti: 2, giro: true, largo: true, colonne: 5, anchor: 'qui' });
+  });
+
+  it('un tipo che lo script non conosce è un errore, non una stringa', () => {
+    const testo = ['# abc/uno — Uno', '', '## Attributi', '| Nome | Tipo | Controllo | Default | Note |', '|---|---|---|---|---|', '| `quanti` | intero | RangeControl | `4` | → `data-per-view` |', '', '## Markup (render.php = kit)', 'abc-block-uno__inner', ''].join('\n');
+    const html = '<main><section class="wp-block-abc-uno abc-block-uno"><div class="abc-block-uno__inner" data-per-view="2"></div></section></main>';
+    assert.match(mappa({ html, prefisso: 'abc', leggiReadme: () => testo, icone: {}, pattern: () => null }).errori.join('\n'), /tipo.*intero/);
+  });
+});
+
+describe('documento (lib/html.js): attributi', () => {
+  it('nomi in minuscolo; di un attributo ripetuto vale il primo, come nel browser', () => {
+    const el = documento('<DIV CLASS="a" Data-X="1" data-x="2" id=uno>x</DIV>').figli[0];
+    assert.equal(el.tag, 'div');
+    assert.deepEqual(el.attr, { class: 'a', 'data-x': '1', id: 'uno' });
   });
 });
 
@@ -331,6 +434,19 @@ describe('kit-pagina.js da riga di comando', () => {
     const manca = lancia(SITO, 'assente', 'controlla');
     assert.equal(manca.status, 2, manca.out);
     assert.match(manca.out, /npm run build/);
+  });
+
+  it('un main senza blocchi non è una pagina mappabile: exit 3; un kit che non è un file: exit 2, mai 1', () => {
+    const vuoto = lancia(copia('<html><body><main class="abc-main"><!-- vuota --></main></body></html>'), 'prova', 'controlla');
+    assert.equal(vuoto.status, 3, vuoto.out);
+    assert.match(vuoto.out, /nessun blocco/);
+    const sito = copia(HTML);
+    const file = path.join(sito, 'wp-content', 'themes', 'abc-tema', 'html', 'abc-prova.html');
+    fs.rmSync(file);
+    fs.mkdirSync(file);
+    const r = lancia(sito, 'prova', 'controlla');
+    assert.equal(r.status, 2, r.out);
+    assert.doesNotMatch(r.out, /at .*node:/, 'niente traccia di errore grezza');
   });
 
   it('senza {wp-cli} in DESIGN.md il file non si scrive: exit 2', () => {

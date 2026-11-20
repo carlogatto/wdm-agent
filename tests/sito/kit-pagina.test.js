@@ -111,6 +111,26 @@ describe('kit-pagina.js sul sito', { skip: sito.nonDisponibile() || false }, () 
     assert.ok(fs.readFileSync(file, 'utf8').includes(`<!-- wp:wdm/card {"postId":${altro}} /-->`), 'senza page= prendono il più recente');
   });
 
+  it('(e2) un\'immagine con lo stesso nome e un\'altra estensione non è lo stesso allegato: si importa la sua', () => {
+    const tema = path.join(cfg.site, TEMA);
+    // Un PNG vero di un pixel: WordPress controlla il contenuto del file.
+    fs.writeFileSync(path.join(tema, 'assets', 'img', 'placeholder-700x450.png'), Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
+    const catalogo = fs.readFileSync(path.join(tema, 'html', 'wdm-blocks.html'), 'utf8');
+    const conPng = catalogo.replace('<img class="wdm-block-image-text__img" src="../assets/img/placeholder-700x450.jpg"', '<img class="wdm-block-image-text__img" src="../assets/img/placeholder-700x450.png"');
+    assert.notEqual(conPng, catalogo);
+    fs.writeFileSync(path.join(tema, 'html', 'wdm-png.html'), conPng);
+    const altro = path.join(tmp, 'page-png.html');
+    const r = kit('png', altro);
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /immagini importate.*placeholder-700x450\.png/);
+    const testo = fs.readFileSync(altro, 'utf8');
+    assert.match(testo, /"imageUrl":"[^"]*placeholder-700x450[^"]*\.png"/);
+    assert.match(testo, /"imageUrl":"[^"]*placeholder-700x450[^"]*\.jpg"/);
+    // Rilanciato: la ritrova, non la importa un'altra volta.
+    assert.doesNotMatch(kit('png', altro).out, /immagini importate/);
+    assert.equal(fs.readFileSync(altro, 'utf8'), testo);
+  });
+
   it('(f) WordPress che non risponde: exit 2 con cosa fare, il file resta com\'era', () => {
     const design = path.join(cfg.site, 'DESIGN.md');
     const buono = fs.readFileSync(design, 'utf8');

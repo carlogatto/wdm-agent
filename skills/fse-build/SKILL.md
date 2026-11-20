@@ -124,14 +124,16 @@ What the script does is the mapping contract, the same for every block, present 
 - `variant` = modifier `{prefix}-block-{slug}--{x}` → the attribute the README `## Varianti`
   row of `x` names (`` `source: "query"` ``), else `variant`;
 - values: `.__{name}` → the string attribute `{name}` (inner HTML, `<br>`/`<strong>` kept; a
-  Note `kit: .__eyebrow` wins over the name), the tag of `.__title` → `headingLevel`,
-  `a.__button` → `buttonText` / `buttonUrl` (href; `#` → `""`, reported) / `buttonNewTab`
-  (`target="_blank"`), the second `.__button` → `secondaryButton*`, a text link (`a.__link` →
-  `linkText` / `linkUrl`) keeps its href as it is, `#` included (without it the block drops the
+  Note `kit: .__eyebrow` wins over the name), the tag of `.__title` → `headingLevel` (an `<h1>` title in a block that has `headingLevel` →
+  the page is skipped: the block would print `h2`),
+  `a.__button` → `buttonText` / `buttonUrl` (href; on a button, i.e. a link that carries
+  `wp-element-button`, `#` → `""`, reported) / `buttonNewTab` (`target="_blank"`), the second
+  `.__button` → `secondaryButton*`, a text link (`a.__link` → `linkText` / `linkUrl`, without
+  `wp-element-button`) keeps its href as it is, `#` included (without it the block drops the
   element that holds the link, and the page would differ from the kit in structure),
   `img.__img` → image (a file of `assets/img/`: the attachment with that name, imported when
   absent; then `imageId` + `imageUrl` + `imageAlt`), `style="--{prefix}-x:N"` / `data-*` / an
-  element modifier → the attribute whose Note names it; `id` on the section → `anchor`; colour
+  element modifier → the attribute whose Note names it; `id` on the section → `anchor`; an `align*` class other than the default → `align`; colour
   classes `has-{slug}-background-color` → `backgroundColor`, `has-{slug}-color` → `textColor`;
   children (`.swiper-slide`, cards) → one child block each with the same mapping, when `##
   Figli` names them; in a block with free InnerBlocks, `<p>` → `core/paragraph`, `<h1>`–`<h6>` →
@@ -144,8 +146,9 @@ What the script does is the mapping contract, the same for every block, present 
 - Post-derived content (a `card` child the kit shows **without `__text`**; a `cards-carousel`
   query variant, whose cards are not written: `## Figli` says "Solo in `manual`"): the kit card
   shows a title → a **published** post with that title, then with that slug, `postType` from
-  the post found; no match → `postId: 0` and reported ("card senza contenuto: titolo X non
-  trovato"). A card whose title is the placeholder of the base theme's catalogue («Titolo del
+  the post found; no match → it is a card written by hand that has no text (the text is
+  optional): it keeps the kit's title, image and link, and the script reports it ("nessun
+  contenuto pubblicato si intitola X: scritta come card a mano"). A card whose title is the placeholder of the base theme's catalogue («Titolo del
   contenuto») is not looked up by title: it keeps the post the WordPress page already has in
   that position (`page=`) and, on a page not built yet, takes the most recent published post; a
   site with no published post → `postId: 0`, reported.
@@ -154,13 +157,15 @@ What the script does is the mapping contract, the same for every block, present 
   the page. It only decides the page option `{prefix}_show_form` (2e).
 - A top-level element of `<main>` that is not a `{prefix}-block-*` section but carries the root
   class of a theme pattern (`{prefix}-{x}` ↔ `patterns/{prefix}-{x}.php`) → the pattern's block
-  markup with the kit's texts in its headings and paragraphs, in order (a different number of
-  them → the page is skipped); any other unmapped top-level element → the page is skipped.
+  markup with the kit's texts in its headings and paragraphs, in order (the kit element must
+  have the structure of the pattern, tag by tag: anything more, or less → the page is skipped); any other unmapped top-level element → the page is skipped.
 - **Nothing is dropped.** Inside a block every project class, modifier, `data-*`, `--{prefix}-*`
   property and text is either read by a rule above or named by the block README; anything else
-  is a reason of the exit 3. The script does not look inside the element a README declares as
+  is a reason of the exit 3. So is an element without a class of the block that carries something
+  of its own (an `<img>`, an `<iframe>`, a form field, an `href` or a `src`, a class the README
+  does not name): it is never walked through blindly. The script does not look inside the element a README declares as
   plugin output ("Parità kit ↔ render: fino a `__el` incluso").
-- Texts verbatim, placeholders `[da confermare]` included. Never rewritten. An HTML comment
+- Texts verbatim (only the whitespace of the source formatting is collapsed), placeholders `[da confermare]` included. Never rewritten. An HTML comment
   `<!-- {attribute} "value" [da confermare]: … -->` next to an element marks that value
   (typically a URL) as provisional: the script uses the element's value and reports the comment.
 

@@ -7,7 +7,8 @@
  *
  * Richiesta: { immagini: [file], post: [titolo], form: [chiave], pagina: slug|ID|percorso|"" }.
  * Risposta, JSON sull'ultima riga:
- *   immagini  file → { id, url }      l'allegato con quel nome (lo slug del file senza estensione)
+ *   immagini  file → { id, url }      l'allegato nato da un file con quel nome, estensione compresa
+ *                                      (WordPress può avergli aggiunto -1, -2… o -scaled)
  *   post      titolo → { id, tipo }   il contenuto pubblicato con quel titolo, poi con quello slug
  *   form      chiave → id             il form di Formidable con quella chiave (0 se non c'è)
  *   pagina    [{ chiave, figli: [{ postId, postType }] }]   i blocchi di primo livello della
@@ -31,8 +32,14 @@ if ( ! is_array( $fkp_req ) ) {
 $fkp_out = array( 'immagini' => array(), 'post' => array(), 'form' => array(), 'pagina' => array(), 'ultimo' => null );
 
 foreach ( (array) ( $fkp_req['immagini'] ?? array() ) as $file ) {
-  $found = get_posts( array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'name' => sanitize_title( pathinfo( $file, PATHINFO_FILENAME ) ), 'numberposts' => 1, 'orderby' => 'ID', 'order' => 'ASC' ) );
-  if ( $found ) $fkp_out['immagini'][ $file ] = array( 'id' => $found[0]->ID, 'url' => wp_get_attachment_url( $found[0]->ID ) );
+  // Per file, non per nome: placeholder.png non è l'allegato di placeholder.jpg.
+  $wanted = '/^' . preg_quote( pathinfo( $file, PATHINFO_FILENAME ), '/' ) . '(-\d+)?(-scaled)?\.' . preg_quote( pathinfo( $file, PATHINFO_EXTENSION ), '/' ) . '$/i';
+  $found  = get_posts( array( 'post_type' => 'attachment', 'post_status' => 'inherit', 'numberposts' => -1, 'orderby' => 'ID', 'order' => 'ASC', 'meta_query' => array( array( 'key' => '_wp_attached_file', 'value' => pathinfo( $file, PATHINFO_FILENAME ), 'compare' => 'LIKE' ) ) ) );
+  foreach ( $found as $attachment ) {
+    if ( ! preg_match( $wanted, wp_basename( (string) get_post_meta( $attachment->ID, '_wp_attached_file', true ) ) ) ) continue;
+    $fkp_out['immagini'][ $file ] = array( 'id' => $attachment->ID, 'url' => wp_get_attachment_url( $attachment->ID ) );
+    break;
+  }
 }
 
 // Solo contenuti che hanno una pagina loro: gli stessi tipi che il blocco accetta.

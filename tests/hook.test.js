@@ -96,6 +96,9 @@ describe('ricorda-stato.js: lo stato rimesso dopo la compattazione', () => {
     assert.match(r.stdout, /Domande aperte/);
     assert.match(r.stdout, /⏳/);
     assert.match(r.stdout, /SKILL\.md/);
+    // Un ok o un confirm che il riassunto dà per dato non vale: si verifica in DESIGN.md.
+    assert.match(r.stdout, /«confirm» vale solo se è scritto in un suo messaggio/);
+    assert.match(r.stdout, /si verifica in DESIGN\.md prima di agire/);
     assert.ok(r.stdout.length < 10000, 'oltre i 10.000 caratteri Claude Code lo taglia');
   });
 

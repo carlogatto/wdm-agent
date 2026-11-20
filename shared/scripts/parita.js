@@ -10,7 +10,8 @@
 // devono avere uguale. Cosa non confronta: testi, immagini, icone, link, quanti elementi ha una
 // serie ripetuta (le card di un carosello) e un campo facoltativo lasciato vuoto in WordPress
 // (un elemento senza figli, come `__text` o `__link`, che il kit ha e il sito non stampa, o un
-// contenitore di soli campi così, come `__buttons` con i suoi due bottoni).
+// contenitore di soli link, come `__buttons` con i suoi due bottoni: un link senza indirizzo non
+// si stampa, e il contenitore con lui).
 // Quelli sono contenuti: li decide chi scrive in WordPress, e una differenza lì non è una
 // differenza. Un elemento che il sito stampa e il kit non ha, invece, si segnala.
 // Dove: header e footer una volta sola (righe `implementato` di ## Telaio), poi il contenuto di
@@ -55,7 +56,7 @@ function scheletro(html, prefisso) {
     // Stesse classi dell'elemento che lo contiene: è lo stesso elemento, stampato due volte.
     if (etichetta === sopra) return scendi(figlio, sopra);
     // Le sezioni di una pagina (i figli di {prefix}-main) non sono una serie: due uguali sono due.
-    return [{ classi, etichetta, base: classi.find((c) => mio(c) && !c.includes('--')) || classi.find(mio), sezioni: classi.includes(`${prefisso}-main`), figli: scendi(figlio, etichetta) }];
+    return [{ tag: figlio.tag, classi, etichetta, base: classi.find((c) => mio(c) && !c.includes('--')) || classi.find(mio), sezioni: classi.includes(`${prefisso}-main`), figli: scendi(figlio, etichetta) }];
   });
   return compatta(scendi(albero(html), ''), false);
 }
@@ -66,11 +67,11 @@ function foglia(nodo) {
   return nodo.figli.length === 0 && nodo.base.includes('__');
 }
 
-// Un elemento del blocco fatto solo di campi facoltativi, a ogni livello: esiste quando loro
-// esistono (`__buttons` con due bottoni), quindi è contenuto come loro. Un contenitore che tiene
-// un blocco figlio non lo è.
+// Un campo facoltativo, o un contenitore del blocco fatto solo di link (`__buttons` con i suoi
+// due bottoni): esiste quando loro esistono, quindi è contenuto come loro. Ogni altro
+// contenitore (una figura con la sua immagine, una colonna, un blocco figlio) è struttura.
 function facoltativo(nodo) {
-  return nodo.base.includes('__') && nodo.figli.every(facoltativo);
+  return foglia(nodo) || (nodo.base.includes('__') && nodo.figli.length > 0 && nodo.figli.every((f) => foglia(f) && f.tag === 'a'));
 }
 
 // `senzaFoglie`: la firma con cui si riconosce una serie, che non guarda i campi facoltativi.
@@ -126,7 +127,10 @@ function confronta(kit, sito, sopra = []) {
   for (const n of spostati) trovate.push(`ordine diverso: ${dove(n)}`);
   // Un campo facoltativo che il kit riempie e in WordPress è vuoto non è una differenza.
   for (const n of soloKit.filter((n) => !spostati.includes(n) && !facoltativo(n))) trovate.push(`solo nel kit: ${dove(n)}`);
-  for (const n of soloSito.filter((n) => !spostati.some((m) => firma(m) === firma(n)))) trovate.push(`solo nel sito: ${dove(n)}`);
+  // Un link che il kit tiene in un contenitore di soli link e il sito stampa da solo (dei due
+  // bottoni ne è rimasto uno, senza contenitore) è lo stesso campo: non è una differenza.
+  const neiContenitori = new Set(soloKit.filter((n) => !foglia(n) && facoltativo(n)).flatMap((n) => n.figli.map((f) => f.base)));
+  for (const n of soloSito.filter((n) => !spostati.some((m) => firma(m) === firma(n)) && !(foglia(n) && neiContenitori.has(n.base)))) trovate.push(`solo nel sito: ${dove(n)}`);
   for (const [i, j] of coppie) {
     if (kit[i].etichetta !== sito[j].etichetta) {
       trovate.push(`classi diverse: ${[...sopra, kit[i].base].join(' › ')} — kit [${kit[i].etichetta}] · sito [${sito[j].etichetta}]`);

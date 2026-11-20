@@ -64,9 +64,24 @@ describe('parita.js: un contenitore di soli campi facoltativi', () => {
     assert.deepEqual(diff(sezione(griglia), sezione('')), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__grid']);
   });
 
+  // Revisione del lotto 8: la tolleranza vale solo per un contenitore di soli link (i bottoni con
+  // l'indirizzo vuoto non si stampano). Una figura, un'intera colonna, un blocco stampato vuoto
+  // restano differenze.
+  it('una figura con la sua immagine, o un contenitore di testi, che il sito non stampa: si segnala', () => {
+    assert.deepEqual(diff(sezione('<figure class="abc-block-hero__media"><img class="abc-block-hero__img" src="a.jpg" alt=""></figure>'), sezione('')), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__media']);
+    assert.deepEqual(diff(sezione('<div class="abc-block-hero__content"><p class="abc-block-hero__text">x</p></div>'), sezione('')), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__content']);
+    assert.deepEqual(diff(sezione('<div class="abc-block-hero__azioni"><a class="abc-block-hero__button" href="#">Uno</a><p class="abc-block-hero__nota">x</p></div>'), sezione('')), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__azioni']);
+  });
+
+  it('un blocco che il sito stampa vuoto (solo la radice) si segnala', () => {
+    const vuoto = '<main class="abc-main"><section class="abc-block-hero"></section></main>';
+    assert.deepEqual(diff(sezione(''), vuoto), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner']);
+  });
+
   it('i campi che il sito stampa fuori dal contenitore del kit si segnalano', () => {
     const fuori = '<a class="abc-block-hero__button" href="/a">Uno</a>';
-    assert.deepEqual(diff(sezione('<div class="abc-block-hero__content"><p class="abc-block-hero__text">x</p></div>'), sezione(fuori)), ['solo nel sito: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__button']);
+    assert.deepEqual(diff(sezione(bottoni), sezione(fuori)), []);
+    assert.deepEqual(diff(sezione('<div class="abc-block-hero__content"><p class="abc-block-hero__text">x</p></div>'), sezione(fuori)), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__content', 'solo nel sito: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__button']);
   });
 });
 

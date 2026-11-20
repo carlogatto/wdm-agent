@@ -42,7 +42,10 @@ class Errore extends Error {}
 
 const perRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const kebab = (nome) => nome.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`);
-const spazi = (s) => s.replace(/\s+/g, ' ').trim();
+// Solo gli spazi di formattazione del sorgente: uno spazio non separabile resta com'è.
+const spazi = (s) => s.replace(/[ \t\r\n\f]+/g, ' ').replace(/^ | $/g, '');
+// Elementi che portano contenuto anche senza testo: senza una classe del blocco non si sa di chi sono.
+const CONTENUTO = new Set(['img', 'picture', 'video', 'audio', 'iframe', 'embed', 'object', 'canvas', 'input', 'select', 'textarea', 'form', 'table']);
 const senzaTag = (s) => s.replace(/<[^>]*>/g, '');
 const ENTITA = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: String.fromCharCode(160) };
 
@@ -92,18 +95,20 @@ function predefinito(cella, tipo) {
 function contratto(testo, prefisso, slug) {
   const s = sezioni(testo);
   const attributi = righe(s.Attributi || '').map((c) => {
-    const tipo = (/^(string|integer|number|boolean|array|object)/.exec(c[1] || '') || [])[1] || 'string';
+    const letto = (/^(string|integer|number|boolean|array|object)/i.exec((c[1] || '').trim()) || [])[1];
+    const tipo = letto ? letto.toLowerCase() : 'string';
     const nota = c[4] || '';
     const a = { nome: senzaApici(c[0] || ''), tipo, default: predefinito(c[3] || '', tipo) };
+    if (!letto && (c[1] || '').trim() !== '') a.tipoIgnoto = (c[1] || '').trim();
     const valori = /`([a-z0-9-]+(?:\|[a-z0-9-]+)+)`/.exec(c[1] || '');
     if (valori) a.valori = valori[1].split('|');
     const kit = /kit: `?\.?__([a-z0-9-]+)`?/.exec(nota);
     if (kit) a.kit = kit[1];
-    const stile = /`style="(--[a-z0-9-]+):N"`/.exec(nota);
+    const stile = /style="(--[a-z0-9-]+):N"/.exec(nota);
     if (stile) a.stile = stile[1];
-    const data = /`(data-[a-z0-9-]+)`/.exec(nota);
+    const data = /(?:`|→\s*)(data-[a-z0-9-]+)/.exec(nota);
     if (data) a.data = data[1];
-    const modificatore = /`([^`]+)` → `(__[a-z0-9-]+--[a-z0-9-]+)`/.exec(nota);
+    const modificatore = /`?([^`\s|]+)`?\s*→\s*`?(__[a-z0-9-]+--[a-z0-9-]+)`?/.exec(nota);
     if (modificatore) a.modificatore = { valore: modificatore[1], classe: modificatore[2] };
     return a;
   }).filter((a) => /^[a-zA-Z][a-zA-Z0-9]*$/.test(a.nome));
@@ -115,7 +120,9 @@ function contratto(testo, prefisso, slug) {
   }).filter(Boolean);
   const figli = s.Figli || '';
   const solo = /Solo in `([a-z0-9-]+)`/.exec(figli);
-  const supports = (/^Supports:([\s\S]*?)(?:\n\s*\n|$)/m.exec(s.Attributi || '') || ['', ''])[1];
+  // La riga «Supports:» fino alla prima riga vuota: può andare a capo.
+  const daSupports = (s.Attributi || '').slice(Math.max(0, (s.Attributi || '').search(/^Supports:/m)));
+  const supports = /^Supports:/.test(daSupports) ? daSupports.split(/\n[ \t]*\n/)[0] : '';
   const plugin = /Parità kit ↔ render: fino a `__([a-z0-9-]+)` incluso/.exec(testo);
   return {
     slug,
@@ -267,6 +274,13 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
           if (c.figli.liberi) { figli.push({ core: core(f, err) }); continue; }
           const estranea = f.classi.find((k) => k.startsWith(`${prefisso}-`));
           if (estranea) err(`classe «${estranea}» su ${apertura(f)}: non è un elemento di ${B}`);
+          // Un contenitore senza classe del blocco si attraversa solo se non porta nulla di suo.
+          if (CONTENUTO.has(f.tag)) err(`${apertura(f)} senza una classe del blocco: lo script non sa a quale attributo va`);
+          else if (f.attr.href !== undefined || f.attr.src !== undefined) err(`${apertura(f)} con ${f.attr.href !== undefined ? 'href' : 'src'} e senza una classe del blocco: lo script non sa a quale attributo va`);
+          for (const k of f.classi) {
+            if (!k.startsWith(`${prefisso}-`) && !c.parole.has(k)) err(`classe «${k}» su ${apertura(f)}: il README non la nomina`);
+          }
+          leggiAttributi(f, apertura(f));
           visita(f);
           continue;
         }
@@ -295,12 +309,21 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
       }
     };
 
+    for (const a of c.attributi) {
+      if (a.tipoIgnoto) err(`README: tipo «${a.tipoIgnoto}» dell'attributo ${a.nome} non riconosciuto (string, integer, boolean)`);
+    }
+
     // La radice: classi, id, stile, data-*.
     const attrs = {};
     const colori = {};
     for (const k of el.classi) {
       let m;
-      if (k === B || k === `wp-block-${prefisso}-${slug}` || k.startsWith(`${B}--`) || k === 'has-text-color' || k === 'has-background' || /^align(full|wide|left|right|center)$/.test(k)) continue;
+      if (k === B || k === `wp-block-${prefisso}-${slug}` || k.startsWith(`${B}--`) || k === 'has-text-color' || k === 'has-background' || k === 'has-link-color') continue;
+      if ((m = /^align(full|wide|left|right|center)$/.exec(k))) {
+        if (c.attributo.align) valori.align = m[1];
+        else if (!c.parole.has(k)) err(`classe «${k}» sulla radice: il README non ha l'attributo align`);
+        continue;
+      }
       if ((m = /^has-([a-z0-9-]+)-background-color$/.exec(k))) colori.backgroundColor = m[1];
       else if ((m = /^has-([a-z0-9-]+)-color$/.exec(k))) colori.textColor = m[1];
       else if (!c.parole.has(k)) err(`classe «${k}» sulla radice: il README non la nomina`);
@@ -312,6 +335,7 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
       const riga = c.varianti.find((v) => v.nome === x);
       const nome = riga ? riga.attributo : (c.attributo.variant && (c.attributo.variant.valori || []).includes(x) ? 'variant' : null);
       if (!nome || !c.attributo[nome]) err(`modificatore «${B}--${x}»: non è una riga di ## Varianti del README`);
+      else if (valori[nome] !== undefined) err(`due valori per ${nome} sulla radice (${valori[nome]}, ${x})`);
       else valori[nome] = x;
     }
     visita(el);
@@ -322,10 +346,11 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
       return nodi[0] || null;
     };
     const converti = (a, v) => {
-      if (a.tipo === 'boolean') return v === true || v === 'true';
+      // Un attributo HTML senza valore (data-loop) è un sì.
+      if (a.tipo === 'boolean') return v === true || v === 'true' || v === '';
       if (a.tipo !== 'integer' && a.tipo !== 'number') return v;
       const n = Number(v);
-      if (Number.isNaN(n)) err(`${a.nome}: «${v}» non è un numero`);
+      if (v === '' || Number.isNaN(n)) err(`${a.nome}: «${v}» non è un numero`);
       return n;
     };
     for (const g of gruppi) {
@@ -334,21 +359,22 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
       if (g.indice === 0 && nodi.length > usati) err(`un ${B}__${g.elemento} in più (${nodi.length}): il README ha attributi per ${usati}`);
     }
 
-    // Modalità post (vocabolario: postId > 0): il kit mostra l'elemento senza il suo testo.
+    // Può essere «da un post» (vocabolario: postId > 0) l'elemento che il kit mostra senza il suo
+    // testo: lo decide WordPress, quando si scrive il file (un post con quel titolo, o il
+    // segnaposto). Altrimenti è un elemento a mano, con i valori del kit letti qui sotto.
     const elementoTesto = c.attributo.text ? elementoDi(c.attributo.text) : 'text';
-    const daPost = !!c.attributo.postId && !(foglie.get(elementoTesto) || []).length;
     const titolo = uno(c.attributo.title ? elementoDi(c.attributo.title) : 'title');
+    const cercato = titolo ? spazi(decodifica(senzaTag(dentro(titolo)))) : '';
+    const post = c.attributo.postId && !(foglie.get(elementoTesto) || []).length && cercato !== ''
+      ? { ...(cercato === SEGNAPOSTO ? { segnaposto: true } : { titolo: cercato }), tipoPredefinito: c.attributo.postType ? c.attributo.postType.default : undefined }
+      : null;
+    if (post && post.titolo) richieste.post.add(post.titolo);
+    if (titolo && titolo.tag === 'h1' && c.attributo.headingLevel) err(`${B}__title è un <h1>, ma il blocco ha headingLevel e stampa h2 o h3: la pagina resterebbe senza il suo h1`);
 
     for (const a of c.attributi) {
       let v;
-      if (daPost) {
-        if (a.nome === 'postId') {
-          const cercato = titolo ? spazi(decodifica(senzaTag(dentro(titolo)))) : '';
-          if (cercato !== SEGNAPOSTO && cercato !== '') richieste.post.add(cercato);
-          v = { $post: cercato === SEGNAPOSTO ? { segnaposto: true } : { titolo: cercato } };
-        } else if (a.nome === 'postType') {
-          v = { $tipo: a.default };
-        }
+      if (a.nome === 'align') {
+        v = valori.align;
       } else if (delleVarianti.has(a.nome) || a.stile || a.data) {
         if (valori[a.nome] !== undefined) v = converti(a, valori[a.nome]);
       } else if (a.modificatore) {
@@ -387,8 +413,12 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
         v = a.nome === 'imageId' ? { $immagine: m[1] } : a.nome === 'imageUrl' ? { $url: m[1] } : decodifica(n.attr.alt || '');
       } else if (a.nome === 'icon') {
         const n = uno('icon');
-        const svg = n && n.figli.find((f) => f.tag === 'svg' && f.grezzo !== undefined);
-        if (!svg) continue;
+        if (!n) continue;
+        const svg = n.figli.find((f) => f.tag === 'svg' && f.grezzo !== undefined);
+        if (!svg || n.figli.some((f) => f !== svg && (f.tag || (f.testo !== undefined && f.testo.trim() !== '')))) {
+          err(`${B}__icon: dentro deve esserci un svg del set (assets/img/icons/) e nient'altro`);
+          continue;
+        }
         const trovata = set.find(([, markup]) => markup === senzaSpazi(svg.grezzo));
         if (trovata) v = trovata[0];
         else err(`icona di ${B}__icon non riconosciuta nel set (assets/img/icons/): un SVG della libreria media si sceglie in WordPress, il kit non può dirlo`);
@@ -402,7 +432,8 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
         const n = uno(elementoDi(a));
         if (!n) continue;
         v = spazi(dentro(n));
-        const avvolto = a.nome === 'title' && /^<a\b[^>]*>([\s\S]*)<\/a>$/.exec(v);
+        // Il link intorno a tutto il titolo lo stampa il render solo nei blocchi che hanno un link loro.
+        const avvolto = a.nome === 'title' && (c.attributo.linkUrl || c.attributo.postId) && /^<a\b[^>]*>([\s\S]*)<\/a>$/.exec(v);
         if (avvolto && !avvolto[1].includes('<a')) v = spazi(avvolto[1]);
       }
       if (v !== undefined && v !== a.default) attrs[a.nome] = v;
@@ -423,7 +454,7 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
         if (b) { b.posizione = blocchi.length; blocchi.push(b); }
       }
     }
-    return { nome: `${prefisso}/${slug}`, etichetta, attrs, figli: blocchi };
+    return { nome: `${prefisso}/${slug}`, etichetta, attrs, figli: blocchi, ...(post ? { post } : {}) };
   }
 
   // Un pattern del tema: il suo markup, con i testi del kit al posto dei suoi, nell'ordine.
@@ -431,7 +462,20 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
     const etichetta = `pattern ${nome}`;
     const corpo = sorgente.replace(/^[\s\S]*?\?>\s*/, '');
     const TESTI = /<(h[1-6]|p)\b([^>]*)>([\s\S]*?)<\/\1>/g;
-    const nelPattern = [...corpo.matchAll(TESTI)].map((m) => m[1]);
+    // La forma: i tag nell'ordine, senza entrare in titoli e paragrafi; un testo fuori da loro conta.
+    const forma = (radice) => {
+      const tag = [];
+      const giu = (nodo) => {
+        for (const f of nodo.figli) {
+          if (f.testo !== undefined) { if (f.testo.trim() !== '') tag.push('testo'); continue; }
+          if (!f.tag) continue;
+          tag.push(f.tag);
+          if (!/^(h[1-6]|p)$/.test(f.tag) && f.grezzo === undefined) giu(f);
+        }
+      };
+      giu(radice);
+      return tag.join(' ');
+    };
     const nelKit = [];
     const raccogli = (nodo) => {
       for (const f of nodo.figli) {
@@ -442,8 +486,8 @@ function mappa({ html, prefisso, leggiReadme, icone, pattern }) {
     raccogli(el);
     if (corpo.includes('<?')) {
       errori.push(`${etichetta}: il file del pattern ha codice PHP dentro il markup: lo script non sa scriverlo`);
-    } else if (nelPattern.join(' ') !== nelKit.map((n) => n.tag).join(' ')) {
-      errori.push(`${etichetta}: il kit ha ${nelKit.length} titoli e paragrafi (${nelKit.map((n) => n.tag).join(' ')}), il pattern ${nelPattern.length} (${nelPattern.join(' ')}): non so quale testo va dove`);
+    } else if (forma(documento(corpo)) !== forma({ figli: [el] })) {
+      errori.push(`${etichetta}: il kit non ha la struttura del pattern (kit: ${forma({ figli: [el] })}; pattern: ${forma(documento(corpo))}): lo script porta nel pattern solo i testi di titoli e paragrafi, nell'ordine`);
     }
     let i = 0;
     const grezzo = corpo.replace(TESTI, (tutto, tag, attr) => (nelKit[i] ? `<${tag}${attr}>${spazi(dentro(nelKit[i++]))}</${tag}>` : tutto));
@@ -504,23 +548,29 @@ function serializza(blocchi, risposte) {
   const uno = (b, wp) => {
     if (b.grezzo !== undefined) return b.grezzo;
     const attrs = {};
-    let post;
-    if (b.attrs.postId && b.attrs.postId.$post) {
-      const q = b.attrs.postId.$post;
+    let daScrivere = b.attrs;
+    if (b.post) {
       const giaLi = wp && wp.figli[b.posizione] && wp.figli[b.posizione].postId ? { id: wp.figli[b.posizione].postId, tipo: wp.figli[b.posizione].postType } : null;
-      post = q.segnaposto ? (giaLi || risposte.ultimo || null) : (risposte.post[q.titolo] || null);
-      if (!post) note.push(`${b.etichetta}: card senza contenuto: ${q.segnaposto ? 'il sito non ha contenuti pubblicati per la card segnaposto' : `titolo «${q.titolo}» non trovato fra i contenuti pubblicati`} (postId 0: la card non si stampa)`);
+      const trovato = b.post.segnaposto ? (giaLi || risposte.ultimo || null) : (risposte.post[b.post.titolo] || null);
+      if (trovato) {
+        daScrivere = {};
+        if (trovato.tipo && trovato.tipo !== b.post.tipoPredefinito) attrs.postType = trovato.tipo;
+        attrs.postId = trovato.id;
+      } else if (b.post.segnaposto) {
+        daScrivere = {};
+        note.push(`${b.etichetta}: card segnaposto senza contenuto: il sito non ha contenuti pubblicati (postId 0: la card non si stampa)`);
+      } else {
+        note.push(`${b.etichetta}: nessun contenuto pubblicato si intitola «${b.post.titolo}»: scritta come card a mano, con i valori del kit`);
+      }
     }
-    for (const [nome, v] of Object.entries(b.attrs)) {
+    for (const [nome, v] of Object.entries(daScrivere)) {
       if (v === null || typeof v !== 'object') attrs[nome] = v;
       else if ('$immagine' in v) attrs[nome] = risposte.immagini[v.$immagine].id;
       else if ('$url' in v) attrs[nome] = risposte.immagini[v.$url].url;
       else if ('$form' in v) {
         if (risposte.form[v.$form]) attrs[nome] = risposte.form[v.$form];
         else note.push(`${b.etichetta}: il form «${v.$form}» del kit non esiste in Formidable → formId 0, la sezione esce senza campi: form da creare in Formidable`);
-      } else if ('$tipo' in v) {
-        if (post && post.tipo && post.tipo !== v.$tipo) attrs[nome] = post.tipo;
-      } else if ('$post' in v && post) attrs[nome] = post.id;
+      }
     }
     // Il blocco che la pagina ha già, nella stessa posizione tra quelli con lo stesso nome.
     let suo = null;
@@ -588,7 +638,7 @@ function esegui(argv) {
   const p = progetto(sito);
   const nome = `${p.prefisso}-${pagina}`;
   const fileHtml = path.join(p.tema, 'html', `${nome}.html`);
-  if (!fs.existsSync(fileHtml)) throw new Errore(`kit non compilato: manca ${fileHtml}. Lancia npm run build nella cartella del tema (il kit è src/kit/${nome}.kit).`);
+  if (!fs.existsSync(fileHtml) || !fs.statSync(fileHtml).isFile()) throw new Errore(`kit non compilato: manca ${fileHtml}. Lancia npm run build nella cartella del tema (il kit è src/kit/${nome}.kit).`);
   const cartellaIcone = path.join(p.tema, 'assets', 'img', 'icons');
   const icone = {};
   if (fs.existsSync(cartellaIcone)) {
@@ -605,6 +655,7 @@ function esegui(argv) {
   for (const file of m.richieste.immagini) {
     if (!fs.existsSync(path.join(p.tema, 'assets', 'img', file))) m.errori.push(`immagine «${file}»: il file non è in assets/img/ del tema`);
   }
+  if (!m.errori.length && !m.blocchi.length) m.errori.push('nessun blocco in <main>: la pagina è vuota');
   if (m.errori.length) {
     console.log(`${nome}: pagina non mappabile (${m.errori.length === 1 ? 'un motivo' : `${m.errori.length} motivi`}): nulla è stato scritto e WordPress non è stato toccato.`);
     for (const e of m.errori) console.log(`  - ${e}`);
@@ -645,7 +696,8 @@ if (require.main === module) {
   try {
     process.exitCode = esegui(process.argv.slice(2));
   } catch (errore) {
-    if (!(errore instanceof Errore)) throw errore;
+    // Un errore del disco (permessi, un file che è una cartella) è d'ambiente: exit 2, mai 1.
+    if (!(errore instanceof Errore) && typeof errore.code !== 'string') throw errore;
     console.error(`kit-pagina: ${errore.message}`);
     process.exitCode = 2;
   }

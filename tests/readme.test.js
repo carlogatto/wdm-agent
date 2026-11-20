@@ -112,6 +112,13 @@ test('problemi comuni: l\'anteprima dei kit che non si apre', () => {
   assert.match(rimedio, /si chiude/, 'il rimedio dice perché succede');
 });
 
+test('cosa contiene: i quattro hook, ognuno con il suo nome', () => {
+  const testo = sezione('Cosa contiene');
+  assert.match(testo, /`hooks\/`: quattro script Node/);
+  for (const hook of fs.readdirSync(path.join(__dirname, '..', 'hooks')).filter((f) => f.endsWith('.js'))) assert.ok(testo.includes(`\`${hook}\``), `manca ${hook}`);
+  assert.match(testo, /rigenerare\), `chiudi-sessione\.js`/);
+});
+
 test('il brief di esempio esiste ed è citato', () => {
   assert.ok(readme.includes('skills/fse-brief/esempio/brief.md'));
   const brief = fs.readFileSync(path.join(__dirname, '..', 'skills', 'fse-brief', 'esempio', 'brief.md'), 'utf8');
