@@ -41,7 +41,7 @@ invalidates a page. But the attributes **saved in post_content keep their names 
 | Change | Scenario | Touches |
 |---|---|---|
 | new attribute / control (text, image, toggle, select, number) | **A** | block.json, README, edit.js, render.php, kit (if visible), style |
-| variant designed by `fse-kit` (README row and kit exist, marked "(kit)" in `DESIGN.md → Blocchi`) | **B** | block.json enum, edit.js select, render.php modifier, style (what the kit left to do) |
+| variant designed by `fse-kit` (README row and kit exist; the row of `## Varianti` in the block README carries "(kit)" in its kit column until it is implemented) | **B** | block.json enum, edit.js select, render.php modifier, style (what the kit left to do) |
 | markup/layout change of an existing element | **C** | kit (first), render.php, edit.js (parity), style, README markup |
 | style only | **D** | style.scss / editor.scss (+ theme.json styles.blocks for section padding) |
 | frontend JS (first JS, or a change) | **E** | src/view.js, block.json `viewScriptModule`, README dependencies |

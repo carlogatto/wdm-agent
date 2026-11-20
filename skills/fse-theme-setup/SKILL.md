@@ -360,7 +360,8 @@ and completed. Never rewrite by hand a section the script wrote.
   per item.
 - `## Log decisioni`: one row, the setup date and its values.
 - `CLAUDE.md` ships with the repo and resolves `{prefix}`/paths from DESIGN.md: verify its
-  "First: read DESIGN.md" protocol and routing table mention only `fse-*` skills.
+  "First: read DESIGN.md" protocol and routing table send every request to an `fse-*` skill (the
+  `dev-*`/`design-*` names it carries are the column of what never runs here: they stay).
 - `README.md` (site root) ships with the repo as the project's quick-start note for humans
   (dependencies, setup on a new machine, `npm` commands, the flow, the project structure); it is
   never a state file (state lives in `DESIGN.md`). `setup.js` renamed it (Step 3a): verify the

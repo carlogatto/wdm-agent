@@ -211,8 +211,10 @@ in its "kit" column until `fse-block-edit`/`fse-build` implements it.
    the tone the existing kits already use. Derived content (`cards-carousel` query, `card`): the
    kit inlines the real titles of the posts the query returns today (text parity); the build
    reads only the section's attributes, links `#`.
-3. A page that opens with a hero variant image has its h1 there (the build sets
-   `{prefix}_show_title 0`); a page without a hero keeps the template title (meta default 1).
+3. A page whose kit has its own h1 (it opens with a hero, in any variant that prints the title
+   as `h1`) gets `{prefix}_show_title 0` from the build; a page without an h1 of its own keeps
+   the template title (meta default 1). `kit-pagina.js … controlla` (point 5) prints the option
+   the kit implies.
    The default form part (`main/form/_form-contacts.kit`, fse-foundations §7) is shown on every
    page (meta default 1, as in wdm-starter); the build sets the page option from the kit, and
    turns it off on a page whose kit does not print it — so the page kit imports
@@ -284,8 +286,9 @@ a kit with more than one root `<section>` per block, or with inline `<script>`/`
 Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · fit a section
 into an existing block because it exists (a new variant or block is Step 3, not a cost) · ask mid-way what
 the charter decides or marks `[da confermare]` · invent a fact about the client · mark a row
-`kit` before the dev's ok (only a Telaio row revised after its build goes back to `kit`, see
-Review) · `git push`, or any git command beyond the fse-foundations §10 rule; commit a kit still under review.
+`kit` before the dev's ok (two rows go back to `kit` by rule: a Telaio row revised after its
+build, see Review, and the `Catalogo blocchi` row when a new block or variant enters the
+catalogue, 3e) · `git push`, or any git command beyond the fse-foundations §10 rule; commit a kit still under review.
 
 ## Completion checklist (per item)
 

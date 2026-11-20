@@ -9,7 +9,8 @@
 // allineamento. Sono i blocchi, il loro ordine, la variante e il markup BEM: ciò che kit e tema
 // devono avere uguale. Cosa non confronta: testi, immagini, icone, link, quanti elementi ha una
 // serie ripetuta (le card di un carosello) e un campo facoltativo lasciato vuoto in WordPress
-// (un elemento senza figli, come `__text` o `__link`, che il kit ha e il sito non stampa).
+// (un elemento senza figli, come `__text` o `__link`, che il kit ha e il sito non stampa, o un
+// contenitore di soli campi così, come `__buttons` con i suoi due bottoni).
 // Quelli sono contenuti: li decide chi scrive in WordPress, e una differenza lì non è una
 // differenza. Un elemento che il sito stampa e il kit non ha, invece, si segnala.
 // Dove: header e footer una volta sola (righe `implementato` di ## Telaio), poi il contenuto di
@@ -65,6 +66,13 @@ function foglia(nodo) {
   return nodo.figli.length === 0 && nodo.base.includes('__');
 }
 
+// Un elemento del blocco fatto solo di campi facoltativi, a ogni livello: esiste quando loro
+// esistono (`__buttons` con due bottoni), quindi è contenuto come loro. Un contenitore che tiene
+// un blocco figlio non lo è.
+function facoltativo(nodo) {
+  return nodo.base.includes('__') && nodo.figli.every(facoltativo);
+}
+
 // `senzaFoglie`: la firma con cui si riconosce una serie, che non guarda i campi facoltativi.
 function firma(nodo, senzaFoglie = false) {
   const figli = senzaFoglie ? nodo.figli.filter((f) => !foglia(f)) : nodo.figli;
@@ -117,7 +125,7 @@ function confronta(kit, sito, sopra = []) {
   const spostati = soloKit.filter((n) => soloSito.some((m) => firma(m) === firma(n)));
   for (const n of spostati) trovate.push(`ordine diverso: ${dove(n)}`);
   // Un campo facoltativo che il kit riempie e in WordPress è vuoto non è una differenza.
-  for (const n of soloKit.filter((n) => !spostati.includes(n) && !foglia(n))) trovate.push(`solo nel kit: ${dove(n)}`);
+  for (const n of soloKit.filter((n) => !spostati.includes(n) && !facoltativo(n))) trovate.push(`solo nel kit: ${dove(n)}`);
   for (const n of soloSito.filter((n) => !spostati.some((m) => firma(m) === firma(n)))) trovate.push(`solo nel sito: ${dove(n)}`);
   for (const [i, j] of coppie) {
     if (kit[i].etichetta !== sito[j].etichetta) {

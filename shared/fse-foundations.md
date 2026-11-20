@@ -447,7 +447,8 @@ says why (servers stopped, kit not compiled): never a pass. Tolerated by design:
 WordPress and Swiper add, a core block that prints the same classes on two nested elements
 (navigation), `{prefix}-header__toggle` (kit only, §7), and an optional field left empty in
 WordPress (an element without children, like `__text` or `__link`, that the kit has and the site
-does not print: that is content). An element the site prints and the kit lacks is reported. It runs at the start of every
+does not print, or a wrapper made only of such fields, like `__buttons` around two buttons: that
+is content). An element the site prints and the kit lacks is reported. It runs at the start of every
 conversation (project `CLAUDE.md`) and at the end of every session inside `npm run check`
 (`tools/check-parita.js` of the theme finds the plugin through the registry; exit 3 there is a
 declared `SKIP`). Menu items are not its matter: `wp-navigation.php` owns them.
@@ -585,8 +586,7 @@ Core blocks only, styled by `src/scss/_telaio.scss`:
   `{prefix}_show_title` (the template title) and `{prefix}_show_form` (the default form part,
   below) — edited from the "Opzioni pagina" panel in the document sidebar (`src/js/page-options.js`
   → `assets/js/page-options.js`, plain JS entry in `build.js`, enqueued on
-  `enqueue_block_editor_assets`) and set by `fse-build` from the kit: title `0` when the page
-  opens with a hero variant image (its h1), form stays `1` (shown everywhere, as
+  `enqueue_block_editor_assets`) and set by `fse-build` from the kit: title `0` when the kit of the page has its own h1 (a page that opens with a hero), form stays `1` (shown everywhere, as
   in wdm-starter) and goes to `0` only on a page whose kit does not print the default form at the end of `<main>` (a page kit with its own `{prefix}/form` does not import it; the catalogue of the base theme imports both, on purpose). `render_block_core/post-title`,
   `render_block_core/group` (className `{prefix}-page-header`) and
   `render_block_core/template-part` (slug `form-contacts`) return `''` when the meta is off, on
@@ -811,7 +811,9 @@ first, because a carousel starts only when it enters the screen).
   stop it at the end of the session. 8848 answers with the kits of **another** project (the dev
   has two projects open) → never stop that process: start `npm run dev` here, browser-sync takes
   the next free port and prints it, and that address is the one for the checks and for the
-  handover message; stop your own process at the end of the session. The watch writes sourcemaps (`*.map`, gitignored);
+  handover message; stop your own process at the end of the session (keep its process id when
+  you start it, or find it from the port it printed: a search by name also finds the other
+  project's watch). The watch writes sourcemaps (`*.map`, gitignored);
   `npm run build` removes them, so `npm run build` → `npm run check` passes with the watch on.
 - **Git: the agent commits, the dev pushes.** A commit is local and can be undone; a push starts
   the dev's pipeline, so that decision stays human.

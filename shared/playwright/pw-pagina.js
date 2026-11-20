@@ -52,7 +52,9 @@ async (page) => {
         window.scrollTo(0, y);
         await new Promise((fatto) => setTimeout(fatto, 150));
       }
-      window.scrollTo(0, 0);
+      // Il tema ha scroll-behavior: smooth: senza `instant` lo screenshot parte a pagina in movimento.
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      await new Promise((fatto) => setTimeout(fatto, 400));
     });
     await page.waitForFunction(() => document.querySelectorAll('.swiper').length === document.querySelectorAll('.swiper-initialized').length, null, { timeout: 5000 }).catch(() => {});
     frontend[larghezza] = await page.evaluate(() => ({

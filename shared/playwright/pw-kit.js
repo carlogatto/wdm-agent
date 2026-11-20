@@ -28,13 +28,17 @@ async (page) => {
       const risposta = await kit.goto(URL).catch(() => null);
       if (!risposta || !risposta.ok()) return { errore: `${URL} ${risposta ? `risponde ${risposta.status()}` : 'non risponde'}: l'anteprima è accesa (npm run dev) e la pagina è stata compilata?` };
       await kit.waitForLoadState('networkidle');
+      // L'avviso «BS: connected» dell'anteprima non è della pagina: fuori dagli screenshot.
+      await kit.addStyleTag({ content: '#__bs_notify__ { display: none !important; }' });
       // I caroselli partono quando entrano nello schermo: prima si scorre tutta la pagina.
       await kit.evaluate(async () => {
         for (let y = 0; y < document.documentElement.scrollHeight; y += window.innerHeight) {
           window.scrollTo(0, y);
           await new Promise((fatto) => setTimeout(fatto, 150));
         }
-        window.scrollTo(0, 0);
+        // Il tema ha scroll-behavior: smooth: senza `instant` lo screenshot parte a pagina in movimento.
+        window.scrollTo({ top: 0, behavior: 'instant' });
+        await new Promise((fatto) => setTimeout(fatto, 400));
       });
       await kit.waitForFunction(() => document.querySelectorAll('.swiper').length === document.querySelectorAll('.swiper-initialized').length, null, { timeout: 5000 }).catch(() => {});
       larghezze[larghezza] = await kit.evaluate(() => {
@@ -47,7 +51,7 @@ async (page) => {
           ancoreSenzaBersaglio: [...document.querySelectorAll('a[href^="#"]')].map((a) => a.getAttribute('href')).filter((h) => h.length > 1 && !document.getElementById(h.slice(1))),
           immaginiRotte: [...document.images].filter((i) => i.complete && !i.naturalWidth).map((i) => i.getAttribute('src')),
           fontDelTesto: famiglia('body'),
-          fontDeiTitoli: famiglia('h1, h2'),
+          fontDeiTitoli: famiglia('main h1, main h2'),
           fontCaricati: [...new Set([...document.fonts].filter((f) => f.status === 'loaded').map((f) => f.family.replace(/["']/g, '')))],
         };
       });

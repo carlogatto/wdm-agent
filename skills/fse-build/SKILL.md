@@ -61,7 +61,8 @@ after the dev's ok there, and this run builds only rows that passed them.
    build work): its transient errors while the block files are written one by one are not
    failures — the truth is this run's own `npm run build` (exit 0) after the last file, and WP on
    `{local-url}`, not the kit on :8848. If `pgrep -f 'build.js --watch'` finds it, say so in the
-   report ("watch acceso: build finale rieseguita da questo run").
+   report ("watch acceso: build finale rieseguita da questo run"); with two projects open the
+   command also finds the other project's watch, which says nothing about this one.
 5. Every block in the compiled pages (`section.{prefix}-block-{slug}` inside `<main>`) has a
    `README.md` with `## Attributi` and `## Markup` — a block with neither → stop ("blocco senza
    contratto: serve fse-kit").
@@ -173,7 +174,9 @@ hand to get past the script.
 ### 2b. Missing blocks → scaffold (Step 5), all variants
 For every distinct `slug` of K without `blocks/{prefix}-block-{slug}/block.json` → Step 5. An
 implemented block whose README lists a variant/attribute the kit uses but the code lacks →
-`fse-block-edit` inline, additive only (new attribute with a default, new variant); a
+`fse-block-edit` inline, additive only (new attribute with a default, new variant): its Steps
+0–3 as written there, while the log row, the commit and the handover are this run's, not a
+closing of its own; a
 non-additive change (rename or removal of an attribute, a different structure) → the pages that
 use that block are skipped and reported: it is a decision of the dev.
 

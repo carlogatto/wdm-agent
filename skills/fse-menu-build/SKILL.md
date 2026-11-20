@@ -41,7 +41,9 @@ in any other part with a navigation block) every time the post changes.
    the menu title; no label → "Menu {part}"); the parts contain a `<!-- wp:navigation {…} -->`.
 4. The pages the kit links to exist in WP (the skill runs **after** the main pages are built):
    missing ones become orphans (below) — if **every** label is orphan the pages are not there
-   yet: stop and say so (except in the setup run, whose plan is just Home).
+   yet: stop and say so (except in the setup run, whose plan is just Home). Inside `fse-build`
+   right after the telaio the pages of the map are still `da progettare` and Home alone
+   resolves: that is expected, go on — the other items stay `#` until their pages are built.
 
 ## Step 1 — dump
 

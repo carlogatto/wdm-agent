@@ -44,6 +44,32 @@ describe('html.js: albero degli elementi', () => {
   });
 });
 
+// Lotto 8.2: un contenitore che esiste solo quando i suoi campi facoltativi ci sono (i due
+// bottoni dell'hero dentro __buttons) è contenuto come loro: se in WordPress i campi sono vuoti
+// il sito non lo stampa, e non è una differenza di struttura.
+describe('parita.js: un contenitore di soli campi facoltativi', () => {
+  const sezione = (dentro) => `<main class="abc-main"><section class="abc-block-hero"><div class="abc-block-hero__inner"><h1 class="abc-block-hero__title">T</h1>${dentro}</div></section></main>`;
+  const bottoni = '<div class="abc-block-hero__buttons"><a class="abc-block-hero__button" href="#">Uno</a><a class="abc-block-hero__button" href="#">Due</a></div>';
+
+  it('nel kit sì, nel sito no: nessuna differenza', () => {
+    assert.deepEqual(diff(sezione(bottoni), sezione('')), []);
+  });
+
+  it('nel sito sì, nel kit no: si segnala', () => {
+    assert.deepEqual(diff(sezione(''), sezione(bottoni)), ['solo nel sito: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__buttons']);
+  });
+
+  it('un contenitore che tiene un blocco figlio non è un campo facoltativo: si segnala', () => {
+    const griglia = '<div class="abc-block-hero__grid"><div class="abc-block-voce"><p class="abc-block-voce__title">V</p></div></div>';
+    assert.deepEqual(diff(sezione(griglia), sezione('')), ['solo nel kit: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__grid']);
+  });
+
+  it('i campi che il sito stampa fuori dal contenitore del kit si segnalano', () => {
+    const fuori = '<a class="abc-block-hero__button" href="/a">Uno</a>';
+    assert.deepEqual(diff(sezione('<div class="abc-block-hero__content"><p class="abc-block-hero__text">x</p></div>'), sezione(fuori)), ['solo nel sito: abc-main › abc-block-hero › abc-block-hero__inner › abc-block-hero__button']);
+  });
+});
+
 describe('parita.js: scheletro', () => {
   it('tiene gli elementi con una classe del progetto, annidati, con le classi di design', () => {
     assert.deepEqual(stampa(scheletro(pagina(), P)), [

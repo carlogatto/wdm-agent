@@ -99,6 +99,24 @@ describe('sessione.js senza WordPress', () => {
     }
   });
 
+  // Lotto 8.2: il tema ha scroll-behavior: smooth, quindi un ritorno in cima «normale» è animato
+  // e lo screenshot a pagina intera partiva con la pagina ancora in movimento (header fisso a
+  // metà pagina, sopra il titolo).
+  it('i modelli tornano in cima senza animazione, e aspettano, prima dello screenshot a pagina intera', () => {
+    for (const nome of ['pw-pagina.js', 'pw-kit.js']) {
+      const modello = fs.readFileSync(path.join(MODELLI, nome), 'utf8');
+      assert.doesNotMatch(modello, /window\.scrollTo\(0, 0\)/, `${nome}: il ritorno in cima è animato`);
+      assert.match(modello, /window\.scrollTo\(\{ top: 0, behavior: 'instant' \}\);\s*await new Promise\(\(fatto\) => setTimeout\(fatto, \d{3}\)\);/, `${nome}: torna in cima con behavior instant e aspetta`);
+    }
+  });
+
+  it('pw-kit.js: misura il font dei titoli nel contenuto e toglie l\'avviso dell\'anteprima dagli screenshot', () => {
+    const modello = fs.readFileSync(path.join(MODELLI, 'pw-kit.js'), 'utf8');
+    // Sotto lg il telaio sposta nel pannello dell'header un'etichetta del footer, che è un h2.
+    assert.match(modello, /fontDeiTitoli: famiglia\('main h1, main h2'\)/);
+    assert.match(modello, /addStyleTag\(\{ content: '#__bs_notify__ \{ display: none !important; \}' \}\)/);
+  });
+
   // Le prove qui sotto leggono il testo del modello: nessuna apre un browser (Playwright gira solo
   // dentro Claude Code). L'esecuzione dal vivo è agli atti nel repo del tema, lotto-7/prova-7-1.
   it('pw-kit.js: accetta il certificato dell\'anteprima, dà uno screenshot per larghezza e un messaggio se l\'anteprima è spenta', () => {
