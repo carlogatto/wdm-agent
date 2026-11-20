@@ -27,9 +27,11 @@ function apri(url) {
   const profilo = fs.mkdtempSync(path.join(os.tmpdir(), 'wdm-agent-chrome-'));
   const figlio = spawn(programma(), ['--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--mute-audio', '--window-size=1000,800', `--user-data-dir=${profilo}`, url], { stdio: 'ignore' });
   return {
+    pid: figlio.pid,
     chiudi: () => new Promise((resolve) => {
       const togli = () => { fs.rmSync(profilo, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); resolve(); };
-      if (figlio.exitCode !== null) return togli();
+      // Già uscito, da solo o per un segnale: l'evento «exit» è passato e non tornerebbe.
+      if (figlio.exitCode !== null || figlio.signalCode !== null) return togli();
       figlio.once('exit', togli);
       figlio.kill();
     }),
