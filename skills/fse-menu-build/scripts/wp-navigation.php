@@ -24,8 +24,10 @@
  *         controlla il post type del ref: un id sbagliato stampa una pagina dentro il menu).
  *         Le parts si controllano prima di scrivere: una part assente o senza il blocco giusto
  *         ferma tutto con exit 1. `parts=<dir>` sostituisce {theme-root}/parts (test, dry run).
- *         Con `prova` confronta e basta: stampa il diff di ogni menu (o «0 differenze», o «da
- *         creare») e non scrive mai, né un post né un ref. Lo usa lo script di controllo.
+ *         Con `prova` confronta e basta: stampa il diff di ogni menu (o «0 differenze», «da
+ *         creare», «ref da scrivere» se il blocco della part non punta al menu) e non scrive
+ *         mai, né un post né un ref. Una perdita o un menu aperto nell'editor qui sono solo
+ *         differenze: gli exit 3 e 4 sono di `apply` che scrive. Lo usa lo script di controllo.
  *
  * Exit: 0 ok · 1 errore · 3 voci che WordPress perderebbe, in attesa di conferma · 4 menu aperto
  * nell'editor da un utente, nulla scritto · 5 solo con `prova`: almeno un menu è diverso dal
@@ -454,14 +456,29 @@ if ( $fmb_mode === 'apply' ) {
     // Solo confronto: i menu diversi hanno già stampato il loro diff qui sopra.
     $different = 0;
     foreach ( $ops as $op ) {
+      $menu = $op['menu'];
       if ( ! $op['existing'] ) {
-        echo "{$op['menu']['title']}: da creare\n";
+        echo "{$menu['title']}: da creare\n";
         $different++;
-      } elseif ( trim( $op['existing']->post_content ) === trim( $op['content'] ) ) {
-        echo "{$op['menu']['title']} (id {$op['existing']->ID}): 0 differenze\n";
-      } else {
-        $different++;
+        continue;
       }
+      $id = (int) $op['existing']->ID;
+      // Il blocco navigation di ogni part deve già puntare a questo menu: un `ref` assente o
+      // diverso è ciò che `apply` scriverebbe.
+      $unlinked = array();
+      foreach ( $menu['parts'] as $part ) {
+        $blocks = isset( $part_navs[ $part ] ) ? $part_navs[ $part ] : array();
+        $i      = fmb_pick_nav_block( $blocks, isset( $menu['aria'][ $part ] ) ? $menu['aria'][ $part ] : null );
+        $ref    = ( $i !== null && ! empty( $blocks[ $i ]['ref'] ) ) ? (int) $blocks[ $i ]['ref'] : 0;
+        if ( $ref !== $id ) $unlinked[] = "{$menu['title']} (id $id): ref da scrivere in parts/$part.html (oggi " . ( $ref ? $ref : 'nessuno' ) . ')';
+      }
+      $same = trim( $op['existing']->post_content ) === trim( $op['content'] );
+      if ( $same && ! $unlinked ) {
+        echo "{$menu['title']} (id $id): 0 differenze\n";
+        continue;
+      }
+      foreach ( $unlinked as $line ) echo "$line\n";
+      $different++;
     }
     fmb_halt( $different ? 5 : 0 );
   }

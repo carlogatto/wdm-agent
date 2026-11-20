@@ -24,6 +24,12 @@ wrote is here, word for word, as the main conversation passed it:
   ("ok", "va bene", "approvato", "procedi") are an ok; anything else is not, and an ok for a kit
   not handed over yet is not one either. With a kit under review and no ok in the request, hand
   it over again (Step 1 "A kit already under review comes first").
+- **An ok that carries a request is a revision.** "Ok, ma cambia il titolo" is not an ok: apply
+  the request, log it, hand over again. The build starts on an ok that asks for nothing else.
+- **"Il controllo non passa: …"** as the request → with a kit under review, the rows say what
+  the kit lacks (a page the build could not map, a file a kit does not write before the ok): put
+  it right and hand over again. With no kit under review there is nothing of yours to repair:
+  say so and end, and never pick the next page (the repair of a build is `fse-build`'s).
 - **No request** (empty, or only `anteprima=`) → Step 1 picks the item.
 - **Preview.** `anteprima=<url>` in the request is the kit preview the main conversation keeps
   on: wherever a step below says `npm run dev`, use that address and start nothing. Without it,
@@ -309,7 +315,7 @@ dev's explicit ok → row `kit` (Telaio: `kit`; Blocchi rows were born `kit` at 
 log row "kit {item} approvato", commit of the approved kit — **and in the same unit** read
 `${CLAUDE_PLUGIN_ROOT}/skills/fse-build/SKILL.md` and run it from its Step 0 (whole perimeter:
 this item is built, the aligned rows answer "0 differenze"; you are already the unit: its
-"request" section adds nothing, and nothing is invoked). The unit ends with the build's report
+request is yours, and nothing is invoked). The unit ends with the build's report
 and its block, whose "Poi" line names the next `da progettare` row: the main conversation
 starts that kit, this unit never does. A revision the dev asks after the build follows the same
 steps without a new gate. A **page** row stays as it is: every page that is not `da progettare` is in the

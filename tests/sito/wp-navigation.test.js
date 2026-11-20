@@ -92,6 +92,17 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
     assert.match(r.out, /0 differenze/);
     r = applica('prova', 'confirm');
     assert.equal(r.status, 1, r.out);
+    // Un menu uguale al kit ma non collegato al suo blocco: il ref che manca è una differenza.
+    const part = path.join(parts, 'header.html');
+    const collegata = fs.readFileSync(part, 'utf8');
+    fs.writeFileSync(part, collegata.replace(/"ref":[0-9]+,?/, ''));
+    assert.notEqual(fs.readFileSync(part, 'utf8'), collegata);
+    const scollegata = fs.readFileSync(part, 'utf8');
+    r = applica('prova');
+    assert.equal(r.status, 5, r.out);
+    assert.match(r.out, /ref da scrivere in parts\/header\.html/);
+    assert.equal(fs.readFileSync(part, 'utf8'), scollegata, 'prova ha scritto il ref');
+    fs.writeFileSync(part, collegata);
   });
 
   it('(d) aggiornamento di un menu esistente: stessa garanzia', () => {

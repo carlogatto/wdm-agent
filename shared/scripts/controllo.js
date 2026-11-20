@@ -40,6 +40,8 @@ const CONTRATTO = path.join(PLUGIN, 'hooks', 'check-block-contract.js');
 const SEZIONI = ['Scopo', 'Varianti', 'Attributi', 'Figli', 'Markup (render.php = kit)', 'Markup di inserimento', 'Dipendenze JS / CSS', 'Componenti condivisi'];
 const AVVISI_PHP = /<b>(Fatal error|Parse error|Warning|Notice|Deprecated)<\/b>:|\b(Fatal error|Warning|Notice|Deprecated): /g;
 
+const h1 = (html) => (html.match(/<h1[\s>]/g) || []).length;
+
 class Errore extends Error {
   constructor(messaggio, exit) {
     super(messaggio);
@@ -93,12 +95,40 @@ function verdetto(righe) {
   return { exit: 0, testo: `UNITÀ BUONA: ${conta(di('PASS').length, 'controllo passa', 'controlli passano')}${note ? `, ${conta(note, 'nota', 'note')}` : ''}.` };
 }
 
+// Che cosa non va in una pagina servita ({ status, body }, o null se il sito non ha risposto).
+function guardaPagina(servita) {
+  if (!servita) return ['non risponde'];
+  if (servita.status !== 200) return [`risponde ${servita.status}`];
+  const difetti = [];
+  const avvisi = (servita.body.match(AVVISI_PHP) || []).length;
+  if (avvisi) difetti.push(`${avvisi} avvisi di PHP nella pagina`);
+  if (h1(servita.body) !== 1) difetti.push(`${h1(servita.body)} h1 nella pagina`);
+  return difetti;
+}
+
+// A che cosa si riferisce una riga «⏳ kit {item} in revisione»: { pagina } (la riga di ## Pagine
+// che l'item nomina; tra più titoli vince il più lungo), { telaio: true }, oppure {} se non si sa.
+function riconosci(item, pagine, telaio) {
+  const testo = item.toLowerCase();
+  const trovate = pagine.filter((p) => p.titolo && testo.includes(p.titolo.toLowerCase())).sort((x, y) => y.titolo.length - x.titolo.length);
+  if (trovate.length) return { pagina: trovate[0] };
+  if (/telaio/.test(testo) || telaio.some((voce) => voce && testo.includes(voce.toLowerCase()))) return { telaio: true };
+  return {};
+}
+
+// I file che un kit in revisione non scrive prima dell'ok (fse-kit, «Never»): il codice di un
+// blocco oltre al suo stile, le parts e i template. Tutto il resto, a gate aperto, è atteso.
+const VIETATI = /(^|\/)blocks\/[^/]+\/(block\.json|render\.php|src\/(edit|index)\.js|src\/editor\.scss)$|(^|\/)(parts|templates)\/[^/]+\.html$/;
+function vietati(file) {
+  return file.filter((f) => VIETATI.test(f));
+}
+
 // ---------- strumenti ----------
 
 function lancia(programma, args, opzioni = {}) {
   const r = spawnSync(programma, args, { encoding: 'utf8', timeout: 300000, maxBuffer: 256 * 1024 * 1024, ...opzioni });
   const out = `${r.stdout || ''}${r.stderr || ''}`.trim();
-  return { status: r.error ? null : r.status, out: r.error ? r.error.message : out, stdout: (r.stdout || '').trim() };
+  return { status: r.error ? null : r.status, out: r.error ? r.error.message : out, stdout: (r.stdout || '').trim(), grezzo: r.stdout || '' };
 }
 
 const prima = (testo) => (testo.split('\n').find((r) => r.trim()) || '').trim();
@@ -143,8 +173,6 @@ function scarica(url, salti = 3) {
   });
 }
 
-const h1 = (html) => (html.match(/<h1[\s>]/g) || []).length;
-
 // ---------- il controllo ----------
 
 async function controlla(sitoDato) {
@@ -169,6 +197,11 @@ async function controlla(sitoDato) {
   if (!a.pagine.length) throw new Errore('DESIGN.md → ## Pagine non ha righe: non c\'è nulla da verificare.', 3);
   const casa = wp('option', 'get', 'home');
   if (casa.status !== 0) throw new Errore(`WordPress non risponde: avvia i server di MAMP PRO e rilancia. (${prima(casa.out)})`, 3);
+  if (!(await scarica(`${url}/`))) throw new Errore(`il sito non risponde a ${url}: avvia i server di MAMP PRO e rilancia.`, 3);
+  // Che cosa aspetta l'ok: una pagina, il telaio, o una riga che non si sa leggere.
+  const voci = tabella(design, 'Telaio').map((r) => r.item || '');
+  const inRevisione = a.revisione.map((item) => ({ item, ...riconosci(item, a.pagine, voci) }));
+  const telaioAlGate = inRevisione.some((r) => r.telaio);
 
   const righe = [];
   const esito = (nome, falliti, note, bene) => righe.push(falliti.length ? riga('FAIL', nome, falliti.join(' · ')) : note.length ? riga('NOTA', nome, [bene, ...note].filter(Boolean).join(' · ')) : riga('PASS', nome, bene));
@@ -212,15 +245,17 @@ async function controlla(sitoDato) {
     // 3. Un kit in revisione è una pagina che la build saprà mappare.
     if (a.revisione.length) {
       const falliti = [];
+      const note = [];
       const bene = [];
-      for (const item of a.revisione) {
-        const p = a.pagine.find((x) => x.titolo.toLowerCase() === item.toLowerCase());
-        if (!p || !p.kit) { bene.push(`${item}: si guarda sull'anteprima`); continue; }
-        const r = lancia(process.execPath, [KIT_PAGINA, sito, p.kit, 'controlla']);
+      for (const { item, pagina, telaio: eTelaio } of inRevisione) {
+        if (eTelaio) { bene.push(`${item}: il telaio si guarda sull'anteprima`); continue; }
+        if (!pagina) { note.push(`«${item}» non è una pagina di ## Pagine né il telaio: non verificato`); continue; }
+        if (!pagina.kit) { falliti.push(`${item}: la riga di ## Pagine non ha ancora il suo kit`); continue; }
+        const r = lancia(process.execPath, [KIT_PAGINA, sito, pagina.kit, 'controlla']);
         if (r.status === 0) bene.push(`${item}: mappabile dalla build`);
         else falliti.push(`${item}: ${r.out.split('\n').slice(0, 3).join(' ')}`);
       }
-      esito('Kit in revisione', falliti, [], bene.join(' · '));
+      esito('Kit in revisione', falliti, note, bene.join(' · '));
     }
 
     // 4. Il sito: ogni pagina implementata risponde, senza avvisi di PHP, con un solo h1.
@@ -228,11 +263,7 @@ async function controlla(sitoDato) {
       const falliti = [];
       for (const p of implementate) {
         const servita = await scarica(`${url}${p.percorso.startsWith('/') ? '' : '/'}${p.percorso}`);
-        if (!servita) { falliti.push(`${p.titolo}: non risponde`); continue; }
-        if (servita.status !== 200) { falliti.push(`${p.titolo}: risponde ${servita.status}`); continue; }
-        const avvisi = (servita.body.match(AVVISI_PHP) || []).length;
-        if (avvisi) falliti.push(`${p.titolo}: ${avvisi} avvisi di PHP nella pagina`);
-        if (h1(servita.body) !== 1) falliti.push(`${p.titolo}: ${h1(servita.body)} h1 nella pagina`);
+        falliti.push(...guardaPagina(servita).map((difetto) => `${p.titolo}: ${difetto}`));
         const kit = p.kit && path.join(tema, 'html', `${prefisso}-${p.kit}.html`);
         if (kit && fs.existsSync(kit) && h1(fs.readFileSync(kit, 'utf8')) !== 1) falliti.push(`${p.titolo}: ${h1(fs.readFileSync(kit, 'utf8'))} h1 nel kit`);
       }
@@ -290,10 +321,14 @@ async function controlla(sitoDato) {
           const nome = pezzo.split('\n')[0].trim().replace(/: differenze kit → WP$/, '');
           const perdita = /WordPress perderebbe: (.*)$/m.exec(pezzo);
           if (perdita) note.push(`${nome} aspetta il confirm del dev: perderebbe ${perdita[1].trim()}`);
+          // Con il kit del telaio al gate i menu sono ancora quelli di prima: li allinea la build dopo l'ok.
+          else if (telaioAlGate) note.push(`${nome.replace(/: da creare$/, '')} diverso dal kit: è atteso, il kit del telaio aspetta l'ok`);
           else falliti.push(/: da creare$/.test(nome) ? nome : `${nome} diverso dal kit`);
         }
+        // Un menu uguale al kit ma non collegato al suo blocco: il `ref` nella part è da scrivere.
+        for (const r of prova.out.split('\n').filter((x) => /: ref da scrivere in /.test(x))) (telaioAlGate ? note : falliti).push(r.trim());
         if (prova.status !== 0 && prova.status !== 5) falliti.push(`confronto dei menu exit ${prova.status}: ${prima(prova.out)}`);
-        else if (prova.status === 5 && !pezzi.length) falliti.push(`menu diversi dal kit: ${prima(prova.out)}`);
+        else if (prova.status === 5 && !pezzi.length && !/: ref da scrivere in /.test(prova.out)) falliti.push(`menu diversi dal kit: ${prima(prova.out)}`);
       }
       esito('Menu', falliti, note, `${quanti} a 0 differenze dal kit`);
     }
@@ -331,9 +366,13 @@ async function controlla(sitoDato) {
       if (git('rev-parse', '--is-inside-work-tree').stdout !== 'true') {
         falliti.push('la cartella del progetto non è un repository git');
       } else {
-        const sporchi = git('status', '--porcelain').stdout.split('\n').filter(Boolean);
-        if (sporchi.length && a.revisione.length) note.push(`${sporchi.length} file non committati: è atteso, il kit in revisione si committa all'ok`);
-        else if (sporchi.length) falliti.push(`${sporchi.length} file non committati: ${sporchi.slice(0, 3).map((r) => r.slice(3)).join(', ')}${sporchi.length > 3 ? '…' : ''}`);
+        // Riga per riga com'è («XY percorso»): lo spazio iniziale fa parte del formato.
+        const sporchi = git('status', '--porcelain', '--untracked-files=all').grezzo.split('\n').filter(Boolean).map((r) => r.slice(3).replace(/^"|"$/g, ''));
+        const elenco = (file) => `${file.slice(0, 3).join(', ')}${file.length > 3 ? '…' : ''}`;
+        const proibiti = vietati(sporchi);
+        if (sporchi.length && a.revisione.length && proibiti.length) falliti.push(`a gate aperto ci sono file che un kit non scrive prima dell'ok: ${elenco(proibiti)}`);
+        else if (sporchi.length && a.revisione.length) note.push(`${sporchi.length} file non committati: è atteso, il kit in revisione si committa all'ok`);
+        else if (sporchi.length) falliti.push(`${sporchi.length} file non committati: ${elenco(sporchi)}`);
         const diWordPress = git('ls-files').stdout.split('\n').filter((f) => /^(wp-admin|wp-includes)\/|^wp-config\.php$|(^|\/)\.playwright-mcp\//.test(f));
         if (diWordPress.length) falliti.push(`${diWordPress.length} file di WordPress o di lavoro tracciati (${diWordPress[0]}…)`);
         if (sporchi.length) bene = '';
@@ -349,7 +388,7 @@ async function controlla(sitoDato) {
   return v.exit;
 }
 
-module.exports = { attese, riga, verdetto };
+module.exports = { attese, riga, verdetto, guardaPagina, riconosci, vietati };
 
 if (require.main === module) {
   const [sito, ...resto] = process.argv.slice(2);

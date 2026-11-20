@@ -451,7 +451,9 @@ every `implementata` page. It only reads. Silent, exit 0 → aligned. Exit 1 →
 difference and the side that changed last (last commit on the kit against the date the page or
 the part was modified): act on it without asking. The kit changed last → `fse-build` brings it
 to WordPress. WordPress or the theme changed last → correct the kit (the page kit, the block
-kit and its README), `npm run build`, run the check again. Exit 3 → it could not verify and
+kit and its README), `npm run build`, run the check again: inside a build the run does it
+(fse-build 2g), in the main conversation it is a kit unit (§10 "Units of work in a
+sub-agent"). Exit 3 → it could not verify and
 says why (servers stopped, kit not compiled): never a pass. Tolerated by design: the classes
 WordPress and Swiper add, a core block that prints the same classes on two nested elements
 (navigation), `{prefix}-header__toggle` (kit only, §7), and an optional field left empty in
@@ -947,16 +949,25 @@ Per la conversazione principale (non mostrare al dev):
 3. **Control.** When the unit returns it runs the command of the block: `controllo.js` reads
    from `DESIGN.md` what to expect and answers in a dozen lines (`PASS`, `FAIL`, `NOTA`, a
    verdict), without writing in WordPress. Exit 3 means it could not verify (servers stopped):
-   say so, it is not a pass.
-4. **Handover.** It shows the dev the unit's handover message as it is. A control that does not
-   pass is never hidden and never fixed by hand: **one** repair unit (the same skill, request
-   "il controllo non passa: {the FAIL rows}"), then the control again; if it still fails, the
-   `FAIL` rows go to the dev in one line under the handover.
+   it is not a pass. Say so to the dev, wait, run it again: nothing goes on until the control has
+   run.
+4. **Handover.** It shows the dev the unit's handover message as it is. Going on with another
+   unit in the same turn (the build, then the next kit) it shows both, the one that just ended
+   first: never a summary in place of a handover (a build report may carry a `confirm` or a gap
+   the dev must see). A control that does not pass is never hidden and never fixed by hand:
+   **one** repair unit — `fse-build`, request "il controllo non passa: {the FAIL rows}"; `fse-kit`
+   instead, same request, when a kit is under review and the row that fails is `Kit in revisione`
+   or `Git` — then the control again; if it still fails, the `FAIL` rows go to the dev in one
+   line under the handover. A `FAIL` that only the dev can resolve is never a repair: it goes to
+   the dev at once.
 5. **What follows** is the "Poi" line: wait for the dev (a gate, a `confirm`), or invoke
    `fse-kit` for the next page in the same turn, unless the dev's message said to stop.
 
-It never reads these foundations or a `SKILL.md` to do the unit's work itself, never edits a
-kit, a block or WordPress, and never gives itself an ok. A unit, for its part, never starts the
+For a kit or a build it never reads these foundations or a `SKILL.md` to do the unit's work
+itself, never edits a kit or WordPress by hand, and never gives itself an ok (maintenance with
+`fse-block-edit` and `fse-menu-build` still runs in the conversation; a kit that parity finds
+behind the site is corrected by a kit unit, request "allinea il kit al sito: {the
+differences}"). A unit, for its part, never starts the
 kit of the next page, and reads an ok or a `confirm` only in the dev's words of its request: a
 `confirm` is valid for a diff an earlier unit showed (its `⏳` line is in `## Domande aperte`),
 never for one the unit computes now. A project whose `CLAUDE.md` does not describe this
@@ -1094,7 +1105,9 @@ conversation's, and a unit runs in the foreground: it cannot fire while the unit
 - `ricorda-stato.js` — on SessionStart with matcher `compact` (after an automatic compaction
   or `/compact`): inside an FSE project it puts back into the context a reminder to read again,
   from disk, `DESIGN.md` (state tables, `## Domande aperte`, the `⏳` lines) and the `SKILL.md`
-  of the `fse-*` skill that was running, with the paragraphs of this file it cites: after a
+  of the `fse-*` skill that was running, with the paragraphs of this file it cites (for a kit
+  or a build it tells the main conversation to look at the state and invoke the skill again,
+  not to read its text: that work is the unit's, §10): after a
   compaction the history is a summary, and the state is on disk, not in the summary. An ok or
   a `confirm` the summary reports is verified in `DESIGN.md` before acting on it. Outside an
   FSE project it is silent; it never exits with a code other than 0.

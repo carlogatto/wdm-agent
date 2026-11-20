@@ -140,3 +140,23 @@ test('fse-kit 3e: la riga del Catalogo torna a kit prima dei controlli', () => {
   const kit = fs.readFileSync(path.join(RADICE, 'skills', 'fse-kit', 'SKILL.md'), 'utf8');
   assert.match(kit, /in this same step, before any check/);
 });
+
+// Rilievi della revisione della 8.3: i casi che la prova non ha toccato hanno una regola scritta.
+test('fse-kit: un ok con dentro una richiesta è una revisione; il controllo che non passa ha la sua regola', () => {
+  const kit = fs.readFileSync(path.join(RADICE, 'skills', 'fse-kit', 'SKILL.md'), 'utf8').replace(/\s+/g, ' ');
+  assert.match(kit, /An ok that carries a request is a revision/);
+  assert.match(kit, /"Il controllo non passa: …"/);
+  assert.match(kit, /never pick the next page/);
+  assert.doesNotMatch(kit, /adds nothing/);
+});
+
+test('fondamenta: chi ripara, le due consegne di un turno, che cosa segue un controllo che non ha verificato', () => {
+  // Il testo va a capo a mano: si cerca senza gli a capo.
+  const fondamenta = fs.readFileSync(path.join(RADICE, 'shared', 'fse-foundations.md'), 'utf8').replace(/\s+/g, ' ');
+  assert.match(fondamenta, /\*\*one\*\* repair unit — `fse-build`/);
+  assert.match(fondamenta, /never a summary in place of a handover/);
+  assert.match(fondamenta, /nothing goes on until the control has run/);
+  assert.match(fondamenta, /maintenance with `fse-block-edit` and `fse-menu-build` still runs in the conversation/);
+  // L'hook dopo la compattazione non rimanda la conversazione principale al testo di kit e build.
+  assert.match(fondamenta, /for a kit or a build it tells the main conversation to look at the state and invoke the skill again/);
+});

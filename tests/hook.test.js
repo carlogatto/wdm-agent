@@ -99,6 +99,11 @@ describe('ricorda-stato.js: lo stato rimesso dopo la compattazione', () => {
     // Un ok o un confirm che il riassunto dà per dato non vale: si verifica in DESIGN.md.
     assert.match(r.stdout, /«confirm» vale solo se è scritto in un suo messaggio/);
     assert.match(r.stdout, /si verifica in DESIGN\.md prima di agire/);
+    // Kit e build girano in un sotto-agente: alla conversazione principale non si dice di
+    // rileggerne il testo e di riprenderne i passi, ma di guardare lo stato e reinvocare la skill.
+    assert.match(r.stdout, /fse-kit.*fse-build.*sotto-agente/s);
+    assert.match(r.stdout, /non rileggere il loro SKILL\.md e non fare il loro lavoro/i);
+    assert.match(r.stdout, /invoca di nuovo la skill/);
     assert.ok(r.stdout.length < 10000, 'oltre i 10.000 caratteri Claude Code lo taglia');
   });
 

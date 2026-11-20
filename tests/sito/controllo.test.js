@@ -135,11 +135,32 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
     }
   });
 
+  it('(a3) il kit del telaio al gate: i menu ancora da allineare sono una NOTA, exit 0', () => {
+    // Il kit del telaio ha una voce di menu in più e aspetta l'ok: la build non è ancora passata.
+    cambia(file('src', 'kit', 'main', 'header', 'header-parts', '_header-content.kit'), '<li><a href="/metodo/">Il metodo</a></li>', '<li><a href="/metodo/">Il metodo</a></li>\n      <li><a href="#">Novità</a></li>');
+    cambia(designMd(), '| header | implementato |', '| header | da progettare |');
+    cambia(designMd(), '| footer | implementato |', '| footer | da progettare |');
+    // (e una riga ⏳ kit che non nomina né una pagina né il telaio: si dice, non si indovina)
+    cambia(designMd(), '- Nessuna.', '- ⏳ kit telaio in revisione (dal 2026-11-20)\n- ⏳ kit Listino in revisione (dal 2026-11-20)');
+    try {
+      const r = controllo();
+      assert.equal(r.status, 0, r.out);
+      assert.match(rigaDi(r, 'Kit in revisione'), /^NOTA.*telaio: il telaio si guarda sull'anteprima · «Listino» non è una pagina di ## Pagine né il telaio: non verificato/);
+      assert.match(rigaDi(r, 'Menu'), /^NOTA.*diverso dal kit: è atteso, il kit del telaio aspetta l'ok/);
+    } finally {
+      git('checkout', '--', '.');
+    }
+  });
+
   it('(b) i difetti messi apposta: exit 1, ognuno con la sua riga FAIL; il menu resta com\'era', () => {
     // 1. Il kit cambia dopo la build: la pagina non è più ciò che il kit dice (e il file non è committato).
     cambia(file('blocks', 'wdm-block-cta', 'kit', '_wdm-block-cta-centered.kit'), '</h2>', ' cambiato</h2>');
+    // Il kit del footer ha un elemento con un altro nome: kit e sito non hanno più la stessa struttura.
+    cambia(file('src', 'kit', 'main', 'footer', 'footer-parts', '_footer-content.kit'), 'wdm-footer__bottom', 'wdm-footer__fondo');
     // 2. Un blocco perde una sezione del suo contratto (se ne accorge anche la build del tema).
     cambia(file('blocks', 'wdm-block-steps', 'README.md'), '## Scopo', '## Intento');
+    // … e si registra con un altro nome: la pagina usa un blocco che WordPress non conosce.
+    cambia(file('blocks', 'wdm-block-steps', 'block.json'), '"name": "wdm/steps"', '"name": "wdm/stepz"');
     // 3. Una riga nel debug.log.
     fs.appendFileSync(path.join(cfg.site, 'wp-content', 'debug.log'), '[20-Nov-2026 12:00:00 UTC] PHP Warning:  prova\n');
     // 4. Una build rimasta a metà.
@@ -158,19 +179,69 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
     assert.equal(r.status, 1, r.out);
     assert.match(rigaDi(r, 'Tema'), /^FAIL.*build exit 1/);
     assert.match(rigaDi(r, 'Pagine'), /^FAIL.*Catalogo blocchi diversa dal kit: .*1 modificato/);
-    assert.match(rigaDi(r, 'Blocchi'), /^FAIL.*wdm-block-steps: README senza Scopo/);
+    assert.match(rigaDi(r, 'Blocchi'), /^FAIL.*non registrati: wdm\/steps/);
+    assert.match(rigaDi(r, 'Blocchi'), /wdm-block-steps: README senza Scopo/);
+    assert.match(rigaDi(r, 'Blocchi'), /wdm-block-steps: (?!README)/, 'il contratto di block.json (nome diverso dalla cartella)');
+    assert.match(rigaDi(r, 'Parità'), /^FAIL.*(classi diverse|struttura diversa)/);
     assert.match(rigaDi(r, 'Sito'), /^FAIL.*debug\.log non è vuoto/);
     assert.match(rigaDi(r, 'Stato'), /^FAIL.*una build è rimasta a metà/);
     assert.match(rigaDi(r, 'Sessione'), /^FAIL.*1 sessioni dell'utente agente aperte/);
     assert.match(rigaDi(r, 'Menu'), /^FAIL.*diverso dal kit/);
     assert.match(rigaDi(r, 'Git'), /^FAIL.*file non committati/);
-    assert.match(r.righe.at(-1), /^UNITÀ NON BUONA: 8 controlli non passano \(Tema, Pagine, Sito, Blocchi, Menu, Sessione, Stato, Git\)\.$/);
+    assert.match(r.righe.at(-1), /^UNITÀ NON BUONA: 9 controlli non passano \(Tema, Pagine, Sito, Blocchi, Parità, Menu, Sessione, Stato, Git\)\.$/);
     assert.equal(contenutoMenu(), monco, 'il controllo ha scritto nel menu');
     // Si rimette tutto a posto: il caso seguente parte dallo stato buono.
     wp('post', 'update', menu, `--post_content=${intero}`);
     assert.equal(nodo(SESSIONE, 'chiudi', cfg.site).status, 0);
     fs.writeFileSync(path.join(cfg.site, 'wp-content', 'debug.log'), '');
     git('checkout', '--', '.');
+  });
+
+  it('(b2) altri difetti, uno per criterio: controlli del tema, immagine che manca, blocco di modifica, segno di sessione', () => {
+    // La build passa, i controlli del tema no: un colore scritto a mano nello SCSS del tema.
+    fs.appendFileSync(file('src', 'scss', '_wp-blocks.scss'), '\n.wdm-prova { color: rgb(1, 2, 3); }\n');
+    // Un'immagine del kit non è più in libreria: in sola lettura non si importa.
+    const allegato = wp('post', 'list', '--post_type=attachment', '--field=ID', '--orderby=ID', '--order=ASC').split('\n')[0];
+    const fileVero = wp('post', 'meta', 'get', allegato, '_wp_attached_file');
+    wp('post', 'meta', 'update', allegato, '_wp_attached_file', '2026/11/un-altro-nome.jpg');
+    const quanti = () => wp('post', 'list', '--post_type=attachment', '--format=count');
+    const prima = quanti();
+    // Il browser dell'agente ha lasciato un blocco di modifica, e il segno di una sessione.
+    const agente = wp('user', 'get', sito.ADMIN, '--field=ID');
+    wp('post', 'meta', 'update', id, '_edit_lock', `${Math.floor(Date.now() / 1000)}:${agente}`);
+    const segno = path.join(cfg.site, '.playwright-mcp', '_sessione.json');
+    fs.mkdirSync(path.dirname(segno), { recursive: true });
+    fs.writeFileSync(segno, '{"scade":0}');
+    // Una riga `implementata` senza kit, a un indirizzo che non esiste; un secondo h1 nel kit del Catalogo, fuori da <main>;
+    // un file di WordPress finito tra quelli tracciati.
+    cambia(designMd(), '| Servizi | /servizi/ | da progettare | — | — |', '| Servizi | /servizi/ | da progettare | — | — |\n| Fantasma | /non-esiste/ | implementata | — | — |');
+    cambia(file('src', 'kit', 'wdm-blocks.kit'), '<main class="wdm-main">', '<h1 hidden>doppio</h1>\n<main class="wdm-main">');
+    git('add', '-f', 'wp-config.php');
+    // Il blocco navigation dell'header non punta più al suo menu.
+    const header = file('parts', 'header.html');
+    const collegato = fs.readFileSync(header, 'utf8');
+    fs.writeFileSync(header, collegato.replace(/"ref":[0-9]+,?/, ''));
+    assert.notEqual(fs.readFileSync(header, 'utf8'), collegato);
+    try {
+      const r = controllo();
+      assert.equal(r.status, 1, r.out);
+      assert.match(rigaDi(r, 'Tema'), /^FAIL.*check exit 1.*check-tokens/);
+      assert.match(rigaDi(r, 'Pagine'), /^FAIL.*Catalogo blocchi: .*in sola lettura non importo/);
+      assert.equal(quanti(), prima, 'il controllo ha importato un\'immagine');
+      assert.match(rigaDi(r, 'Sessione'), /^FAIL.*0 sessioni dell'utente agente aperte, 1 pagine con il suo blocco di modifica/);
+      assert.match(rigaDi(r, 'Sessione'), /resta il segno di una sessione aperta/);
+      assert.match(rigaDi(r, 'Pagine'), /Fantasma: la riga non ha un kit/);
+      assert.match(rigaDi(r, 'Sito'), /Fantasma: risponde 404/);
+      assert.match(rigaDi(r, 'Menu'), /^FAIL.*ref da scrivere in parts\/header\.html/);
+      assert.match(rigaDi(r, 'Sito'), /^FAIL.*Catalogo blocchi: 2 h1 nel kit/);
+      assert.match(rigaDi(r, 'Git'), /^FAIL.*1 file di WordPress o di lavoro tracciati \(wp-config\.php/);
+    } finally {
+      git('rm', '--cached', '-q', 'wp-config.php');
+      wp('post', 'meta', 'update', allegato, '_wp_attached_file', fileVero);
+      wp('post', 'meta', 'delete', id, '_edit_lock');
+      fs.rmSync(segno, { force: true });
+      git('checkout', '--', '.');
+    }
   });
 
   it('(c) ciò che non è un difetto: pagina modificata a mano e kit in revisione sono NOTA, exit 0', () => {
@@ -180,7 +251,7 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
     assert.notEqual(modificato, contenuto);
     wp('post', 'update', id, `--post_content=${modificato}`);
     // Un kit aspetta l'ok: la sua riga ⏳, la pagina ancora da progettare, i file non committati.
-    cambia(designMd(), '- Nessuna.', '- ⏳ kit Servizi in revisione (dal 2026-11-20)');
+    cambia(designMd(), '- Nessuna.', '- ⏳ kit della pagina Servizi in revisione (dal 2026-11-20)');
     cambia(designMd(), '| Servizi | /servizi/ | da progettare | — | — |', '| Servizi | /servizi/ | da progettare | src/kit/wdm-servizi.kit | cta |');
     fs.writeFileSync(file('src', 'kit', 'wdm-servizi.kit'), fs.readFileSync(file('src', 'kit', 'wdm-blocks.kit'), 'utf8'));
 
@@ -188,9 +259,19 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
     assert.equal(r.status, 0, r.out);
     assert.match(rigaDi(r, 'Pagine'), /^NOTA.*Catalogo blocchi: modificata a mano in WordPress/);
     assert.match(rigaDi(r, 'Kit in revisione'), /^PASS.*Servizi: mappabile dalla build/);
-    assert.match(rigaDi(r, 'Stato'), /^PASS.*gate aperto: kit Servizi/);
+    assert.match(rigaDi(r, 'Stato'), /^PASS.*gate aperto: kit della pagina Servizi/);
     assert.match(rigaDi(r, 'Git'), /^NOTA.*file non committati: è atteso/);
     assert.match(r.righe.at(-1), /^UNITÀ BUONA: 8 controlli passano, 2 note\.$/);
+
+    // Ma un kit in revisione non scrive il codice di un blocco prima dell'ok.
+    fs.appendFileSync(file('blocks', 'wdm-block-cta', 'render.php'), '\n<?php // toccato prima dell\'ok ?>\n');
+    try {
+      const guasto = controllo();
+      assert.equal(guasto.status, 1, guasto.out);
+      assert.match(rigaDi(guasto, 'Git'), /^FAIL.*file che un kit non scrive prima dell'ok: .*wdm-block-cta\/render\.php/);
+    } finally {
+      git('checkout', '--', path.join(TEMA, 'blocks', 'wdm-block-cta', 'render.php'));
+    }
   });
 
   it('(d) un kit in revisione che la build non saprebbe mappare: FAIL', () => {
@@ -200,6 +281,22 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
     assert.match(rigaDi(r, 'Kit in revisione'), /^FAIL.*Servizi: .*non mappabile/);
   });
 
+  it('(f) la cartella non è un repository, e il confronto dei menu non riesce: due FAIL', () => {
+    const vero = repo;
+    const part = file('parts', 'header.html');
+    repo = { GIT_DIR: path.join(tmp, 'non-esiste.git'), GIT_WORK_TREE: cfg.site };
+    fs.renameSync(part, `${part}.via`);
+    try {
+      const r = controllo();
+      assert.equal(r.status, 1, r.out);
+      assert.match(rigaDi(r, 'Git'), /^FAIL.*non è un repository git/);
+      assert.match(rigaDi(r, 'Menu'), /^FAIL.*confronto dei menu exit 1/);
+    } finally {
+      fs.renameSync(`${part}.via`, part);
+      repo = vero;
+    }
+  });
+
   it('(e) non ha potuto verificare: exit 3, mai 0 (WordPress che non risponde; DESIGN.md senza pagine)', () => {
     const originale = fs.readFileSync(designMd(), 'utf8');
     try {
@@ -207,6 +304,11 @@ describe('controllo.js sul sito', { skip: sito.nonDisponibile() || false }, () =
       let r = controllo();
       assert.equal(r.status, 3, r.out);
       assert.match(r.out, /non verificato — WordPress non risponde/);
+      // WP-CLI risponde ma il server web no: non ha potuto guardare le pagine.
+      fs.writeFileSync(designMd(), originale.replace(/^\| `\{local-url\}` \|.*$/m, () => '| `{local-url}` | http://127.0.0.1:9/ |'));
+      r = controllo();
+      assert.equal(r.status, 3, r.out);
+      assert.match(r.out, /non verificato — il sito non risponde a http:\/\/127\.0\.0\.1:9/);
       fs.writeFileSync(designMd(), originale.slice(0, originale.indexOf('## Pagine')));
       r = controllo();
       assert.equal(r.status, 3, r.out);

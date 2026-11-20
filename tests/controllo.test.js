@@ -115,3 +115,39 @@ test('verdetto: buona senza FAIL (le NOTA non contano), non buona con un FAIL', 
   assert.equal(v.exit, 1);
   assert.match(v.testo, /^UNITÀ NON BUONA: 2 controlli non passano \(Menu, Git\)/);
 });
+
+// Le tre decisioni che la revisione ha chiesto di difendere con una prova ciascuna.
+test('guardaPagina: non risponde, stato diverso da 200, avvisi di PHP, numero di h1', () => {
+  const { guardaPagina } = require(SCRIPT);
+  const pagina = (corpo) => ({ status: 200, body: `<html><body>${corpo}</body></html>` });
+  assert.deepEqual(guardaPagina(null), ['non risponde']);
+  assert.deepEqual(guardaPagina({ status: 404, body: '<h1>Non trovata</h1>' }), ['risponde 404']);
+  assert.deepEqual(guardaPagina(pagina('<h1>Titolo</h1><p>testo</p>')), []);
+  assert.deepEqual(guardaPagina(pagina('<h1 class="x">Titolo</h1><br />\n<b>Warning</b>:  Undefined variable in <b>/x.php</b>')), ['1 avvisi di PHP nella pagina']);
+  assert.deepEqual(guardaPagina(pagina('<h1>Uno</h1><h1>Due</h1>')), ['2 h1 nella pagina']);
+  assert.deepEqual(guardaPagina(pagina('<h2>Senza titolo</h2>')), ['0 h1 nella pagina']);
+});
+
+test('riconosci: la riga ⏳ kit dice una pagina, il telaio, oppure nulla che si conosca', () => {
+  const { attese, riconosci } = require(SCRIPT);
+  const a = attese(DESIGN, 'abc');
+  const telaio = ['header', 'footer', 'form di default'];
+  assert.equal(riconosci('Servizi', a.pagine, telaio).pagina.titolo, 'Servizi');
+  assert.equal(riconosci('della pagina Servizi', a.pagine, telaio).pagina.titolo, 'Servizi');
+  // «Fisioterapia» e «Servizi» sono due pagine: vince il titolo che la riga nomina per intero.
+  assert.equal(riconosci('Fisioterapia', a.pagine, telaio).pagina.titolo, 'Fisioterapia');
+  assert.deepEqual(riconosci('telaio', a.pagine, telaio), { telaio: true });
+  assert.deepEqual(riconosci('del telaio (header e footer)', a.pagine, telaio), { telaio: true });
+  assert.deepEqual(riconosci('header', a.pagine, telaio), { telaio: true });
+  assert.deepEqual(riconosci('Listino', a.pagine, telaio), {});
+});
+
+test('vietati: i file che un kit in revisione non scrive prima dell\'ok', () => {
+  const { vietati } = require(SCRIPT);
+  const t = 'wp-content/themes/tema';
+  const leciti = ['DESIGN.md', `${t}/src/kit/abc-servizi.kit`, `${t}/html/abc-servizi.html`, `${t}/blocks/abc-block-x/README.md`, `${t}/blocks/abc-block-x/kit/_abc-block-x.kit`,
+    `${t}/blocks/abc-block-x/src/style.scss`, `${t}/blocks/abc-block-x/src/view.js`, `${t}/blocks/abc-block-x/build/style-index.css`, `${t}/src/scss/_telaio.scss`, `${t}/assets/css/main.css`];
+  const proibiti = [`${t}/blocks/abc-block-x/block.json`, `${t}/blocks/abc-block-x/render.php`, `${t}/blocks/abc-block-x/src/edit.js`, `${t}/blocks/abc-block-x/src/index.js`,
+    `${t}/blocks/abc-block-x/src/editor.scss`, `${t}/parts/header.html`, `${t}/templates/page.html`];
+  assert.deepEqual(vietati([...leciti, ...proibiti]), proibiti);
+});
