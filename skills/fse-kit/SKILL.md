@@ -131,6 +131,11 @@ not in the map stays where it is: never imported, never built, never given a row
 - Say which supports the block gets (`anchor`, `color.background/text`, `spacing.padding`):
   colours and padding of the section are **not** attributes.
 - A repeater becomes a child block `{prefix}/{child}` with its own folder and README.
+- The build reads the README with a script (`kit-pagina.js`, fse-build 2a), so the tables are
+  written in the notation of fse-foundations §3 "README.md — the contract": a value the shared
+  vocabulary does not place (a custom property, a `data-*`, an element modifier, an element
+  with another name) says in its Note where it is in the kit, and every BEM element, modifier
+  and state class of the kit appears in `## Markup`. Step 4.5 checks it.
 
 **3b. Kit per variant** — `kit/_{prefix}-block-{slug}-{variant}.kit`: the exact markup of the
 future render.php (§4): `<section class="wp-block-{prefix}-{slug} alignfull {prefix}-block-{slug}
@@ -138,7 +143,9 @@ future render.php (§4): `<section class="wp-block-{prefix}-{slug} alignfull {pr
 elements that map 1:1 to the attributes (`__title` ↔ `title`, `__text` ↔ `text`,
 `a.wp-element-button.__button` ↔ button*, `img.__img` ↔ image*), placeholder texts, images from
 `../assets/img/placeholder-*.jpg` (check they exist), children repeated 3 times for carousels.
-Core-block containers (columns-wrapper) hold plain `<h2>`/`<p>` markup.
+Core-block containers (columns-wrapper) hold plain `<h2>`/`<p>` markup (the build maps
+paragraphs, headings and `pre.wp-block-code` without attributes; anything else there stops the
+page).
 
 **3c. CSS** — `src/style.scss`: `@use 'breakpoints' as *;`, `.{prefix}-block-{slug}` BEM,
 `__inner` rule (`box-sizing: content-box; max-width: var(--wp--style--global--wide-size);
@@ -217,7 +224,17 @@ in its "kit" column until `fse-block-edit`/`fse-build` implements it.
    reverse: a section is not picked among the existing blocks and then filled.
 5. `npm run dev` → `/html/{prefix}-{page}.html` at 1440/768/390 with the model `pw-kit.js`
    (fse-foundations §9, `nome=kit-{page}`); fix until clean; screenshots
-   `.playwright-mcp/shots/kit-{page}-{w}.png`.
+   `.playwright-mcp/shots/kit-{page}-{w}.png`. Then the page must be one the build can map,
+   with `html/` compiled:
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/kit-pagina.js" "{site-root}" {page} controlla
+   ```
+   It reads the compiled kit and the README contracts and touches nothing. Exit 0 → mappable
+   (its `nota —` lines are the gaps the build will report: put the `#` and the `[da
+   confermare]` in the table of the gate). Exit 3 → one line per thing the kit shows and the
+   README does not say (an element, a modifier, a `data-*`, a text outside a mapped element):
+   fix the kit or the README **now**, before the gate; after the ok the build would skip the
+   page.
 6. `DESIGN.md → Pagine`: ordered block list (`hero (image), image-text (right), cta`) in the
    row, state still `da progettare`; `## Blocchi`: new rows `kit` with origin = this page.
    Then the Review.
@@ -277,6 +294,6 @@ Review) · `git push`, or any git command beyond the fse-foundations §10 rule; 
 - [ ] Kit per variant with parity markup; `src/style.scss` with tokens and `__inner`; `view.js` only if needed
 - [ ] `_css-shared.kit` (+ `_js-shared.kit`) and `{prefix}-blocks.kit` updated
 - [ ] Every section designed first, then mapped: new variants/blocks born wherever no existing variant renders the design (§4 "No catalogue constraint")
-- [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots
+- [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots, and mappable by the build (`kit-pagina.js … controlla` exit 0)
 - [ ] Review delivered once, for the whole item (never one block at a time), in the §10 handover shape: URL, screenshots, contracts, decisions, `[da confermare]` table, "ok o osservazioni" (no prompt to paste); ⏳ `kit {item} in revisione` written; row still `da progettare`
 - [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row, commit of the approved kit (fse-foundations §10; the push is the dev's), then `fse-build` run in the same turn

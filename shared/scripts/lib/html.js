@@ -40,4 +40,56 @@ function albero(html) {
   return radice;
 }
 
-module.exports = { albero };
+function attributi(testo) {
+  const trovati = {};
+  for (const m of testo.matchAll(ATTRIBUTO)) {
+    const nome = m[1].toLowerCase();
+    if (!(nome in trovati)) trovati[nome] = m[2] ?? m[3] ?? m[4] ?? '';
+  }
+  return trovati;
+}
+
+// Il documento intero, per chi deve leggere anche i valori (kit-pagina.js): elementi con
+// attributi e classi, testi ({ testo }) e commenti ({ commento }) tra i figli, nell'ordine.
+// `dentroDa` e `dentroA` sono le posizioni dell'HTML interno in `sorgente` (sulla radice).
+// Un elemento il cui contenuto non è HTML (svg, script, style) non ha figli: ha `grezzo`.
+function documento(html) {
+  const sorgente = String(html);
+  const radice = { tag: '', attr: {}, classi: [], figli: [], dentroDa: 0, dentroA: sorgente.length, sorgente };
+  const pila = [radice];
+  let letto = 0;
+  const testoFino = (fine) => {
+    if (fine > letto) pila[pila.length - 1].figli.push({ testo: sorgente.slice(letto, fine) });
+  };
+  for (const m of sorgente.matchAll(PEZZO)) {
+    testoFino(m.index);
+    letto = m.index + m[0].length;
+    const sopra = pila[pila.length - 1];
+    if (m[0].startsWith('<!--')) {
+      sopra.figli.push({ commento: m[0].slice(4, -3).trim() });
+    } else if (m[1]) {
+      const apertura = /^<[a-zA-Z][\w:-]*((?:[^>"']|"[^"]*"|'[^']*')*)>/.exec(m[0]);
+      const attr = attributi(apertura ? apertura[1] : '');
+      sopra.figli.push({ tag: m[1].toLowerCase(), attr, classi: (attr.class || '').split(/\s+/).filter(Boolean), figli: [], grezzo: m[0] });
+    } else if (m[2]) {
+      const tag = m[2].toLowerCase();
+      for (let i = pila.length - 1; i > 0; i--) {
+        if (pila[i].tag !== tag) continue;
+        for (let j = i; j < pila.length; j++) pila[j].dentroA = m.index;
+        pila.length = i;
+        break;
+      }
+    } else if (m[3]) {
+      const tag = m[3].toLowerCase();
+      const attr = attributi(m[4] || '');
+      const nodo = { tag, attr, classi: (attr.class || '').split(/\s+/).filter(Boolean), figli: [], dentroDa: letto, dentroA: letto };
+      sopra.figli.push(nodo);
+      if (!VUOTI.has(tag) && !/\/\s*$/.test(m[4] || '')) pila.push(nodo);
+    }
+  }
+  testoFino(sorgente.length);
+  for (let j = 1; j < pila.length; j++) pila[j].dentroA = sorgente.length;
+  return radice;
+}
+
+module.exports = { albero, documento };

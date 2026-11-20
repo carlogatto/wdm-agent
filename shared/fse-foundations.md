@@ -343,6 +343,30 @@ table does not exist. It is also the **only** place where variants, attributes a
 written: `DESIGN.md → Blocchi`, the project `CLAUDE.md → Existing Blocks` and the theme README
 list which blocks exist and nothing more, so they cannot drift from the contract.
 
+**What the build script reads in a README** (`kit-pagina.js`, fse-build 2a). The README is
+parsed by a script, so these forms are notation, not prose:
+- `## Varianti`: the first cell of a row is the value of the modifier (`split (default)`); a
+  row that sets an attribute other than `variant` says it as `` `source: "query"` ``.
+- `## Attributi`: the name in backticks, the type starting with `string`, `integer` or
+  `boolean`, the default in backticks. The shared vocabulary above places most values by name
+  (`.__title` ↔ `title`, `a.__button` ↔ `button*`, the second one ↔ `secondaryButton*`,
+  `a.__link` ↔ `link*`, `img.__img` ↔ `image*`, `.__icon` ↔ `icon`, any other string
+  attribute `{name}` ↔ `.__{name}`); the Note says where a value is in the kit when the name
+  does not: `` kit: `.__eyebrow` `` (an element with another name), `` → `style="--{prefix}-columns:N"` ``
+  (a custom property), `` → `data-per-view` `` (a data attribute), `` `false` → `__inner--start` ``
+  (a value given by an element modifier).
+- The line `Supports:` names `anchor` and `color…` in backticks when the block has them: an
+  `id` or a colour class on a block that does not declare them is not mapped.
+- `## Figli`: each child as `` `{prefix}/{child}` ``; "InnerBlocks liberi" for free core
+  blocks; "Solo in `{variant}`" when the children exist only in that variant (in the others
+  the kit shows derived content, which is not written).
+- A BEM element printed by a plugin: "Parità kit ↔ render: fino a `__el` incluso" (§4): the
+  script does not read inside it.
+- Every BEM element, element modifier, state class (`is-style-inverted`) and `data-*`
+  attribute of the kit appears in `## Markup` or in a Note. What the kit shows and the README
+  does not name stops the build of that page (exit 3 of the script, with the name): nothing is
+  dropped to make a page pass.
+
 ## 4. Kit = render.php — the parity rule
 
 Kit markup (`blocks/{prefix}-block-{slug}/kit/_{prefix}-block-{slug}-{variant}.kit`) is the

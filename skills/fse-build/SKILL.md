@@ -14,8 +14,9 @@ description: 'Use to build the whole site in WordPress from the approved kits fo
 3. Read the project `CLAUDE.md` and the rest of `DESIGN.md` (`## Brief` if present, `## Telaio`,
    `## Pagine`, `## Navigazione`, `## Blocchi`, `## Domande aperte`).
 4. Read `${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/SKILL.md` (Step 1–5 run inline at Step 3).
-5. For every page of the perimeter: its kit (`src/kit/{prefix}-{page}.kit`) **and** its compiled
-   `html/{prefix}-{page}.html`, plus the `README.md` of every block it uses.
+5. For every page of the perimeter: its kit (`src/kit/{prefix}-{page}.kit`). The compiled
+   `html/{prefix}-{page}.html` and the block READMEs are read by `scripts/kit-pagina.js` (2a):
+   open a README only for a block to create (Step 5) or one the script names in a reason.
 
 All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 
@@ -98,55 +99,76 @@ after the dev's ok there, and this run builds only rows that passed them.
 Progress line in `DESIGN.md → ## Domande aperte`: `⏳ build sito: pagina {Titolo} {M}/{N} (dal
 YYYY-MM-DD)`, updated per page, removed at Step 4.
 
-### 2a. Target sequence from the compiled kit
-Parse `html/{prefix}-{page}.html` → `<main>` → top-level `section` elements with a class
-`{prefix}-block-{slug}`: `K[i] = { slug, variant, values }`:
-- `variant` = modifier `{prefix}-block-{slug}--{x}` → the README `## Varianti` row → attributes;
-- `values` = from the README `## Markup`: `.__title` → `title` (inner HTML, `<br>`/`<strong>`
-  kept), `.__text` → `text`, `a.__button` → `buttonText` (text) / `buttonUrl` (href; `#` →
-  `""`, reported) / `buttonNewTab` (`target="_blank"`), a text link (`a.__link` → `linkText` /
-  `linkUrl`) keeps its href as it is, `#` included (without it the block drops the element that
-  holds the link, and the page would differ from the kit in structure), `img.__img` → image (basename of `src`
-  → attachment: `{wp-cli} post list --post_type=attachment --name=<basename-without-ext>
-  --field=ID`; absent → `{wp-cli} media import {theme-root}/assets/img/<file> --porcelain`; then
-  `imageId` + `imageUrl` (`wp_get_attachment_url`) + `imageAlt` (alt)), `style="--{prefix}-x:N"`
-  / `data-*` → the attribute the README maps; `id` on the section → `anchor`; colour classes
-  `has-{slug}-background-color` → `backgroundColor`, `has-{slug}-color` → `textColor`; children (`.swiper-slide`, cards) → one
-  child block each with the same mapping; a core-block container → `core/heading` (`level` from
-  the tag) / `core/paragraph` per `<p>` (`content` verbatim), `textAlign` from
-  `has-text-align-*`. An icon of the set arrives inlined in the compiled page: its slug is the
-  name of the file in `assets/img/icons/` with the same markup (compare the files, never guess
-  from the drawing). A `{prefix}/form`: `formId` is the Formidable form whose key is the
-  `form_key` field of the kit's form (`{wp-cli} eval 'echo (int) FrmForm::get_id_by_key(
-  "{key}" );'`); no such form → `formId` 0, reported ("form «{key}» da creare in Formidable").
-- Post-derived content (a `card` child with only `postType`/`postId`; a `cards-carousel` query
-  variant): the kit card shows a title → resolve it to a **published** post with that title
-  (case/entity-insensitive, then slug), `postType` from the post found; no match → `postId: 0`
-  and report ("card senza contenuto: titolo X non trovato"). A card whose title is the
-  placeholder of the base theme's catalogue («Titolo del contenuto») is not looked up by title:
-  it keeps the post the WordPress page already has in that position and, on a page not built
-  yet, takes the most recent published post; a site with no published post → `postId: 0`,
-  reported. Query variant: `postType`/`count`
-  from `data-post-type`/`data-count` on the section when the kit has them, else the README
-  defaults. A `data-*`/`style` attribute the README does not map → the page is skipped (below).
-- The README `## Attributi` "Note" column may name the kit selector explicitly (e.g. `kit:
-  .__eyebrow`): it wins over the BEM naming convention above.
+### 2a. Target sequence and block file — `scripts/kit-pagina.js` (never by hand)
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/kit-pagina.js" "{site-root}" {page} "{scratchpad}/page-{slug}.html" page={slug}
+```
+`{page}` is the kit name without the prefix (`src/kit/{prefix}-{page}.kit`, compiled to
+`html/{prefix}-{page}.html`); `page=` is the page in WordPress (ID, URL path or slug) and is
+omitted on a page not built yet. The script reads the compiled kit, the README of every block it
+meets, the icons of the set and the theme patterns, asks WordPress for the ids, imports the kit
+images the media library lacks, and writes the file that `wp-page.php` compares (2d). It prints
+the sequence `K` (one label per top-level block, `slug (variant)`), the page options the kit
+implies (2e) and one `nota —` line per gap: keep the output, it goes into the log row and the
+report. Same kit and same site → the same file, byte for byte.
+
+**The block file is never written or edited by hand, and no generator is written during the
+run.** Exit **0** → file written. Exit **3** → the page cannot be mapped: one line per reason
+(the block, the element, what the README should say); nothing was written and WordPress was not
+touched → the page is skipped (below). Exit **2** → environment (kit not compiled, WP-CLI not
+answering): fix it and run again. Exit 1 is never the script's.
+
+What the script does is the mapping contract, the same for every block, present or future
+(the notation it reads in a README is in fse-foundations §3 "README.md — the contract"):
+- `variant` = modifier `{prefix}-block-{slug}--{x}` → the attribute the README `## Varianti`
+  row of `x` names (`` `source: "query"` ``), else `variant`;
+- values: `.__{name}` → the string attribute `{name}` (inner HTML, `<br>`/`<strong>` kept; a
+  Note `kit: .__eyebrow` wins over the name), the tag of `.__title` → `headingLevel`,
+  `a.__button` → `buttonText` / `buttonUrl` (href; `#` → `""`, reported) / `buttonNewTab`
+  (`target="_blank"`), the second `.__button` → `secondaryButton*`, a text link (`a.__link` →
+  `linkText` / `linkUrl`) keeps its href as it is, `#` included (without it the block drops the
+  element that holds the link, and the page would differ from the kit in structure),
+  `img.__img` → image (a file of `assets/img/`: the attachment with that name, imported when
+  absent; then `imageId` + `imageUrl` + `imageAlt`), `style="--{prefix}-x:N"` / `data-*` / an
+  element modifier → the attribute whose Note names it; `id` on the section → `anchor`; colour
+  classes `has-{slug}-background-color` → `backgroundColor`, `has-{slug}-color` → `textColor`;
+  children (`.swiper-slide`, cards) → one child block each with the same mapping, when `##
+  Figli` names them; in a block with free InnerBlocks, `<p>` → `core/paragraph`, `<h1>`–`<h6>` →
+  `core/heading` (`level` from the tag), `pre.wp-block-code` → `core/code`, only in their form
+  without attributes (a `has-text-align-*` class or any other core block → the page is skipped).
+  An icon of the set arrives inlined in the compiled page: its slug is the name of the file in
+  `assets/img/icons/` with the same markup. A `{prefix}/form`: `formId` is the Formidable form
+  whose key is the `form_key` field of the kit's form; no such form → `formId` 0, reported
+  ("form «{key}» da creare in Formidable"). Defaults are omitted.
+- Post-derived content (a `card` child the kit shows **without `__text`**; a `cards-carousel`
+  query variant, whose cards are not written: `## Figli` says "Solo in `manual`"): the kit card
+  shows a title → a **published** post with that title, then with that slug, `postType` from
+  the post found; no match → `postId: 0` and reported ("card senza contenuto: titolo X non
+  trovato"). A card whose title is the placeholder of the base theme's catalogue («Titolo del
+  contenuto») is not looked up by title: it keeps the post the WordPress page already has in
+  that position (`page=`) and, on a page not built yet, takes the most recent published post; a
+  site with no published post → `postId: 0`, reported.
 - The default form at the end of `<main>` (`.wp-block-template-part.{prefix}-form-contacts`)
   is telaio, printed by the template: it is never mapped to a block and never a reason to skip
   the page. It only decides the page option `{prefix}_show_form` (2e).
 - A top-level element of `<main>` that is not a `{prefix}-block-*` section but carries the root
   class of a theme pattern (`{prefix}-{x}` ↔ `patterns/{prefix}-{x}.php`) → the pattern's block
-  markup (core blocks) with the kit's texts and extra `className`s; any other unmapped top-level
-  element → the page is skipped (below): an element is never dropped to make the page pass.
-- Texts verbatim (entities decoded), placeholders `[da confermare]` included. Never rewritten.
-  An HTML comment `<!-- {attribute} "value" [da confermare]: … -->` next to an element marks that
-  value (typically a URL) as provisional: use it and report it.
+  markup with the kit's texts in its headings and paragraphs, in order (a different number of
+  them → the page is skipped); any other unmapped top-level element → the page is skipped.
+- **Nothing is dropped.** Inside a block every project class, modifier, `data-*`, `--{prefix}-*`
+  property and text is either read by a rule above or named by the block README; anything else
+  is a reason of the exit 3. The script does not look inside the element a README declares as
+  plugin output ("Parità kit ↔ render: fino a `__el` incluso").
+- Texts verbatim, placeholders `[da confermare]` included. Never rewritten. An HTML comment
+  `<!-- {attribute} "value" [da confermare]: … -->` next to an element marks that value
+  (typically a URL) as provisional: the script uses the element's value and reports the comment.
 
 **A page that cannot be mapped is skipped, not the run.** An unknown element, modifier or
 attribute means the kit says something the README contract does not cover: nothing of that page
 is generated or written (never a partial page), its row stays as it is (`kit` stays `kit`), the
-report names the page, the element and the README that should map it, and the run goes on with
-the next page. The fix is a kit or README revision (`fse-kit`), not a question in the middle.
+report carries the lines the script printed, and the run goes on with the next page. The fix is
+a kit or README revision (`fse-kit`), not a question in the middle and never a file composed by
+hand to get past the script.
 
 ### 2b. Missing blocks → scaffold (Step 5), all variants
 For every distinct `slug` of K without `blocks/{prefix}-block-{slug}/block.json` → Step 5. An
@@ -165,16 +187,17 @@ saved content as expected, frontend renders render.php. A failure here is fixed 
 `plan` is the only check that the page in WordPress is what the kit says: it runs for **every**
 page of the perimeter, in every run, also when "nothing changed" and also when the page will not
 be written. A run that skips it has verified nothing for that page, and the log row says which
-pages went through it. Generate `{scratchpad}/page-{slug}.html` from K with the README `## Markup di inserimento` of
-each block: `<!-- wp:{prefix}/{slug} {"attr":"value"} /-->`, children inside the parent, core
-blocks with their HTML, `imageId` always with `imageUrl` (+ `imageAlt`), defaults omitted. Ids
-(images, posts, forms, pages) are resolved from WP, never invented: the file is deterministic.
+pages went through it. The file is `{scratchpad}/page-{slug}.html`, written by
+`kit-pagina.js` in 2a (`<!-- wp:{prefix}/{slug} {"attr":"value"} /-->`, children inside the
+parent, core blocks with their HTML, `imageId` always with `imageUrl`, defaults omitted, ids
+resolved from WP): never a file composed or corrected by hand.
 ```bash
 {wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" plan "{scratchpad}/page-{slug}.html" page={slug}
 ```
 The script first checks the generated file: a block comment whose attributes are not a JSON
 object is an error (exit 2 with the block name — WordPress would read it as a block without
-attributes and the page would look fine): fix the file, never the script's verdict. Then it
+attributes and the page would look fine): it means the file did not come from `kit-pagina.js`
+as it wrote it; generate it again (2a), never touch the verdict. Then it
 aligns the top-level blocks of the file (G) and of the page (W) by key (block name + variant;
 `page=` accepts the ID, the URL path `servizi/fisioterapia` or the slug) and compares normalized
 attributes, children included. What happens next depends on **whose page it is**, which the
@@ -207,8 +230,8 @@ it is the page's section of the log row.
 ```bash
 ID=$({wp-cli} post create --post_type=page --post_title="{Titolo}" --post_name={slug} --post_parent={parent-id} --post_status=publish --porcelain)   # only when plan said "pagina assente"
 {wp-cli} eval-file "${CLAUDE_PLUGIN_ROOT}/skills/fse-build/scripts/wp-page.php" apply "{scratchpad}/page-{slug}.html" page=$ID   # the ID after a create; else the slug or the URL path
-{wp-cli} post meta update $ID {prefix}_show_title 0   # only if K[0] is a hero variant image and the meta differs (the h1 is in the content); else leave the default 1
-{wp-cli} post meta update $ID {prefix}_show_form 0    # only if the kit of the page does not print the default form at the end of <main> (2a) and the meta differs; else leave the default 1
+{wp-cli} post meta update $ID {prefix}_show_title 0   # only if 2a printed "{prefix}_show_title 0" (the kit has its own h1) and the meta differs; else leave the default 1
+{wp-cli} post meta update $ID {prefix}_show_form 0    # only if 2a printed "{prefix}_show_form 0" (the kit does not print the default form at the end of <main>) and the meta differs; else leave the default 1
 ```
 `apply` writes only when there is a difference (exit **5** `scritto`, exit **0** `0 differenze,
 nessuna scrittura`, exit **6** nothing to write on a page modified by hand). On a page not
@@ -237,8 +260,10 @@ Editor: the page opens with 0 invalid / 0 `core/missing` blocks, `isEditedPostDi
 block count = N. Frontend at 1440/768/390: `scrollWidth === innerWidth`, exactly one h1,
 as many carousels started as the page has (`caroselliAvviati` = `caroselli`), every in-page anchor target exists. Screenshots editor +
 frontend ×3 in `.playwright-mcp/shots/`. On a page written from the kit in this run also the
-texts must be the kit's (2f): a wrong text there is a mapping error of this run, fixed in the
-generated file and applied again.
+texts must be the kit's (2f): a wrong text there is a mapping error, and the file is never the
+place to fix it: correct the kit or the README note the script reads, run 2a again, `apply`
+again. Kit and README right and the file wrong → a defect of the script: the page goes to the
+report with the element, and its row stays `kit`.
 
 **Structure parity** is checked by the script, for the whole site at once (fse-foundations §4):
 ```bash
@@ -250,7 +275,8 @@ on a page of this run: a difference where **WP is right and the kit is wrong** (
 `render.php` always prints, an element the README fixes, a stale kit) is **fixed in the kit in
 this run** (the files `fse-kit` would touch, texts untouched), `npm run build`, check again, one
 line in the log row: never handed back to the dev, never a `## Domande aperte` item. A
-difference where the kit is right is a mapping error: fix the generated file, `apply` again. A
+difference where the kit is right is a mapping error: handle it as above (kit or README, then
+2a and `apply` again; never the file). A
 difference that stays (it would change the design: order, variant, a missing element on a page
 modified by hand) goes in the report with the line the script printed, and the row of a page
 built in this run goes back to `kit`. Exit 3 → say why in the report; the pages keep their
@@ -387,7 +413,8 @@ the report, and `confirm` runs in a later turn.
 
 ## Never
 
-`save()` with markup · rename or remove attributes of an implemented block · delete a block, a
+`save()` with markup · write or edit the block file of a page by hand, or write a generator for
+it (2a: `kit-pagina.js` only) · rename or remove attributes of an implemented block · delete a block, a
 page or a `wp_navigation` without `confirm` in a later turn · ask during the run (the charter
 decides, the report collects) · skip 2d for a page, or narrow the perimeter because the prompt
 names one page · drop an unmapped element to make a page pass · `apply … forza` without the
@@ -400,7 +427,7 @@ the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are th
 
 - [ ] Guard passed, state on disk verified, perimeter and opening line reported
 - [ ] Missing blocks scaffolded with every README variant; build exit 0; hook silent; smoke test 0 console errors
-- [ ] Every page of the perimeter through `wp-page.php plan` → `apply` (2d never skipped); deletions left to `confirm`; pages modified by hand left to WordPress; pages skipped named with what unblocks them; page options derived
+- [ ] Every page of the perimeter through `kit-pagina.js` (the block file never by hand) and `wp-page.php plan` → `apply` (2d never skipped); deletions left to `confirm`; pages modified by hand left to WordPress; pages skipped named with what unblocks them; page options derived
 - [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; `parita.js` silent on the whole site (kit errors fixed in the kit in this run, differences that stay reported)
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
