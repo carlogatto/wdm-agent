@@ -6,6 +6,7 @@
  *   {wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php dump
  *   {wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php plan header=<kit> footer=<kit> > {scratchpad}/nav-plan.json
  *   {wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php apply <plan.json> [confirm] [parts=<dir>]
+ *   {wp-cli} eval-file ${CLAUDE_PLUGIN_ROOT}/skills/fse-menu-build/scripts/wp-navigation.php apply <plan.json> prova [parts=<dir>]
  *
  * dump  → JSON: ref dei blocchi navigation per part (parts/*.html), post wp_navigation con
  *         l'albero delle voci, pagine di ogni stato, pagina in front.
@@ -23,9 +24,12 @@
  *         controlla il post type del ref: un id sbagliato stampa una pagina dentro il menu).
  *         Le parts si controllano prima di scrivere: una part assente o senza il blocco giusto
  *         ferma tutto con exit 1. `parts=<dir>` sostituisce {theme-root}/parts (test, dry run).
+ *         Con `prova` confronta e basta: stampa il diff di ogni menu (o «0 differenze», o «da
+ *         creare») e non scrive mai, né un post né un ref. Lo usa lo script di controllo.
  *
  * Exit: 0 ok · 1 errore · 3 voci che WordPress perderebbe, in attesa di conferma · 4 menu aperto
- * nell'editor da un utente, nulla scritto.
+ * nell'editor da un utente, nulla scritto · 5 solo con `prova`: almeno un menu è diverso dal
+ * piano, nulla scritto.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -406,12 +410,15 @@ if ( $fmb_mode === 'plan' ) {
 if ( $fmb_mode === 'apply' ) {
   $plan_file = isset( $fmb_args[1] ) ? $fmb_args[1] : '';
   $confirm   = false;
+  $dry       = false;
   $parts_dir = '';
   foreach ( array_slice( $fmb_args, 2 ) as $arg ) {
     if ( $arg === 'confirm' ) { $confirm = true; continue; }
+    if ( $arg === 'prova' ) { $dry = true; continue; }
     if ( strpos( $arg, 'parts=' ) === 0 ) { $parts_dir = substr( $arg, 6 ); continue; }
-    fmb_err( "argomento non valido: $arg (ammessi: confirm, parts=<dir>)" );
+    fmb_err( "argomento non valido: $arg (ammessi: confirm, prova, parts=<dir>)" );
   }
+  if ( $dry && $confirm ) fmb_err( '`prova` non scrive: non va insieme a `confirm`' );
   $plan = $plan_file && file_exists( $plan_file ) ? json_decode( file_get_contents( $plan_file ), true ) : null;
   if ( ! is_array( $plan ) || empty( $plan['menus'] ) ) fmb_err( "piano non leggibile: $plan_file" );
 
@@ -442,6 +449,21 @@ if ( $fmb_mode === 'apply' ) {
       if ( $who !== '' ) $locked[] = "{$menu['title']} (aperto da $who)";
     }
     $ops[] = array( 'menu' => $menu, 'content' => $content, 'existing' => $existing );
+  }
+  if ( $dry ) {
+    // Solo confronto: i menu diversi hanno già stampato il loro diff qui sopra.
+    $different = 0;
+    foreach ( $ops as $op ) {
+      if ( ! $op['existing'] ) {
+        echo "{$op['menu']['title']}: da creare\n";
+        $different++;
+      } elseif ( trim( $op['existing']->post_content ) === trim( $op['content'] ) ) {
+        echo "{$op['menu']['title']} (id {$op['existing']->ID}): 0 differenze\n";
+      } else {
+        $different++;
+      }
+    }
+    fmb_halt( $different ? 5 : 0 );
   }
   if ( $locked ) {
     echo "\nNessuna scrittura: menu aperto nell'editor — " . implode( ', ', $locked ) . ". Chiudi la scheda dell'editor e rilancia.\n";
@@ -480,4 +502,4 @@ if ( $fmb_mode === 'apply' ) {
   fmb_halt( 0 );
 }
 
-fmb_err( 'uso: dump | plan part=<kit> … | apply <plan.json> [confirm] [parts=<dir>]' );
+fmb_err( 'uso: dump | plan part=<kit> … | apply <plan.json> [confirm | prova] [parts=<dir>]' );

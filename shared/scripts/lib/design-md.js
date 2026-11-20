@@ -1,5 +1,6 @@
 // DESIGN.md → Project Config: lettura e scrittura delle righe `| `nome` | valore |`, e la riga
-// {wp-cli} come elenco di argomenti. Lo usano gli hook, il sync dei token e il setup.
+// {wp-cli} come elenco di argomenti; le tabelle di stato (## Telaio, ## Pagine). Lo usano gli
+// hook, il sync dei token, il setup, la parità e il controllo.
 //
 // {wp-cli} è una riga di comando scritta per bash (su Windows: Git Bash). Chi la esegue da Node
 // la divide con argomenti() e lancia il primo elemento senza shell; chi la scrive usa comando().
@@ -73,4 +74,20 @@ function comando(argv) {
   return argv.map((a) => (/^[A-Za-z0-9_.,:=\/@%+-]+$/.test(a) ? a : `"${a.replace(/(["\\$`])/g, '\\$1')}"`)).join(' ');
 }
 
-module.exports = { valore, eFse, imposta, argomenti, comando };
+// Le righe di una tabella sotto un titolo `## …`, come oggetti { colonna minuscola: valore }.
+function tabella(design, titolo) {
+  const righe = design.split(/\r?\n/);
+  const inizio = righe.findIndex((r) => r.trim() === `## ${titolo}`);
+  if (inizio === -1) return [];
+  const celle = (riga) => riga.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+  const corpo = [];
+  for (let i = inizio + 1; i < righe.length && !/^## /.test(righe[i]); i++) {
+    if (righe[i].trim().startsWith('|')) corpo.push(righe[i]);
+    else if (corpo.length) break;
+  }
+  if (corpo.length < 3) return [];
+  const colonne = celle(corpo[0]).map((c) => c.toLowerCase());
+  return corpo.slice(2).map((riga) => Object.fromEntries(celle(riga).map((valore, i) => [colonne[i] || `col${i}`, valore])));
+}
+
+module.exports = { valore, eFse, imposta, argomenti, comando, tabella };

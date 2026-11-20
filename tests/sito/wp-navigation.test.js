@@ -3,6 +3,7 @@
 // scrivere. `confirm` serve solo quando WordPress perderebbe qualcosa (U07); un menu aperto
 // nell'editor non si scrive (U16); le parts si controllano prima di creare un menu.
 // Exit: 0 ok · 1 errore · 3 perdite in attesa di conferma · 4 menu aperto nell'editor.
+// `apply … prova` confronta e non scrive mai (lo usa controllo.js): 0 nessuna differenza · 5 differenze.
 // I casi sono in sequenza.
 const { describe, it, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -57,6 +58,14 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
   it('(a) primo apply: crea il menu e scrive il ref nella part', () => {
     scriviKit('Privacy &amp; Cookie');
     pianifica();
+    // Prima, in prova: il menu che manca è «da creare», e non nasce né il post né il ref.
+    const menu = () => sito.wp(['post', 'list', '--post_type=wp_navigation', '--post_status=any', '--format=count']).stdout.trim();
+    const prima = menu();
+    const prova = applica('prova');
+    assert.equal(prova.status, 5, prova.out);
+    assert.match(prova.out, /da creare/);
+    assert.equal(menu(), prima, 'prova ha creato un menu');
+    assert.ok(!fs.readFileSync(path.join(parts, 'header.html'), 'utf8').includes('"ref"'), 'prova ha scritto il ref');
     const r = applica();
     assert.equal(r.status, 0, r.out);
     assert.match(r.out, /creato/);
@@ -77,6 +86,14 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
     assert.match(r.out, /0 differenze/);
   });
 
+  it('(c2) prova: menu allineato → 0 differenze, exit 0; con confirm è un errore', () => {
+    let r = applica('prova');
+    assert.equal(r.status, 0, r.out);
+    assert.match(r.out, /0 differenze/);
+    r = applica('prova', 'confirm');
+    assert.equal(r.status, 1, r.out);
+  });
+
   it('(d) aggiornamento di un menu esistente: stessa garanzia', () => {
     scriviKit('Privacy, Cookie &amp; Termini');
     pianifica();
@@ -92,6 +109,9 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
     scriviVoci('Uno', 'Due');
     atteso(0, ['confirm']);
     scriviVoci('Uno', 'Due', 'Contatti');
+    // In prova l'aggiunta si vede e non si scrive (senza `prova` si scriverebbe subito).
+    atteso(5, ['prova'], '+ ');
+    assert.ok(!contenuto().includes('Contatti'), 'prova ha scritto');
     atteso(0, [], 'aggiornato', '+ ');
     assert.ok(contenuto().includes('Contatti'));
   });
@@ -110,6 +130,8 @@ describe('wp-navigation.php', { skip: sito.nonDisponibile() || false }, () => {
 
   it('(h) voce tolta dal kit: exit 3 con il nome della voce, nulla scritto; confirm la toglie', () => {
     scriviVoci('Contatti', 'Uno');
+    // In prova una perdita è una differenza come le altre: exit 5, nulla scritto.
+    atteso(5, ['prova'], 'WordPress perderebbe: «Due»');
     atteso(3, [], 'WordPress perderebbe: «Due»');
     assert.ok(contenuto().includes('Due'), 'apply senza confirm ha scritto');
     atteso(0, ['confirm'], 'aggiornato');

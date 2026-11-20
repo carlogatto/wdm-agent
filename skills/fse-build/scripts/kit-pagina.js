@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // fse-build 2a/2d — dal kit compilato di una pagina al file di blocchi che wp-page.php confronta.
 //
-//   node kit-pagina.js <site-root> <pagina> <file-di-uscita> [page=<slug|ID>]
+//   node kit-pagina.js <site-root> <pagina> <file-di-uscita> [page=<slug|ID>] [sola-lettura]
 //   node kit-pagina.js <site-root> <pagina> controlla
 //
 // <pagina> è il nome del kit senza prefisso (home → html/{prefix}-home.html). Legge il kit
@@ -9,7 +9,8 @@
 // WordPress, con {wp-cli} di DESIGN.md, solo gli id (immagini, post, form). `page=` è la pagina
 // già costruita, se c'è: serve alle card segnaposto, che tengono il post che hanno lì.
 // `controlla` mappa e basta: non chiede nulla a WordPress e non scrive file (fse-kit prima del
-// gate).
+// gate). Con `sola-lettura` scrive il file ma in WordPress legge soltanto: un'immagine del kit
+// che manca in libreria non si importa, e la pagina esce come non mappabile (controllo.js).
 //
 // Non ha regole per singolo blocco: applica il vocabolario condiviso degli attributi
 // (fondamenta §3) e legge dal README ciò che il vocabolario non dice. Nulla si perde in
@@ -32,7 +33,7 @@ const { valore, eFse, argomenti } = require('../../../shared/scripts/lib/design-
 const { documento } = require('../../../shared/scripts/lib/html.js');
 
 const PHP = path.join(__dirname, 'kit-pagina.php');
-const USO = 'uso: node kit-pagina.js <site-root> <pagina> <file-di-uscita> [page=<slug|ID>] | node kit-pagina.js <site-root> <pagina> controlla';
+const USO = 'uso: node kit-pagina.js <site-root> <pagina> <file-di-uscita> [page=<slug|ID>] [sola-lettura] | node kit-pagina.js <site-root> <pagina> controlla';
 // Il titolo delle card «da un post» nel catalogo del tema base: non si cerca tra i post.
 const SEGNAPOSTO = 'Titolo del contenuto';
 // Attributi che hanno una regola loro, non quella dell'elemento con lo stesso nome.
@@ -627,10 +628,12 @@ function chiedi(riga, richiesta) {
 }
 
 function esegui(argv) {
-  const [sitoDato, pagina, terzo, ...resto] = argv;
+  const [sitoDato, pagina, terzo, ...dati] = argv;
   const soloControllo = terzo === 'controlla';
+  const solaLettura = dati.includes('sola-lettura');
+  const resto = dati.filter((d, i) => !(d === 'sola-lettura' && dati.indexOf(d) === i));
   const pageWp = resto.length === 1 && /^page=.+/.test(resto[0]) ? resto[0].slice(5) : '';
-  if (!sitoDato || !pagina || !terzo || (soloControllo ? resto.length : resto.length > 1 || (resto.length === 1 && !pageWp))) {
+  if (!sitoDato || !pagina || !terzo || (soloControllo ? dati.length : resto.length > 1 || (resto.length === 1 && !pageWp))) {
     console.error(USO);
     return 2;
   }
@@ -668,7 +671,12 @@ function esegui(argv) {
     const richiesta = { ...m.richieste, pagina: pageWp };
     let risposte = chiedi(riga, richiesta);
     const importate = [];
-    for (const file of m.richieste.immagini.filter((f) => !risposte.immagini[f])) {
+    const mancanti = m.richieste.immagini.filter((f) => !risposte.immagini[f]);
+    if (solaLettura && mancanti.length) {
+      console.log(`${nome}: in sola lettura non importo le immagini del kit che mancano nella libreria media (${mancanti.join(', ')}): nulla è stato scritto.`);
+      return 3;
+    }
+    for (const file of mancanti) {
       importate.push(`${file} (id ${wp(riga, ['media', 'import', path.join(p.tema, 'assets', 'img', file), '--porcelain']).trim()})`);
     }
     if (importate.length) {

@@ -34,7 +34,7 @@ const http = require('node:http');
 const https = require('node:https');
 const path = require('node:path');
 
-const { valore, eFse } = require('./lib/design-md.js');
+const { valore, eFse, tabella } = require('./lib/design-md.js');
 const { albero } = require('./lib/html.js');
 
 const USO = 'uso: node parita.js <site-root> [--html <cartella>] [--url <indirizzo>]';
@@ -141,22 +141,6 @@ function confronta(kit, sito, sopra = []) {
 }
 
 // ---------- DESIGN.md ----------
-
-// Le righe di una tabella sotto un titolo `## …`, come oggetti { colonna minuscola: valore }.
-function tabella(design, titolo) {
-  const righe = design.split(/\r?\n/);
-  const inizio = righe.findIndex((r) => r.trim() === `## ${titolo}`);
-  if (inizio === -1) return [];
-  const celle = (riga) => riga.trim().replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
-  const corpo = [];
-  for (let i = inizio + 1; i < righe.length && !/^## /.test(righe[i]); i++) {
-    if (righe[i].trim().startsWith('|')) corpo.push(righe[i]);
-    else if (corpo.length) break;
-  }
-  if (corpo.length < 3) return [];
-  const colonne = celle(corpo[0]).map((c) => c.toLowerCase());
-  return corpo.slice(2).map((riga) => Object.fromEntries(celle(riga).map((valore, i) => [colonne[i] || `col${i}`, valore])));
-}
 
 // { prefisso, url, tema, pagine: [{ titolo, percorso, kit }], header, footer }
 function progetto(sito) {

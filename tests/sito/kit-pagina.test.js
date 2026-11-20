@@ -58,6 +58,15 @@ describe('kit-pagina.js sul sito', { skip: sito.nonDisponibile() || false }, () 
     assert.deepEqual(allegati(), []);
   });
 
+  it('(a2) sola-lettura: le immagini che mancano non si importano, exit 3 e nessun file', () => {
+    const r = kit('blocks', file, 'sola-lettura');
+    assert.equal(r.status, 3, r.out);
+    assert.match(r.out, /in sola lettura non importo le immagini.*placeholder-2000x1150\.jpg/);
+    assert.equal(fs.existsSync(file), false);
+    assert.deepEqual(allegati(), []);
+    assert.equal(kit('blocks', 'controlla', 'sola-lettura').status, 2, 'con controlla non ha senso: uso');
+  });
+
   it('(b) il Catalogo del tema base: file scritto, immagini importate, form e card dichiarati', () => {
     const r = kit('blocks', file);
     assert.equal(r.status, 0, r.out);
@@ -98,6 +107,10 @@ describe('kit-pagina.js sul sito', { skip: sito.nonDisponibile() || false }, () 
     const r = kit('blocks', file, `page=${SLUG}`);
     assert.equal(r.status, 0, r.out);
     assert.doesNotMatch(r.out, /immagini importate/);
+    // Con le immagini già in libreria, in sola lettura esce lo stesso file.
+    const copia = `${file}.sola-lettura`;
+    assert.equal(kit('blocks', copia, `page=${SLUG}`, 'sola-lettura').status, 0);
+    assert.equal(fs.readFileSync(copia, 'utf8'), fs.readFileSync(file, 'utf8'));
     assert.equal(fs.readFileSync(file, 'utf8'), prima);
     assert.deepEqual(allegati(), ['placeholder-2000x1150', 'placeholder-700x450']);
   });
