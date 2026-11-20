@@ -1,9 +1,38 @@
 ---
 name: fse-build
-description: 'Use to build the whole site in WordPress from the approved kits for a wdm-theme FSE project — every `kit`/`implementata` row of DESIGN.md (telaio, pages, menus) in one run, re-runnable: it applies only the kit ↔ WP difference — "costruisci il sito", "build del sito", "monta la home in WP", "riallinea WP ai kit", "prosegui con la build", or when a DESIGN.md row is `kit` and not yet implemented. Missing native blocks are created along the way. Not for wdm-starter projects (`dev-page-build`).'
+description: 'Use to build the whole site in WordPress from the approved kits for a wdm-theme FSE project — every `kit`/`implementata` row of DESIGN.md (telaio, pages, menus) in one run, re-runnable: it applies only the kit ↔ WP difference — "costruisci il sito", "build del sito", "monta la home in WP", "riallinea WP ai kit", "prosegui con la build", the dev''s `confirm` of a deletion an earlier build showed, or when a DESIGN.md row is `kit` and not yet implemented. Missing native blocks are created along the way. Not for wdm-starter projects (`dev-page-build`), and not for the ok to a kit under review (that is `fse-kit`, which builds after recording it). Runs in a sub-agent that does not see the conversation: pass the dev''s message word for word as arguments, plus `anteprima=` followed by the address of the kit preview when it is on; when it returns, follow the block at the end of its result.'
+context: fork
+agent: general-purpose
+background: false
 ---
 
 # FSE Build — approved kits → native blocks → the WordPress site, autonomously and re-runnable
+
+## The request — this skill runs in a sub-agent
+
+You are a **unit of work** (fse-foundations §10 "Units of work in a sub-agent"): you run in a
+sub-agent, you do not see the conversation and you cannot ask the dev anything. What the dev
+wrote is here, word for word, as the main conversation passed it:
+
+> $ARGUMENTS
+
+(Reading this file from disk inside a unit that `fse-kit` started after an ok, the line above
+is a literal placeholder: your request is the one that unit received, and you go on from Step 0.)
+
+- **One run, then stop.** The whole perimeter, the report, the block for the main conversation.
+  Never the kit of a page: the main conversation starts it.
+- **A `confirm` is the dev's, in the request, for a diff already shown.** It is valid for a
+  deletion or a menu rewrite that an earlier run reported: its `⏳` line is in `## Domande
+  aperte`. A `confirm` for something this run computes now is not one: the diff goes in the
+  report and waits.
+- **"Il controllo non passa: …"** as the request → the rows name what is wrong (a page that
+  differs from its kit, a menu, a session left open, files not committed, a build left
+  half-way): this run puts it right as any run would, and the log row says what it found.
+- **Preview.** `anteprima=<url>` in the request is the kit preview the main conversation keeps
+  on: use that address for every check on a kit and start nothing. Without it, §10
+  "Browser-sync".
+- **The result** is your last message: the handover message for the dev and, under it, the block
+  for the main conversation (Step 4).
 
 **MANDATORY first steps, in order:**
 1. Read `${CLAUDE_PLUGIN_ROOT}/shared/fse-foundations.md` — all of it, in particular §0 (guard),
@@ -24,17 +53,17 @@ All paths are relative to `{theme-root}` from `DESIGN.md → Project Config`.
 
 **The kit is the source of the values, WordPress never loses anything without an ok, and what
 the client changed by hand in WordPress stays the client's.** The
-build runs right after the dev's ok to a kit, **in the same conversation**, started by `fse-kit`
-(fse-foundations §1 "The ok continues"), and on its own when the dev asks to realign WP to the
-kits. One run builds the whole perimeter (telaio, every approved page, menus) and ends with one
+build runs right after the dev's ok to a kit, **in the unit that records the ok**, started by
+`fse-kit` (fse-foundations §1 "The ok continues"), and on its own when the dev asks to realign
+WP to the kits. One run builds the whole perimeter (telaio, every approved page, menus) and ends with one
 report; it is not a gate: the dev's remarks on the live site come back as kit revisions. It is
 **re-runnable**: every page goes through the diff of `scripts/wp-page.php` and receives only its
 difference; a second identical run answers "0 differenze" everywhere. The kit's texts, images
 and links are placeholders: they fill a page at its first build, and from the moment someone
 edits that page by hand in WordPress its existing content is never rewritten (2d). Deletions (a
 block or a page the kit no longer has, a menu that would lose an item) are shown in the report
-and executed only with the dev's ok **in a later turn** (`confirm`); they never stop the rest of
-the run. A page that cannot be built (an element the README does not map, a page open in the
+and executed only with the dev's ok **in a later turn** (`confirm`: the request of a later
+unit); they never stop the rest of the run. A page that cannot be built (an element the README does not map, a page open in the
 editor) is **skipped and reported**: the run goes on with the next one.
 During the run the agent asks nothing: it decides under the charter (§10) and reports gaps at
 the end. Gates 2 (telaio kit) and 3 (one per page kit) are `fse-kit`'s: a row is `kit` only
@@ -356,15 +385,24 @@ cancello?") and its `## Navigazione` row says "non usato". With the dev's ok in 
      run meets it ("la pagina Chi siamo è stata modificata in WordPress: da ora i suoi testi
      restano quelli di WordPress, dal kit entrano solo le sezioni nuove"), then silence.
    - *Prossimo passo*: a pending `confirm` is answered in this conversation: say what the dev
-     writes for each item, by id, and apply it in the turn that follows the answer (`fse-build
+     writes for each item, by id; it is applied by the unit that receives the answer (`fse-build
      2i` / `fse-menu-build apply … confirm`); no prompt to paste. Then the next `da progettare`
-     row of `## Pagine`, in one line: the agent goes on with its kit (point 3).
+     row of `## Pagine`, in one line: its kit is what comes next (point 3).
    Everything else (counts, scripts, intermediate fixes, green checks) stays in the log row.
-3. **Go on, or stop.** A `## Pagine` row `da progettare` → read
-   `${CLAUDE_PLUGIN_ROOT}/skills/fse-kit/SKILL.md` and start its kit in the same conversation
-   (its Step 0 verifies the state again), unless the dev's message says to stop. No row left → the
-   conversation ends with the report. A later run starts from zero and finds the aligned pages at
-   0 differenze: there is no progress state to resume.
+3. **Stop, and say what follows.** The unit ends here and never starts the kit of the next page:
+   under the handover message, after a `---` line, the block for the main conversation
+   (fse-foundations §10 "Units of work in a sub-agent"), with real paths:
+   ```
+   Per la conversazione principale (non mostrare al dev):
+   - Controllo: node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/controllo.js" "{site-root}"
+   - Anteprima: {usata <url> | accesa da me e ora spenta: accendila (npm run dev in {theme-root}) e, se l'indirizzo cambia, correggilo nel messaggio}
+   - Poi: {invoca fse-kit per la pagina «{Titolo}» | aspetta il dev: confirm {che cosa} | nulla: nessuna pagina da progettare}
+   ```
+   "Poi" names the first `## Pagine` row `da progettare` (order of the map), unless the
+   request said to stop after the build; a pending `confirm` does not hold the next kit back
+   (the dev answers it whenever they want): name the page and add the confirm in the same line.
+   A later run starts from zero and finds the aligned pages at 0 differenze: there is no progress
+   state to resume.
 
 ## Step 5 — Block scaffold (from the README, every variant)
 
@@ -439,4 +477,4 @@ the Site Editor, Playwright or SQL (`wp-page.php` and `wp-navigation.php` are th
 - [ ] Editor: 0 invalid blocks, not dirty; frontend 3 widths: no overflow, 1 h1; `parita.js` silent on the whole site (kit errors fixed in the kit in this run, differences that stay reported)
 - [ ] Menus through `fse-menu-build` inline; diffs waiting in the report
 - [ ] DESIGN.md (Pagine, Blocchi, Navigazione, ⏳ removed, Log, Domande aperte), READMEs, `version` bumps
-- [ ] Log row written; commit of the verified run (fse-foundations §10: main branch, files added by name; the push is the dev's); handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, nessun prompt da incollare); tab closed; next `da progettare` kit started in the same conversation (or none left)
+- [ ] Log row written; commit of the verified run (fse-foundations §10: main branch, files added by name; the push is the dev's); handover message (§10: esito · cosa è cambiato · cosa aspetta te · prossimo passo, nessun prompt da incollare); tab closed; under the message the block for the main conversation (control command, preview, the next `da progettare` page or none): the kit of that page is not started here

@@ -87,3 +87,41 @@ test('nessun testo mette il form di default dopo </main>', () => {
   assert.deepEqual(residui(SKILL_E_FONDAMENTA, /after\s+`<\/main>`|<\/main>\s*(?:\n\s*)*<!-- @import "main\/form\/_form-contacts\.kit" -->/g), []);
 });
 
+
+// Kit e build girano in un sotto-agente (fondamenta §10 «Units of work in a sub-agent»): la
+// skill riceve il messaggio del dev negli argomenti e chiude con il blocco per la conversazione
+// principale, che lancia il controllo e decide che cosa segue.
+test('fse-kit e fse-build: la richiesta negli argomenti e il blocco per la conversazione principale', () => {
+  for (const nome of ['fse-kit', 'fse-build']) {
+    const skill = fs.readFileSync(path.join(RADICE, 'skills', nome, 'SKILL.md'), 'utf8');
+    assert.equal((skill.match(/\$ARGUMENTS/g) || []).length, 1, `${nome}: $ARGUMENTS una volta sola`);
+    assert.match(skill, /Per la conversazione principale \(non mostrare al dev\):/, nome);
+    assert.match(skill, /node "\$\{CLAUDE_PLUGIN_ROOT\}\/shared\/scripts\/controllo\.js" "\{site-root\}"/, nome);
+    assert.match(skill, /Units of work in a sub-agent/, nome);
+  }
+});
+
+test('le fondamenta dicono chi esegue che cosa, e che cosa restituisce un\'unità', () => {
+  const fondamenta = fs.readFileSync(path.join(RADICE, 'shared', 'fse-foundations.md'), 'utf8');
+  assert.match(fondamenta, /^### Units of work in a sub-agent$/m);
+  assert.match(fondamenta, /Per la conversazione principale \(non mostrare al dev\):/);
+  assert.match(fondamenta, /word for word/);
+  assert.match(fondamenta, /never gives itself an ok/);
+});
+
+// Un'unità finisce: il kit della pagina seguente lo avvia la conversazione principale.
+test('nessun testo dice a un\'unità di cominciare il kit successivo', () => {
+  assert.deepEqual(residui(SKILL_E_FONDAMENTA, /start its kit in the\s+same\s+conversation|goes on with\s+its\s+kit|next `da progettare` kit started in the same conversation|goes on with its kit\s+unless/g), []);
+  const build = fs.readFileSync(path.join(RADICE, 'skills', 'fse-build', 'SKILL.md'), 'utf8');
+  assert.match(build, /never starts? the kit of the next page/i);
+});
+
+// Una skill che gira nella conversazione (brief, block-edit) non legge il testo di kit e build
+// per eseguirlo in linea: le invoca, e girano in un sotto-agente.
+test('fse-brief e fse-block-edit invocano fse-kit e fse-build, non ne leggono il testo', () => {
+  for (const nome of ['fse-brief', 'fse-block-edit']) {
+    const skill = fs.readFileSync(path.join(RADICE, 'skills', nome, 'SKILL.md'), 'utf8');
+    assert.doesNotMatch(skill, /skills\/fse-(kit|build)\/SKILL\.md/, nome);
+    assert.match(skill, /Skill tool/, nome);
+  }
+});

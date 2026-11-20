@@ -106,6 +106,11 @@ is a `wp_navigation`, else by title), serializes the items with core's own
 - the menu post is **open in the editor** by a user → exit **4 without writing**: say who has
   it open, ask the dev to close the tab, relaunch `apply` in a later turn.
 
+`apply … prova` (in place of `confirm`) only compares and never writes, neither a post nor a
+`ref`: exit 0 with every menu at "0 differenze", exit 5 with at least one difference. It is
+the read-only check the control script uses (`shared/scripts/controllo.js`); this skill writes
+with the plain `apply`.
+
 ### The loss stop — no exceptions
 **Violating the letter of this rule is violating its spirit.** The script decides what is a
 loss, not the agent. When `apply` exits 3, the turn **ends** with the diff and the question.

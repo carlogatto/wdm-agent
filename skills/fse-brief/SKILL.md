@@ -167,8 +167,12 @@ confermare]`. The dev's explicit ok →
 - plugins approved: `{wp-cli} plugin install {slug} --activate` (and `{wp-cli} language plugin
   install {slug} it_IT`) for each, listed in the log row;
 - `## Log decisioni`: "brief approvato"; `## Domande aperte`: only the `[da confermare]` the dev
-  left open. Then, **in the same turn**, read `${CLAUDE_PLUGIN_ROOT}/skills/fse-kit/SKILL.md` and
-  start the telaio kit (its Step 0 verifies the state again).
+  left open. Then, **in the same turn**, start the telaio kit: invoke the skill `fse-kit` with
+  the Skill tool, request "kit del telaio" plus `anteprima=<url>` (the preview this skill
+  started for the catalogue stays on: it is the conversation's). `fse-kit` runs in a sub-agent
+  and returns its handover with a block for this conversation: run the control it gives, show
+  the handover as it is, then do what its "Poi" line says (fse-foundations §10 "Units of work
+  in a sub-agent"). Never design the kit here.
 
 ## Stop conditions (the only ones)
 
@@ -189,4 +193,4 @@ what the charter decides · `git push`, or any git command beyond the fse-founda
 - [ ] `theme.json` edited, sync run, `npm run build` exit 0, catalogue checked at 3 widths with screenshots
 - [ ] `DESIGN.md`: `## Brief` (`Stato: bozza`), `## Pagine` `da progettare`, `## Telaio` `da progettare`, log row
 - [ ] Review delivered in the §10 handover shape with the `[da confermare]` table; turn ended
-- [ ] On the dev's ok (later turn): `Stato: approvato`, plugins installed, log row, commit of the approved brief (fse-foundations §10; the push is the dev's), then the telaio kit started in the same turn
+- [ ] On the dev's ok (later turn): `Stato: approvato`, plugins installed, log row, commit of the approved brief (fse-foundations §10; the push is the dev's), then the telaio kit started in the same turn by invoking `fse-kit` (a sub-agent: control, handover, what follows)

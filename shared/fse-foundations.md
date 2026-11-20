@@ -41,8 +41,8 @@ wdm-theme FSE project") the third.
 |---|---|---|---|---|
 | Setup | dev (technical values), agent runs | `fse-theme-setup` | — | — |
 | **Brief**: the designer's folder `docs/brief/` becomes the site contract | agent | `fse-brief` | **1 — brief**: site map, tokens applied to theme.json (kit catalogue on `:8848`), tone, plugins, images, in `DESIGN.md → ## Brief` | the telaio kit, same conversation |
-| **Kit telaio**: header, footer, default form in HTML | agent | `fse-kit` | **2 — telaio**: the kit on `:8848` | `fse-build` (parts, templates), same conversation; then the first page kit |
-| **Kit page**, one complete page with every block and variant it needs | agent | `fse-kit` | **3 — page kit**: the whole page with real texts on `:8848` | `fse-build` (blocks, page, menus), same conversation; then the next page kit |
+| **Kit telaio**: header, footer, default form in HTML | agent | `fse-kit` | **2 — telaio**: the kit on `:8848` | `fse-build` (parts, templates), in the unit that records the ok; then the first page kit, same conversation |
+| **Kit page**, one complete page with every block and variant it needs | agent | `fse-kit` | **3 — page kit**: the whole page with real texts on `:8848` | `fse-build` (blocks, page, menus), in the unit that records the ok; then the next page kit, same conversation |
 | **Site build**: every approved kit into WordPress, menus included | agent | `fse-build` | — (closes with a report, not a gate: remarks on the live site are kit revisions) | the next `da progettare` row |
 | Maintenance | agent | `fse-block-edit`, `fse-menu-build` | — | — |
 
@@ -66,6 +66,14 @@ applies it in the turn that follows the answer, never in the turn that computed 
 restarts). The dev who prefers to stop after a report simply stops: the state is in `DESIGN.md`
 (one `⏳` line per pending `confirm`) and the next conversation resumes from there. Never a
 "prompt ready to paste" for a step the agent can take itself.
+
+**Who runs what.** `fse-kit` and `fse-build` run in a sub-agent, one unit of work at a time (§10
+"Units of work in a sub-agent"): the kit of one item up to its gate; the dev's answer to the
+gate, which with an ok becomes the approval and the site build; a build on its own. The main
+conversation keeps the gates: it passes the dev's message word for word, checks every unit with
+the control script, shows the handover and starts the next unit. For the dev nothing changes:
+one conversation, the same three decisions, and a conversation that stays light enough to build
+a whole site without being compacted.
 
 **Blocks are born inside pages.** A block or a new variant is designed only inside the kit of the
 page (or the telaio) that needs it and reviewed with that page, never as an item of its own with
@@ -816,6 +824,12 @@ first, because a carousel starts only when it enters the screen).
   you start it, or find it from the port it printed: a search by name also finds the other
   project's watch). The watch writes sourcemaps (`*.map`, gitignored);
   `npm run build` removes them, so `npm run build` → `npm run check` passes with the watch on.
+  A unit of work in a sub-agent ("Units of work in a sub-agent", below) does not own a
+  preview: it uses the address its request carries (`anteprima=<url>`: the main conversation
+  keeps that preview on, so the address still answers when the dev opens it), else the one on
+  8848 that lists this theme's kits; with neither it starts one, stops it at the end and says so
+  in its block, and the main conversation starts its own before showing the handover. Never two
+  watchers of the same theme.
 - **Git: the agent commits, the dev pushes.** A commit is local and can be undone; a push starts
   the dev's pipeline, so that decision stays human.
   - Commit every unit that is closed and verified: after the ok to a gate, after a verified
@@ -892,6 +906,58 @@ the protocol is said in one line, with its effect on the dev ("regola saltata, n
 lo stato finale è lo stesso"). Never a credential or a cookie, never a wall of counts, no headings for empty
 sections, bullets over tables when the rows are few. The dev who wants more asks: the log row
 and the files hold it.
+
+### Units of work in a sub-agent
+
+`fse-kit` and `fse-build` run in a sub-agent (`context: fork` in their frontmatter, in the
+foreground): reading these foundations, designing, building and checking in the browser stay out
+of the main conversation, which keeps the gates. A unit does not see the conversation and cannot
+ask the dev anything: it starts from its request (the dev's message, word for word) and from
+the state on disk (`DESIGN.md`, the kits, WordPress), and it is never the same sub-agent twice.
+
+| Unit | Starts when | Ends with |
+|---|---|---|
+| **Kit** of one item (`fse-kit`) | the dev asks for a kit, or the main conversation goes on with the next `da progettare` row | the handover of the gate: `⏳ kit {item} in revisione` written, nothing committed |
+| **Answer to the gate** (`fse-kit`, same item) | the dev answers: remarks → the revision and a new handover; an explicit ok → approval, commit, then the site build read from `fse-build` | the new handover, or the build report. The kit of the next page is **not** started |
+| **Build** on its own (`fse-build`) | the dev asks to realign the site to the kits, or answers a `confirm` | the build report |
+
+**The result of a unit** is its last message, in two parts: the handover message for the dev
+(above, complete) and, under a `---` line, the block for the main conversation, with these
+four lines and real paths in the command (the unit copies the plugin path from its own skill
+text, where it is already expanded):
+
+```
+Per la conversazione principale (non mostrare al dev):
+- Controllo: node "{plugin}/shared/scripts/controllo.js" "{site-root}"
+- Anteprima: {usata <url> | accesa da me e ora spenta: accendila (npm run dev in {theme-root}) e, se l'indirizzo cambia, correggilo nel messaggio}
+- Poi: {aspetta il dev: gate aperto, kit {item} | aspetta il dev: confirm {che cosa} | invoca fse-kit per la pagina «{Titolo}» | nulla: nessuna pagina da progettare}
+```
+
+**The main conversation** does five things, and none of the unit's work:
+
+1. **Preview.** It keeps the kit preview on — `npm run dev` from `{theme-root}`, started in the
+   background the first time, unless one already answers with this theme's kits — and gives its
+   address to every unit as `anteprima=<url>`.
+2. **Request.** It invokes the skill (Skill tool) with the dev's message **word for word**: never
+   a summary, never an ok the dev did not write. Going on by itself with the next page, the
+   request is "kit della pagina «{Titolo}»".
+3. **Control.** When the unit returns it runs the command of the block: `controllo.js` reads
+   from `DESIGN.md` what to expect and answers in a dozen lines (`PASS`, `FAIL`, `NOTA`, a
+   verdict), without writing in WordPress. Exit 3 means it could not verify (servers stopped):
+   say so, it is not a pass.
+4. **Handover.** It shows the dev the unit's handover message as it is. A control that does not
+   pass is never hidden and never fixed by hand: **one** repair unit (the same skill, request
+   "il controllo non passa: {the FAIL rows}"), then the control again; if it still fails, the
+   `FAIL` rows go to the dev in one line under the handover.
+5. **What follows** is the "Poi" line: wait for the dev (a gate, a `confirm`), or invoke
+   `fse-kit` for the next page in the same turn, unless the dev's message said to stop.
+
+It never reads these foundations or a `SKILL.md` to do the unit's work itself, never edits a
+kit, a block or WordPress, and never gives itself an ok. A unit, for its part, never starts the
+kit of the next page, and reads an ok or a `confirm` only in the dev's words of its request: a
+`confirm` is valid for a diff an earlier unit showed (its `⏳` line is in `## Domande aperte`),
+never for one the unit computes now. A project whose `CLAUDE.md` does not describe this
+division yet works the same: the protocol travels in the block.
 
 ## 11. DESIGN.md — the cross-session state (FSE format)
 
@@ -1014,6 +1080,9 @@ The hooks are Node scripts, run without a shell (`"command": "node"` with the sc
 `args`). The two on PostToolUse (Write|Edit) judge only files inside
 `{site-root}/wp-content/themes/{theme}/` of an FSE project (`theme_family: fse`); the third
 runs when a turn or a session ends, the fourth when a session restarts after a compaction.
+The hooks fire inside a unit of work too (§10 "Units of work in a sub-agent"): a sub-agent's
+Write and Edit pass through the two PostToolUse hooks. The end-of-turn hook is the main
+conversation's, and a unit runs in the foreground: it cannot fire while the unit is working.
 
 - `chiudi-sessione.js` — on Stop and SessionEnd: if the project has a session of the agent user
   still open (`{site-root}/.playwright-mcp/_sessione.json`, written by `sessione.js apri`), it

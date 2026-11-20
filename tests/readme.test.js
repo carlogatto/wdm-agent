@@ -18,6 +18,7 @@ const COMANDI = [
   'wdm-agent:fse-brief',
   'wp-page.php',
   'kit-pagina.js',
+  'controllo.js',
   'claude plugin uninstall wdm-agent@wdm-agent && claude plugin install wdm-agent@wdm-agent',
 ];
 

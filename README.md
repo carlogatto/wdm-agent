@@ -143,7 +143,10 @@ review per pagina, mai per blocco.
 
 La build (`fse-build`) non è un gate: parte da sola all'ok di un kit, nella stessa conversazione,
 e si chiude con il report del sito in WordPress; le osservazioni sul sito live tornano come
-revisioni del kit. A ogni gate le osservazioni tornano all'agente come revisioni; il gate si
+revisioni del kit. Il kit e la build li esegue un aiutante dell'agente (un sotto-agente) che
+lavora a parte: mentre lavora la conversazione aspetta, poi controlla il risultato con uno
+script e ti mostra la consegna. Per te non cambia nulla: scrivi nella stessa conversazione, che
+così resta leggera anche su un sito di molte pagine. A ogni gate le osservazioni tornano all'agente come revisioni; il gate si
 chiude con un ok esplicito in un turno successivo, che la skill registra in `DESIGN.md`. Ogni
 consegna è un messaggio in quattro punti (esito · cosa è cambiato · cosa aspetta te · prossimo
 passo). Un `confirm` si dà nella stessa conversazione, in un turno successivo, senza copiare
@@ -213,14 +216,15 @@ Per chi vuole sapere cosa c'è dentro il plugin: per usarlo non serve.
 |---|---|
 | `fse-theme-setup` | nuovo progetto dal tema base («nuovo progetto da wdm-theme»), o progetto esistente su un altro computer |
 | `fse-brief` | il brief in `docs/brief/` diventa il contratto del sito: mappa, token applicati, tono, plugin, immagini («leggi il brief») |
-| `fse-kit` | progettazione in HTML del telaio o di una pagina completa con i suoi blocchi, una review alla fine («progettiamo il kit…») |
-| `fse-build` | build del sito in WordPress da tutti i kit approvati, rieseguibile, menu inclusi («costruisci il sito») |
+| `fse-kit` | progettazione in HTML del telaio o di una pagina completa con i suoi blocchi, una review alla fine («progettiamo il kit…»); gira in un sotto-agente |
+| `fse-build` | build del sito in WordPress da tutti i kit approvati, rieseguibile, menu inclusi («costruisci il sito»); gira in un sotto-agente |
 | `fse-block-edit` | modifica di un blocco già implementato («aggiungi un attributo a X»); una variante nuova nasce in `fse-kit`, dentro la pagina che la richiede |
 | `fse-menu-build` | creazione e riallineamento dei menu `wp_navigation` dal kit («popola il menu») |
 
 - `shared/fse-foundations.md`: le convenzioni («fondamenta»), citate per paragrafo (§) da ogni skill e dal `CLAUDE.md` dei progetti. Quando un testo dice «fondamenta §9» parla di questo file.
 - `shared/scripts/sync-theme-json-tokens.js`: genera la sezione Design Tokens di `DESIGN.md` e `assets/css/wp-global-styles.css` da `theme.json`.
 - `shared/scripts/parita.js`: confronta la struttura dei kit con quella del sito, senza scrivere nulla.
+- `shared/scripts/controllo.js`: dopo ogni kit e ogni build dice in una dozzina di righe se il progetto è nello stato che `DESIGN.md` dichiara (pagine uguali ai kit, sito senza errori, blocchi con il loro contratto, parità, menu, sessione chiusa, git), senza scrivere in WordPress. Lo lancia la conversazione principale: il verdetto non viene da chi ha fatto il lavoro.
 - `shared/scripts/sessione.js` e `shared/playwright/`: il login dell'agente nel backend senza password (una sessione temporanea, sempre revocata) e i modelli degli script che esegue nel browser: una pagina e un blocco in WordPress, e una pagina di kit, che si guarda senza entrare in WordPress.
 - `skills/fse-build/scripts/kit-pagina.js` (con `kit-pagina.php`, che legge gli id in WordPress): dal kit compilato di una pagina e dai README dei blocchi scrive il file di blocchi della pagina; ciò che non sa mappare lo dichiara e la pagina si salta, non lo inventa. Con `controlla` dice soltanto se la pagina è mappabile.
 - `skills/fse-build/scripts/wp-page.php` e `skills/fse-menu-build/scripts/wp-navigation.php`: i due write path verso WordPress (pagine e menu), eseguiti con WP-CLI; mostrano il diff, cancellano solo dopo una conferma in un turno successivo, non scrivono su una pagina aperta nell'editor e non toccano i contenuti modificati a mano in WordPress.

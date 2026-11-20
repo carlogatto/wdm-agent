@@ -114,8 +114,12 @@ what the editor now offers) and the pages that use it, saying whether their save
 (normally it did not); *Cosa aspetta te* = a kit left behind by the change, a `[da confermare]`,
 or "Niente da confermare"; *Prossimo passo* = "nessuno" — when the change must reach a page, the
 `fse-build` re-run (whole perimeter) is done **in the same conversation before the handover**,
-never handed to the dev as a prompt (fse-foundations §1 "The ok continues"); a kit revision the
-change needs is done here too. Scenario, files and checks stay in the log row.
+never handed to the dev as a prompt (fse-foundations §1 "The ok continues"): invoke the skill
+`fse-build` with the Skill tool, request "riallinea il sito dopo la modifica al blocco
+{prefix}/{slug}" (it runs in a sub-agent and returns its report with a block for this
+conversation: run the control it gives, then hand over — fse-foundations §10 "Units of work in
+a sub-agent"). When this skill is itself running inline inside a build (fse-build 2b) nothing
+is invoked: that run goes on. A kit revision the change needs is done here too. Scenario, files and checks stay in the log row.
 
 ## Stop conditions
 

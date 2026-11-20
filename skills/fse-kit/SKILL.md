@@ -1,9 +1,36 @@
 ---
 name: fse-kit
-description: 'Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "nuova variante Z del blocco Y" (designed inside the page that needs it), or when a DESIGN.md row is `da progettare`. One page, one review at the end (kit + README contracts + SCSS); on the dev''s ok the skill runs `fse-build` in the same conversation. Blocks and variants are never designed on their own: they are born inside the page that needs them.'
+description: 'Use to design in HTML, autonomously, the telaio (header/footer) or one complete page with every block and variant it needs for a wdm-theme FSE project — "progettiamo il kit della pagina X", "kit del telaio", "nuova variante Z del blocco Y" (designed inside the page that needs it), when a DESIGN.md row is `da progettare`, and for the dev''s answer to a kit under review (remarks, or the ok that starts the site build). One page, one review at the end (kit + README contracts + SCSS). Blocks and variants are never designed on their own: they are born inside the page that needs them. Runs in a sub-agent that does not see the conversation: pass the dev''s message word for word as arguments, plus `anteprima=` followed by the address of the kit preview when it is on; when it returns, follow the block at the end of its result.'
+context: fork
+agent: general-purpose
+background: false
 ---
 
 # FSE Kit — design in HTML: telaio or one page with its blocks (one item, one review, then the build)
+
+## The request — this skill runs in a sub-agent
+
+You are a **unit of work** (fse-foundations §10 "Units of work in a sub-agent"): you run in a
+sub-agent, you do not see the conversation and you cannot ask the dev anything. What the dev
+wrote is here, word for word, as the main conversation passed it:
+
+> $ARGUMENTS
+
+- **One unit, then stop.** Either the kit of one item up to the Review (nothing committed), or —
+  when `## Domande aperte` has a `⏳ kit {item} in revisione` line — the dev's answer to that
+  gate: remarks (the revision, and a new handover) or the ok (approval, commit, site build).
+  Never the kit of the next page: the main conversation starts it.
+- **An ok is the dev's, in the request.** Words of the dev that approve the item under review
+  ("ok", "va bene", "approvato", "procedi") are an ok; anything else is not, and an ok for a kit
+  not handed over yet is not one either. With a kit under review and no ok in the request, hand
+  it over again (Step 1 "A kit already under review comes first").
+- **No request** (empty, or only `anteprima=`) → Step 1 picks the item.
+- **Preview.** `anteprima=<url>` in the request is the kit preview the main conversation keeps
+  on: wherever a step below says `npm run dev`, use that address and start nothing. Without it,
+  §10 "Browser-sync": the preview that answers on 8848 with this theme's kits, else your own,
+  stopped at the end and declared in the block.
+- **The result** is your last message: the handover message for the dev and, under it, the block
+  for the main conversation (Review → "The result of the unit").
 
 **MANDATORY first steps, in order:**
 1. Read `${CLAUDE_PLUGIN_ROOT}/shared/fse-foundations.md` — §0 (guard), §1 (gates), §2
@@ -34,8 +61,8 @@ the brief (map, tone, sources, images); the block README is the contract `fse-bu
 without questions. One item per gate —
 the telaio, or one complete page with every block and variant it needs, however many — and **one
 review at the end** (gate 2 or 3 of fse-foundations §1): the dev looks at the design of the whole
-page, never at one block at a time. On the ok the skill goes on with `fse-build` in the same
-conversation (§1 "The ok continues"). Decisions follow the charter (§10): texts, layout
+page, never at one block at a time. The ok reaches this skill as the request of a later unit,
+which records it and goes on with `fse-build` (§1 "The ok continues"). Decisions follow the charter (§10): texts, layout
 in the system, ids, verifiable numbers are decided and logged; facts about the client, external
 URLs, legal texts, missing images get a default plus `[da confermare]`; nothing is asked
 mid-way. Kit markup = the future `render.php` (§4), BEM classes, tokens from theme.json, no
@@ -243,12 +270,12 @@ in its "kit" column until `fse-block-edit`/`fse-build` implements it.
 
 ## Review (the gate)
 
-The last message of the session hands over the item (gate 2 for the telaio, gate 3 for a page):
+The unit's last message hands over the item (gate 2 for the telaio, gate 3 for a page):
 URL on `https://localhost:8848/html/…`, the screenshots, the blocks and variants created with
 their README contract, the decisions taken (one `## Log decisioni` row with the non-obvious ones
 and why), the **table of `[da confermare]`** with the default chosen for each ("Niente da
 confermare" when empty). `DESIGN.md → ## Domande aperte` gets `⏳ kit {item} in revisione (dal
-YYYY-MM-DD)`; the row stays `da progettare`. Then the turn ends.
+YYYY-MM-DD)`; the row stays `da progettare`. Then the unit ends with its result (below).
 
 Two things the telaio handover always says, one line each: until the build the site in WordPress
 shows the old header and footer with the new CSS (kit and site share `main.css`); and, when the
@@ -264,23 +291,35 @@ blocks and variants born with their README) and only the decisions the dev may w
 follows the ok is the agent's. How the kit was built (files, checks, screenshots at three
 widths) stays in the `## Log decisioni` row.
 
-Later turns: the dev's remarks are their decisions — apply them (same files), log them as
-"richiesta del dev", hand over again. The dev's explicit ok → row `kit` (Telaio: `kit`;
-Blocchi rows were born `kit` at 3g), ⏳ removed, log row "kit {item} approvato" — **and in the
-same turn** read `${CLAUDE_PLUGIN_ROOT}/skills/fse-build/SKILL.md` and run it from its Step 0
-(whole perimeter: this item is built, the aligned rows answer "0 differenze"); the conversation
-ends with the build's report, which names the next `da progettare` row and goes on with its kit
-unless the dev stops. A revision the dev asks after the build follows the same steps without a
-new gate. A **page** row stays as it is: every page that is not `da progettare` is in the
+**The result of the unit** (fse-foundations §10 "Units of work in a sub-agent"): the handover
+message above and, under a `---` line, the block for the main conversation, with real paths:
+
+```
+Per la conversazione principale (non mostrare al dev):
+- Controllo: node "${CLAUDE_PLUGIN_ROOT}/shared/scripts/controllo.js" "{site-root}"
+- Anteprima: {usata <url> | accesa da me e ora spenta: accendila (npm run dev in {theme-root}) e, se l'indirizzo cambia, correggilo nel messaggio}
+- Poi: {aspetta il dev: gate aperto, kit {item} | after an ok: the "Poi" line of the build report}
+```
+
+The answer to the gate is a later unit (the request carries it). The dev's remarks are their
+decisions — apply them (same files), log them as "richiesta del dev", hand over again. The
+dev's explicit ok → row `kit` (Telaio: `kit`; Blocchi rows were born `kit` at 3g), ⏳ removed,
+log row "kit {item} approvato", commit of the approved kit — **and in the same unit** read
+`${CLAUDE_PLUGIN_ROOT}/skills/fse-build/SKILL.md` and run it from its Step 0 (whole perimeter:
+this item is built, the aligned rows answer "0 differenze"; you are already the unit: its
+"request" section adds nothing, and nothing is invoked). The unit ends with the build's report
+and its block, whose "Poi" line names the next `da progettare` row: the main conversation
+starts that kit, this unit never does. A revision the dev asks after the build follows the same
+steps without a new gate. A **page** row stays as it is: every page that is not `da progettare` is in the
 build's perimeter. A **Telaio** row goes back to `kit` (fse-foundations §11): `fse-build` works
 the telaio only when its row is `kit`. Then `fse-build` re-applies the difference in the same
-turn.
+unit.
 
 ## Never
 
 Write `block.json`, `render.php`, `edit.js`, `index.js`, `editor.scss` or touch WP (no WP-CLI
 writes, no editor) **before the ok** — after the ok they are `fse-build`'s, run by this skill in
-the same conversation · design a block or a variant as an item of its own, or hand over one block at a time ·
+the unit that records the ok · start the kit of the next page (the main conversation does) · read as an ok something the dev did not write in the request · design a block or a variant as an item of its own, or hand over one block at a time ·
 hand the dev a prompt for the build or the next kit · hardcode colours/sizes instead of tokens ·
 a kit with more than one root `<section>` per block, or with inline `<script>`/`<style>` ·
 Bootstrap/utility classes · `@use 'swiper/swiper'` in a block (shared handle) · fit a section
@@ -298,5 +337,5 @@ catalogue, 3e) · `git push`, or any git command beyond the fse-foundations §10
 - [ ] `_css-shared.kit` (+ `_js-shared.kit`) and `{prefix}-blocks.kit` updated
 - [ ] Every section designed first, then mapped: new variants/blocks born wherever no existing variant renders the design (§4 "No catalogue constraint")
 - [ ] Page kit with real content inlined (texts from the brief or in its tone, `[da confermare]` for facts), checked at 3 widths with screenshots, and mappable by the build (`kit-pagina.js … controlla` exit 0)
-- [ ] Review delivered once, for the whole item (never one block at a time), in the §10 handover shape: URL, screenshots, contracts, decisions, `[da confermare]` table, "ok o osservazioni" (no prompt to paste); ⏳ `kit {item} in revisione` written; row still `da progettare`
-- [ ] On the dev's ok (later turn): row `kit`, ⏳ removed, log row, commit of the approved kit (fse-foundations §10; the push is the dev's), then `fse-build` run in the same turn
+- [ ] Review delivered once, for the whole item (never one block at a time), in the §10 handover shape: URL, screenshots, contracts, decisions, `[da confermare]` table, "ok o osservazioni" (no prompt to paste); ⏳ `kit {item} in revisione` written; row still `da progettare`; under the message, the block for the main conversation (control command, preview, what follows)
+- [ ] On the dev's ok (the request of a later unit): row `kit`, ⏳ removed, log row, commit of the approved kit (fse-foundations §10; the push is the dev's), then `fse-build` run in the same unit, which ends with the build report and its block; the kit of the next page is not started
